@@ -7,7 +7,7 @@
   },
   "files": [
     "dist/cli.bundle.js",
-    "dist/updater-entry.bundle.cjs",
+    "dist/app-core-cli-updater.cjs",
     "dist/public/**",
     "README.md"
   ],

@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 56 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 57 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -254,6 +254,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 56 | `app-core-cli validate` gains a `--json` flag, emitting the parsed+validated manifest as JSON on success (or `{"error": "..."}` on failure). `validateManifestFile()` now returns the parsed `Manifest` on success too. Requested by `violations-owner` so `backend-entry-location`/`view-location` rules can share app-core's one authoritative schema instead of hand-rolled field extraction. | Decided | 2026-10-11 | Cross-repo request from `violations-owner`, implemented and verified (real subprocess test + manual run). |
+
+## Decision Log (cont. 36)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 57 | BUG FOUND AND FIXED: `app-core-cli`'s self-update was broken since it was first built -- `cli.ts` correctly expected the updater bundle at `app-core-cli-updater.cjs` (matching the universal `<binary-name>-updater.cjs` convention confirmed across queue/orchestrator/flow-cli), but `bundle.mjs` actually produced `updater-entry.bundle.cjs` (named after its source file instead). The two names never matched, so `app-core-cli update` always failed with "updater not found," and because the self-updater can't fix itself from a broken state, every real install stayed stuck on whatever version was first installed. Found via `violations-owner`'s real-world report of a stuck install. Fixed `bundle.mjs`'s output filename and `package.json`'s `files` entry; also added the same updater bundle-size safeguard (500KB limit) every other `@wadeck-app` CLI's bundler has. Verified for real: ran the actual `update` command locally, confirmed it found the updater, executed it, and upgraded to the real published latest version, then passed `self-check`. | Decided | 2026-10-11 | User: "assure toi que le app-core-cli suit les memes principes que flow, task, orch niveau auto-update!" |
 
 ## Open Questions
 

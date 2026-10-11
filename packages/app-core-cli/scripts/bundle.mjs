@@ -46,25 +46,39 @@ await build({
 });
 console.log('Bundled dist/cli.bundle.js');
 
-// Bundled SEPARATELY and as CJS (not ESM) -- mirrors queue-cli's real
-// queue-updater-entry.ts convention exactly: the updater must not share a
+// Bundled SEPARATELY and as CJS (not ESM) -- the updater must not share a
 // module graph with the main CLI runtime, and shared-updater's own strategy
-// implementation expects a standalone script.
+// implementation expects a standalone script. Filename must be
+// app-core-cli-updater.cjs (the <binary-name>-updater.cjs convention every
+// other @wadeck-app CLI in this workspace uses -- queue-updater.cjs,
+// orchestrator-updater.cjs, flow-updater.cjs) since cli.ts looks for that
+// exact name.
 await build({
   entryPoints: [path.join(root, 'dist/updater-entry.js')],
   bundle: true,
   platform: 'node',
   target: 'node22',
   format: 'cjs',
-  outfile: path.join(root, 'dist/updater-entry.bundle.cjs'),
+  outfile: path.join(root, 'dist/app-core-cli-updater.cjs'),
   external: ['@wadeck-app/shared-cli', '@wadeck-app/shared-updater'],
   define,
   logLevel: 'warning',
 });
-console.log('Bundled dist/updater-entry.bundle.cjs');
+console.log('Bundled dist/app-core-cli-updater.cjs');
 
-// Same invariant as app-core-sdk (Decision #41): zero internal cross-package
-// references in published output. dist/** is excluded from violations
+// Same safeguard every other @wadeck-app CLI's updater bundle has: catches
+// the CLI runtime accidentally getting pulled into the updater bundle.
+const MAX_UPDATER_SIZE = 500 * 1024;
+const updaterSize = fs.statSync(path.join(root, 'dist/app-core-cli-updater.cjs')).size;
+if (updaterSize > MAX_UPDATER_SIZE) {
+  throw new Error(
+    `app-core-cli-updater.cjs is ${updaterSize} bytes (${(updaterSize / 1024).toFixed(1)} KB) -- exceeds 500 KB limit. ` +
+      'The CLI runtime may have been accidentally included -- check updater-entry.ts imports.',
+  );
+}
+
+// Zero internal cross-package references in published output, same invariant
+// as app-core-sdk's own bundle script. dist/** is excluded from violations
 // scanning by design, so this is asserted here at build time instead.
 function assertNoInternalReferences() {
   const packagesDir = path.join(root, '..');
@@ -79,7 +93,7 @@ function assertNoInternalReferences() {
     .filter(Boolean)
     .filter((name) => name !== '@wadeck-app/app-core-sdk'); // real published dependency, not internal-only
 
-  const publishedFiles = ['dist/cli.bundle.js', 'dist/updater-entry.bundle.cjs'].map((f) => path.join(root, f));
+  const publishedFiles = ['dist/cli.bundle.js', 'dist/app-core-cli-updater.cjs'].map((f) => path.join(root, f));
 
   for (const file of publishedFiles) {
     const content = fs.readFileSync(file, 'utf-8');

@@ -34,8 +34,8 @@ console.log('Bundled dist/index.bundle.js');
 // which resolves fine inside the monorepo (a real workspace package) but is a dangling
 // reference once published, since app-core-server is never published. rollup-plugin-dts
 // inlines the ACTUAL type definitions from app-core-server's own .d.ts output (resolved
-// locally at build time, not hand-copied -- Decision #31's no-drift requirement still
-// holds), producing a single flattened declaration file with zero external
+// locally at build time, not hand-copied, so there's no drift to keep in sync manually),
+// producing a single flattened declaration file with zero external
 // @wadeck-app/app-core-server references.
 async function bundleTypes() {
   const bundle = await rollup({

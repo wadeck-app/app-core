@@ -1,9 +1,7 @@
-// updater-entry.ts -- background auto-update entry point, bundled SEPARATELY as
-// updater-entry.bundle.cjs (see scripts/bundle.mjs). Must not import any of this
-// package's own CLI runtime -- mirrors queue-cli's queue-updater-entry.ts pattern
-// exactly, since that's the real, proven convention every other @wadeck-app CLI
-// in this workspace already uses (Decision #42: app-core-cli is a global
-// auto-updating binary like queue/orch/flow/task, not a per-project pin).
+// Background auto-update entry point, bundled SEPARATELY as
+// app-core-cli-updater.cjs (see scripts/bundle.mjs). Must not import any of
+// this package's own CLI runtime -- mirrors the queue-updater-entry.ts
+// convention every other @wadeck-app CLI in this workspace uses.
 import { runUpdater, execNpm } from '@wadeck-app/shared-updater';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
 import { join } from 'node:path';
