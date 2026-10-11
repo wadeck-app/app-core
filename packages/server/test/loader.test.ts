@@ -10,7 +10,7 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-describe('ModuleManager.loadFromEntry (Decision #8 -- dynamic import with cache-busting)', () => {
+describe('ModuleManager.loadFromEntry (dynamic import with cache-busting)', () => {
   beforeEach(() => {
     (globalThis as Record<string, unknown>)['__fixtureBTicks'] = undefined;
   });
@@ -27,7 +27,7 @@ describe('ModuleManager.loadFromEntry (Decision #8 -- dynamic import with cache-
     ]);
   });
 
-  it('resolves a path-type view by reading and YAML-parsing it (Decision #16)', async () => {
+  it('resolves a path-type view by reading and YAML-parsing it', async () => {
     const manager = new ModuleManager();
     const loaded = await manager.loadFromEntry({
       id: 'module-b',
@@ -56,7 +56,7 @@ describe('ModuleManager.loadFromEntry (Decision #8 -- dynamic import with cache-
     await wait(30);
     const ticksAfterSwap = (globalThis as any).__fixtureBTicks;
 
-    // v1's interval must have been cleared by dispose() on unload (Decision #9) --
+    // v1's interval must have been cleared by dispose() on unload --
     // its counter must not advance further after the swap.
     expect(ticksAfterSwap.v1).toBe(ticksRightAfterSwap);
     // v2 is the fresh instance's own interval, ticking independently.

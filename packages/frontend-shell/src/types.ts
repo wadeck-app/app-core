@@ -4,9 +4,9 @@ export interface ResolvedExtensionPoint {
   slot: string;
   label?: string;
   view: Record<string, unknown>;
-  // Decision #26/#28: raw YAML text, required by GenericPageRunner (it parses
-  // yamlText itself -- a pre-parsed `view` object is not accepted). Used by both
-  // widget and page extension points so either can declare $sources for live data.
+  // Raw YAML text, required by GenericPageRunner (it parses yamlText itself --
+  // a pre-parsed `view` object is not accepted). Used by both widget and page
+  // extension points so either can declare $sources for live data.
   rawYaml: string;
 }
 

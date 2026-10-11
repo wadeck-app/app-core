@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { writeRegistryEntry, readRegistryEntries } from '../src/registry.js';
 
-describe('registry read/write round-trip (Decision #14)', () => {
+describe('registry read/write round-trip', () => {
   let modulesDir: string;
 
   beforeEach(() => {

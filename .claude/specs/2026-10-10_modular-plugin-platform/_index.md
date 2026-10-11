@@ -266,6 +266,7 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 58 | RESOLVED: the 6 `app-module/*` rules are genuinely migrated, published (`@wadeck-app/violations-rules@2026.10.11-121`), and verified by the parent via a real scratch consumer repo (not just trusting `violations-owner`'s report) -- a misnamed `queue-app-module` package correctly flags, a correctly-named `app-module-queue` passes clean (0 violations), including the `manifest-exists-and-valid` rule's shell-out to the real `app-core-cli` succeeding. `queue-owner` cleared to rename for real. | Decided | 2026-10-11 | Closes the gap found in Decision #55. |
+| - | Follow-up to Decision #58: `violations-owner` added `app-core-cli` to their own CI (so the "flags X" assertions exercise the real validator, not just a skip branch) and fixed a Node `DEP0190` shell-arg deprecation warning in the `app-core-cli` shell-out. Published `2026.10.11-123`. Re-verified by the parent against the same scratch repo: version confirmed real, warning confirmed gone, `0 violations` on correct naming still holds. | Logged | 2026-10-11 | Closes a minor finding raised during Decision #58's verification. |
 
 ## Open Questions
 

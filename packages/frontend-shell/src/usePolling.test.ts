@@ -3,7 +3,7 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePolling } from './usePolling.js';
 
-describe('usePolling (Decision #25 -- exponential backoff + hibernate on blur)', () => {
+describe('usePolling (exponential backoff + hibernate on blur)', () => {
   let hidden = false;
 
   beforeEach(() => {

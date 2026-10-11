@@ -4,10 +4,10 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { ModulePage } from './ModulePage.js';
 import type { LoadedModuleSummary } from './types.js';
 
-// Decision #26 end-to-end: a page's $sources fetches live data from the module's
+// A page's $sources fetches live data from the module's
 // own registerRoute()-registered endpoint, through the real fetcher + GenericPageRunner
 // + real dsl-ui Badge component -- not a mocked/stubbed render.
-describe('ModulePage (Decision #26 -- live data via $sources + fetcher)', () => {
+describe('ModulePage (live data via $sources + fetcher)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });

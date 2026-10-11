@@ -9,9 +9,9 @@ export interface DashboardProps {
 }
 
 // Base slot: widget/dashboard -> rendered into a grid (frontend-shell.md "Base slots").
-// Decision #28: widgets use the same GenericPageRunner + fetcher path as pages
-// (ModulePage.tsx) -- widget/page is a placement distinction only, not a
-// capability tier, so a widget's view can declare $sources just like a page's.
+// Widgets use the same GenericPageRunner + fetcher path as pages (ModulePage.tsx)
+// -- widget/page is a placement distinction only, not a capability tier, so a
+// widget's view can declare $sources just like a page's.
 export function Dashboard({ modules }: DashboardProps): React.ReactElement {
   const widgets = modules.flatMap((m) =>
     m.extensionPoints

@@ -11,10 +11,10 @@ import { fetcher } from './fetcher.js';
 // Real end-to-end test, not mocked: a real app-core server process (the actual
 // built dist/index.js, not an in-process stub), the real published
 // @wadeck-app/dsl-renderer ExtensionSlot directive, and the real GenericPageRunner
-// + fetcher wiring already used in production (ModulePage.tsx). Proves Decision #40
-// (bare array, order sorted/stripped server-side) and Decision #44
-// (GET /api/slots/:slotId) actually interoperate with dsl-renderer's real
-// ExtensionSlot implementation, not just each side's own isolated test suite.
+// + fetcher wiring already used in production (ModulePage.tsx). Proves the bare
+// array returned by GET /api/slots/:slotId (order sorted/stripped server-side)
+// actually interoperates with dsl-renderer's real ExtensionSlot implementation,
+// not just each side's own isolated test suite.
 const PORT = 48700;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const serverEntry = path.resolve(
@@ -53,7 +53,7 @@ async function registerFixture(id: string, manifestDir: string): Promise<void> {
   }
 }
 
-describe('ExtensionSlot real end-to-end (Decision #32/#40/#44)', () => {
+describe('ExtensionSlot real end-to-end', () => {
   beforeAll(async () => {
     serverProcess = spawn('node', [serverEntry], {
       env: {
@@ -93,7 +93,7 @@ describe('ExtensionSlot real end-to-end (Decision #32/#40/#44)', () => {
     expect(screen.getByText('contributor-a')).toBeInTheDocument();
     expect(screen.getByText('contributor-b-unordered')).toBeInTheDocument();
 
-    // Real proof of real server-side sorting (Decision #40's `order` field),
+    // Real proof of real server-side sorting (the `order` field),
     // not just "all three happened to render": DOM order must match the
     // sorted response order verified manually against the real endpoint
     // (order=5, then order=20, then no-order last).

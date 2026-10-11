@@ -5,15 +5,15 @@ export interface SlotsRoutesOptions {
   manager: ModuleManager;
 }
 
-// Decision #40 (ExtensionSlot wire contract, resolved with dsl-owner): a module's
-// view can embed `{ "$type": "ExtensionSlot", "items": "$sources.<key>" }`, and
-// the dsl-renderer-side directive expects whatever that $sources URL returns to
-// be a BARE array of DSL nodes -- no envelope, or dsl-renderer surfaces a visible
-// UI alert rather than silently failing. This endpoint is that URL's target.
+// A module's view can embed `{ "$type": "ExtensionSlot", "items": "$sources.<key>" }`,
+// and the dsl-renderer-side directive expects whatever that $sources URL returns
+// to be a BARE array of DSL nodes -- no envelope, or dsl-renderer surfaces a
+// visible UI alert rather than silently failing. This endpoint is that URL's
+// target.
 //
-// Ordering/multiplicity is app-core's job, without app-core needing to know what
-// any slot *means* (P-3): each contributing extensionPoint can declare a generic
-// `order` number (Decision #40); this handler sorts by it and strips it before
+// Ordering/multiplicity is app-core's job, without app-core needing to know
+// what any slot *means*: each contributing extensionPoint can declare a
+// generic `order` number; this handler sorts by it and strips it before
 // responding, so the wire format stays a bare array of resolved view nodes only.
 export async function slotsRoutes(server: FastifyInstance, opts: SlotsRoutesOptions): Promise<void> {
   const { manager } = opts;

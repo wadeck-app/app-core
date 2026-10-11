@@ -45,7 +45,7 @@ describe('app-core HTTP integration', () => {
     await server.close();
   });
 
-  it('rejects an npm source type with 422 (Decision #11 -- deferred to v2)', async () => {
+  it('rejects an npm source type with 422', async () => {
     const { server } = await buildServer({ configDir });
     const res = await server.inject({
       method: 'POST',
@@ -63,7 +63,7 @@ describe('app-core HTTP integration', () => {
     await server.close();
   });
 
-  it('picks up a pre-existing registry entry on startup (Decision #14)', async () => {
+  it('picks up a pre-existing registry entry on startup', async () => {
     const manifestPath = path.join(fixturesDir, 'app-module-minimal', 'manifest.json');
     writeRegistryEntry(path.join(configDir, 'modules'), { id: 'module-a', source: { type: 'file', path: manifestPath } });
 
@@ -72,10 +72,10 @@ describe('app-core HTTP integration', () => {
     await server.close();
   });
 
-  it('picks up a module registered via the fallback-file path, written directly (Decision #12/#14)', async () => {
+  it('picks up a module registered via the fallback-file path, written directly', async () => {
     // Simulates a daemon that could not reach app-core and wrote the registry
     // file itself instead -- app-core's startup load does not distinguish the
-    // two write paths, by design (Decision #14).
+    // two write paths, by design.
     const manifestPath = path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json');
     const modulesDir = path.join(configDir, 'modules');
     fs.mkdirSync(modulesDir, { recursive: true });
@@ -117,7 +117,7 @@ describe('app-core HTTP integration', () => {
     await server.close();
   });
 
-  it('a module-registered route is reachable at /api/modules/<id>/... and gone after unload (Decision #26)', async () => {
+  it('a module-registered route is reachable at /api/modules/<id>/... and gone after unload', async () => {
     const { server, manager } = await buildServer({ configDir });
     await server.inject({
       method: 'POST',
@@ -136,7 +136,7 @@ describe('app-core HTTP integration', () => {
     await server.close();
   });
 
-  it('does not let one module reach another module\'s registered route (Decision #26 id scoping)', async () => {
+  it('does not let one module reach another module\'s registered route', async () => {
     const { server } = await buildServer({ configDir });
     await server.inject({
       method: 'POST',
@@ -150,7 +150,7 @@ describe('app-core HTTP integration', () => {
     await server.close();
   });
 
-  it('a widget extensionPoint registers a live route and resolves rawYaml identically to a page (Decision #28)', async () => {
+  it('a widget extensionPoint registers a live route and resolves rawYaml identically to a page', async () => {
     const { server, manager } = await buildServer({ configDir });
     await server.inject({
       method: 'POST',

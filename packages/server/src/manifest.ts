@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Decision #15: manifest shape. A module declares any number of UI contributions
+// Manifest shape: a module declares any number of UI contributions
 // (widgets, pages) in a single manifest/version.
 const ViewSchema = z.object({
   type: z.enum(['inline', 'path']),
@@ -12,10 +12,10 @@ const ExtensionPointSchema = z.object({
   slot: z.string().min(1),
   label: z.string().optional(),
   view: ViewSchema,
-  // Decision #40: generic, slot-agnostic sort key for ExtensionSlot aggregation
-  // (GET /api/slots/:slotId). Purely structural -- app-core sorts by this
-  // number, it never interprets what it means. Entries without `order` sort
-  // last, in registration order.
+  // Generic, slot-agnostic sort key for ExtensionSlot aggregation (GET
+  // /api/slots/:slotId). Purely structural -- app-core sorts by this number,
+  // it never interprets what it means. Entries without `order` sort last, in
+  // registration order.
   order: z.number().optional(),
 });
 
@@ -28,8 +28,8 @@ export const ManifestSchema = z.object({
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type ExtensionPoint = z.infer<typeof ExtensionPointSchema>;
 
-// Decision #10/#11: v1 only supports a `file` source. `npm` is deferred to v2 and
-// must be rejected with a clear error, not silently ignored.
+// v1 only supports a `file` source. `npm` is deferred to v2 and must be
+// rejected with a clear error, not silently ignored.
 const FileSourceSchema = z.object({
   type: z.literal('file'),
   path: z.string().min(1),
@@ -47,7 +47,7 @@ export type RegistrationPayload = z.infer<typeof RegistrationPayloadSchema>;
 
 export class UnsupportedSourceTypeError extends Error {
   constructor(sourceType: string) {
-    super(`Source type "${sourceType}" is not supported in v1 (Decision #11 defers npm sourcing to v2). Only { type: 'file', path } is accepted.`);
+    super(`Source type "${sourceType}" is not supported in v1 (npm sourcing is deferred to v2). Only { type: 'file', path } is accepted.`);
     this.name = 'UnsupportedSourceTypeError';
   }
 }

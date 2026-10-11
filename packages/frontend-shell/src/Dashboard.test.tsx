@@ -4,7 +4,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { Dashboard } from './Dashboard.js';
 import type { LoadedModuleSummary } from './types.js';
 
-// Decision #28: widgets render through GenericPageRunner (same as pages), so
+// Widgets render through GenericPageRunner (same as pages), so
 // even a plain static widget now goes through dsl-renderer's source-loading
 // pipeline -- assertions must be async-safe (findBy/waitFor), not sync getBy.
 // GenericPageRunner also calls react-router's useSearchParams internally, so
@@ -64,7 +64,7 @@ describe('Dashboard (base slot: widget/dashboard -> grid, frontend-shell.md)', (
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Unknown component type'));
   });
 
-  it('fetches from a widget-scoped route and renders the live value (Decision #28 end-to-end)', async () => {
+  it('fetches from a widget-scoped route and renders the live value', async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       expect(String(input)).toBe('/api/modules/module-d/count');
       return new Response(JSON.stringify({ count: 42 }), {

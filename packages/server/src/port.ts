@@ -1,4 +1,4 @@
-// Decision #7: hardcoded default port, overridable via env for testing.
+// Hardcoded default port, overridable via env for testing.
 const DEFAULT_PORT = 4850;
 
 export function resolvePort(): number {

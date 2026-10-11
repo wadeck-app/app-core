@@ -1,10 +1,10 @@
 import type { ModuleRouteHandler, ModuleRouteRegistry } from './moduleRoutes.js';
 
-// Decision #9: scoped helpers a module's backend must use instead of raw
-// globals, so app-core can clear them automatically on unload/swap. Dev-time
-// enforcement that this is actually used (instead of raw setInterval/addEventListener)
-// is the violations rule, not a runtime guard -- see Decision #9's rationale.
-// Decision #26: registerRoute is the same pattern applied to HTTP routes.
+// Scoped helpers a module's backend must use instead of raw globals, so
+// app-core can clear them automatically on unload/swap. Dev-time enforcement
+// that this is actually used (instead of raw setInterval/addEventListener) is
+// the violations rule, not a runtime guard. registerRoute is the same pattern
+// applied to HTTP routes.
 export interface ModuleContext {
   setInterval(fn: () => void, ms: number): void;
   setTimeout(fn: () => void, ms: number): void;

@@ -19,9 +19,9 @@ async function handleRegisterOrUpdate(
   const manifestPath = path.resolve(payload.source.path);
   const entry: RegistryEntry = { id: payload.id, source: { type: 'file', path: manifestPath } };
 
-  // Decision #14: app-core itself writes/updates the registry file on a
-  // successful push -- the push path and the fallback-file path converge on
-  // the exact same storage, so there is no separate reconciliation step.
+  // app-core itself writes/updates the registry file on a successful push --
+  // the push path and the fallback-file path converge on the exact same
+  // storage, so there is no separate reconciliation step.
   writeRegistryEntry(modulesDir, entry);
   const loaded = await manager.loadFromEntry(entry);
   return { id: loaded.id, version: loaded.manifest.version, extensionPoints: loaded.resolvedViews.length };
@@ -49,7 +49,7 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
   });
 
   // Internal inspection endpoint for tests/dashboard -- lists currently loaded
-  // modules and their resolved views (Decision #8/#16: views are DSL data, not code).
+  // modules and their resolved views (views are DSL data, not code).
   server.get('/api/modules', async (_req, reply) => {
     const modules = manager.list().map((m) => ({
       id: m.id,

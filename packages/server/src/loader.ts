@@ -8,8 +8,8 @@ import type { RegistryEntry } from './registry.js';
 import { ModuleRouteRegistry } from './moduleRoutes.js';
 
 export interface BackendEntryExports {
-  // A module's backend entry is a plain ESM module. app-core is agnostic about what
-  // it does once loaded (Decision #4) -- the only contract app-core relies on is this
+  // A module's backend entry is a plain ESM module. app-core is agnostic about
+  // what it does once loaded -- the only contract app-core relies on is this
   // optional default export, called with the module's own moduleContext.
   default?: (ctx: ModuleContext) => void | Promise<void>;
 }
@@ -24,9 +24,9 @@ export interface LoadedModule {
 
 export class ModuleManager {
   private loaded = new Map<string, LoadedModule>();
-  // Decision #26: shared across all modules so routes stay scoped by moduleId
-  // (enforced in ModuleRouteRegistry itself) and so server.ts's single catch-all
-  // dispatcher route can look up any module's registered routes.
+  // Shared across all modules so routes stay scoped by moduleId (enforced in
+  // ModuleRouteRegistry itself) and so server.ts's single catch-all dispatcher
+  // route can look up any module's registered routes.
   readonly routeRegistry = new ModuleRouteRegistry();
 
   get(id: string): LoadedModule | undefined {
@@ -37,9 +37,9 @@ export class ModuleManager {
     return [...this.loaded.values()];
   }
 
-  // Decision #8: backend loaded via dynamic import() with cache-busting (not a
-  // child process, not a vm context) so a version bump always yields a fresh
-  // module instance instead of Node's cached one.
+  // Backend loaded via dynamic import() with cache-busting (not a child
+  // process, not a vm context) so a version bump always yields a fresh module
+  // instance instead of Node's cached one.
   async loadFromEntry(entry: RegistryEntry): Promise<LoadedModule> {
     const manifestPath = entry.source.path;
     const manifestDir = path.dirname(manifestPath);
@@ -48,9 +48,9 @@ export class ModuleManager {
 
     const existing = this.loaded.get(entry.id);
     if (existing) {
-      // Decision #9: unload = stop routing to the old instance + clear its
-      // moduleContext registrations. The old module instance itself may still
-      // leak outside moduleContext -- an accepted limitation (Decision #9).
+      // Unload = stop routing to the old instance + clear its moduleContext
+      // registrations. The old module instance itself may still leak outside
+      // moduleContext -- an accepted limitation.
       existing.moduleContext.dispose();
       this.loaded.delete(entry.id);
     }

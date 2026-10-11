@@ -8,7 +8,7 @@ import { buildServer } from '../../src/server.js';
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const fixturesDir = path.join(__dirname, '..', '..', '..', 'test-app-modules');
 
-describe('GET /api/slots/:slotId (Decision #40 -- ExtensionSlot wire contract)', () => {
+describe('GET /api/slots/:slotId', () => {
   let configDir: string;
 
   beforeEach(() => {

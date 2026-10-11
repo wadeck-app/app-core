@@ -1,8 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-// Decision #14: `<app-core-config-dir>/modules/<id>.json` IS app-core's module
-// registry -- not a separate "pending" dropbox. Both app-core (on a successful
+// `<app-core-config-dir>/modules/<id>.json` IS app-core's module registry --
+// not a separate "pending" dropbox. Both app-core (on a successful
 // HTTP push) and a daemon (on the fallback path) write to the exact same files.
 export interface RegistryEntry {
   id: string;

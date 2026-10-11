@@ -46,7 +46,7 @@ describe('parseRegistrationPayload', () => {
     expect(payload.source.type).toBe('file');
   });
 
-  it('rejects an npm source in v1 with UnsupportedSourceTypeError (Decision #11)', () => {
+  it('rejects an npm source in v1 with UnsupportedSourceTypeError', () => {
     expect(() =>
       parseRegistrationPayload({ id: 'queue', source: { type: 'npm', package: '@wadeck-app/queue-module', version: '1.0.0' } }),
     ).toThrow(UnsupportedSourceTypeError);

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { ManifestSchema, parseManifest, createModuleContext, UnsupportedSourceTypeError, parseRegistrationPayload } from './index.js';
 
-// app-core-sdk is a types/schemas-only package (Decision #42) -- these tests
-// prove the re-exports actually work end to end, not just compile.
+// app-core-sdk is a types/schemas-only package -- these tests prove the
+// re-exports actually work end to end, not just compile.
 describe('app-core-sdk re-exports', () => {
   it('ManifestSchema/parseManifest validate a real manifest shape', () => {
     const manifest = parseManifest({
@@ -21,7 +21,7 @@ describe('app-core-sdk re-exports', () => {
     ctx.dispose();
   });
 
-  it('parseRegistrationPayload rejects npm source (v1, Decision #11) via UnsupportedSourceTypeError', () => {
+  it('parseRegistrationPayload rejects npm source (deferred to v2) via UnsupportedSourceTypeError', () => {
     expect(() => parseRegistrationPayload({ id: 'x', source: { type: 'npm', package: 'y', version: '1.0.0' } })).toThrow(
       UnsupportedSourceTypeError,
     );

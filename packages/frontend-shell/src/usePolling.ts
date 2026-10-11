@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Decision #25: poll with exponential backoff when nothing changed, and drop
-// to a very long "hibernate" interval when the tab is not focused. Kept as a
-// standalone hook (not inline in a component) so the scheduling logic has
-// real unit tests with fake timers, independent of any rendering.
+// Polls with exponential backoff when nothing changed, and drops to a very
+// long "hibernate" interval when the tab is not focused. Kept as a standalone
+// hook (not inline in a component) so the scheduling logic has real unit
+// tests with fake timers, independent of any rendering.
 
 export interface PollingOptions<T> {
   fetchFn: () => Promise<T>;
@@ -57,7 +57,7 @@ export function usePolling<T>(options: PollingOptions<T>): PollingState<T> {
       if (disposedRef.current) return;
 
       if (isDocumentHidden()) {
-        // Hibernate: don't even fetch, just check back much later. Decision #25.
+        // Hibernate: don't even fetch, just check back much later.
         scheduleNext(hibernateIntervalMs);
         return;
       }
@@ -84,7 +84,7 @@ export function usePolling<T>(options: PollingOptions<T>): PollingState<T> {
 
     const onVisibilityChange = () => {
       if (!isDocumentHidden()) {
-        // Coming back into focus: reset backoff and poll immediately (Decision #25).
+        // Coming back into focus: reset backoff and poll immediately.
         currentIntervalRef.current = minIntervalMs;
         clearTimeout(timerRef.current);
         void tick();

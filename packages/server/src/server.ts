@@ -22,10 +22,10 @@ export interface AppCoreServer {
   modulesDir: string;
 }
 
-// Decision #14: on startup, app-core loads every file found in the module
-// registry directory -- this covers both modules that pushed successfully
-// earlier and modules a daemon dropped via the fallback-file path while
-// app-core was unreachable. No separate reconciliation step.
+// On startup, app-core loads every file found in the module registry
+// directory -- this covers both modules that pushed successfully earlier and
+// modules a daemon dropped via the fallback-file path while app-core was
+// unreachable. No separate reconciliation step.
 export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCoreServer> {
   const modulesDir = resolveModulesDir(opts.configDir);
   const manager = new ModuleManager();
@@ -34,9 +34,9 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   await server.register(modulesRoutes, { modulesDir, manager });
   await server.register(slotsRoutes, { manager });
 
-  // Decision #26: a module's own registerRoute()-registered routes are dispatched
-  // through a single catch-all, since Fastify/find-my-way has no API to remove a
-  // route from a running instance (see moduleRoutes.ts). This route requires at
+  // A module's own registerRoute()-registered routes are dispatched through a
+  // single catch-all, since Fastify/find-my-way has no API to remove a route
+  // from a running instance (see moduleRoutes.ts). This route requires at
   // least one path segment after :id, so it never collides with the static
   // /api/modules, /api/modules/register, /api/modules/update routes above.
   server.all('/api/modules/:id/*', async (req, reply) => {
@@ -49,10 +49,9 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
     return handler(req, reply);
   });
 
-  // Decision #24: app-core serves its own frontend shell (built from
-  // packages/frontend-shell, copied into the repo root's public/ by
-  // scripts/copy-app.mjs) -- same static-serving + SPA-fallback pattern as
-  // orch-server (its sibling precedent in this workspace). __dirname here is
+  // app-core serves its own frontend shell (built from packages/frontend-shell,
+  // copied into the repo root's public/ by scripts/copy-app.mjs) -- same
+  // static-serving + SPA-fallback pattern as orch-server. __dirname here is
   // packages/server/dist at runtime, so public/ at the repo root is 3 levels up.
   const publicDir = opts.publicDir ?? path.resolve(__dirname, '../../../public');
   const hasPublic = fs.existsSync(publicDir);
@@ -73,9 +72,9 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
     try {
       await manager.loadFromEntry(entry);
     } catch (err) {
-      // A single bad registry entry must not block startup for every other module
-      // (Decision #3/#9: app-core has no isolation guarantee, but startup itself
-      // should still succeed) -- judgment call, not an explicit spec decision.
+      // A single bad registry entry must not block startup for every other
+      // module -- app-core has no isolation guarantee, but startup itself
+      // should still succeed.
       server.log.error({ err, moduleId: entry.id }, 'failed to load module from registry on startup');
     }
   }

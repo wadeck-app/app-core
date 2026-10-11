@@ -1,4 +1,4 @@
-// Decision #31: re-exports, never hand-copies, app-core-server's real types/schemas --
+// Re-exports, never hand-copies, app-core-server's real types/schemas --
 // module authors (queue, orchestrator, flow, future daemons) depend on this package
 // instead of guessing the contract shape by hand.
 export {
