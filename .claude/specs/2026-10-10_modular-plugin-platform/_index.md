@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 55 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 56 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -249,11 +249,17 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 |---|---|---|---|---|
 | 55 | BUG FOUND: the 6 `app-module/*` violations rules (Decisions #22/#34/#37/#38) were built as LOCAL files in app-core's own `.violations/rules/`, which per violations-framework's documented behavior only auto-run inside app-core's own repo -- they never had a path to reach a consumer repo like `queue`. Describing them as "auto-applying to any repo" was incorrect; conflated "no per-repo config within app-core" with "global across every repo." Caught by `queue-owner` attempting to actually trigger one. Fix in progress: migrating all 6 to the real global package (`@wadeck-app/violations-rules`), coordinated with `violations-owner`. `app-core-sdk/no-internal-dependencies` (Decision #41) correctly stays local -- it's inherently app-core-specific. | Open (fix requested, not yet landed) | 2026-10-11 | User: "je pense que ta regle de violation ne trigger pas proprement car elle doit etre globale (dans violations rules) pas dans ton projet ou dans le sdk!" |
 
+## Decision Log (cont. 35)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 56 | `app-core-cli validate` gains a `--json` flag, emitting the parsed+validated manifest as JSON on success (or `{"error": "..."}` on failure). `validateManifestFile()` now returns the parsed `Manifest` on success too. Requested by `violations-owner` so `backend-entry-location`/`view-location` rules can share app-core's one authoritative schema instead of hand-rolled field extraction. | Decided | 2026-10-11 | Cross-repo request from `violations-owner`, implemented and verified (real subprocess test + manual run). |
+
 ## Open Questions
 
 | # | Question | Priority | Status |
 |---|---|---|---|
-| 1 | Migration of the 6 `app-module/*` rules into `@wadeck-app/violations-rules`: pending `violations-owner`'s response on how they want the handoff (direct migration vs. receiving the rule source/tests). | High | Open |
+| 1 | Migration of the 6 `app-module/*` rules into `@wadeck-app/violations-rules`: `violations-owner` reports migration done locally (380 tests pass, self-check clean), but confirmed via `git status`/`npm view` that it's still uncommitted/unpublished -- not yet verifiable from app-core's side. Waiting on commit+push+publish before real verification. | High | Open |
 
 ## Modules / Sub-files
 

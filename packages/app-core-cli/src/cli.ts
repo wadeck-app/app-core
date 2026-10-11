@@ -20,11 +20,9 @@ const bundlePath = process.env['LAUNCHER_BUNDLE_OVERRIDE'] ?? fileURLToPath(impo
 async function main(): Promise<void> {
   const [command, target, ...rest] = process.argv.slice(2);
 
-  // Decision #42: app-core-cli is a global auto-updating binary like
-  // queue/orch/flow/task -- check for an update in the background on every
-  // real invocation (not `self-check`, to avoid recursing into the just-
-  // installed binary mid-verification). Mirrors queue-cli's real pattern
-  // (QueueIndex.ts) exactly; in dev mode (no bundled updater file) this is a
+  // Check for an update in the background on every real invocation (not
+  // `self-check`, to avoid recursing into the just-installed binary
+  // mid-verification). In dev mode (no bundled updater file) this is a
   // silent no-op, per UpdateManager's own documented behavior.
   if (command !== 'self-check') {
     try {
@@ -40,11 +38,20 @@ async function main(): Promise<void> {
       process.exitCode = 1;
       return;
     }
+    const json = rest.includes('--json');
     const result = validateManifestFile(target);
     if (result.ok) {
-      console.log(`OK: ${target} is a valid manifest.`);
+      if (json) {
+        console.log(JSON.stringify(result.manifest));
+      } else {
+        console.log(`OK: ${target} is a valid manifest.`);
+      }
     } else {
-      console.error(result.message);
+      if (json) {
+        console.log(JSON.stringify({ error: result.message }));
+      } else {
+        console.error(result.message);
+      }
       process.exitCode = 1;
     }
     return;
