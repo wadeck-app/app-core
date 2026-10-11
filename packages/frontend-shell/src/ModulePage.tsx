@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { GenericPageRunner } from '@wadeck-app/dsl-renderer';
+import { PageContent } from '@wadeck-app/dsl-ui';
 import { appRegistry } from './registry.js';
 import { fetcher } from './fetcher.js';
 import type { LoadedModuleSummary } from './types.js';
@@ -16,8 +17,8 @@ export function ModulePage({ modules }: { modules: LoadedModuleSummary[] }): Rea
   const ep = mod?.extensionPoints.filter((e) => e.kind === 'page' && e.slot === 'nav')[Number(index)];
 
   if (!ep) {
-    return <p>Page not found (module may have been unloaded).</p>;
+    return <p className="p-4 text-muted">Page not found (module may have been unloaded).</p>;
   }
 
-  return <GenericPageRunner yamlText={ep.rawYaml} registry={appRegistry} fetcher={fetcher} />;
+  return <PageContent sections={<GenericPageRunner yamlText={ep.rawYaml} registry={appRegistry} fetcher={fetcher} />} />;
 }

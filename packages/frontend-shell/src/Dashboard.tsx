@@ -1,5 +1,6 @@
 import React from 'react';
 import { GenericPageRunner } from '@wadeck-app/dsl-renderer';
+import { Card, PageContent, PageSection } from '@wadeck-app/dsl-ui';
 import { appRegistry } from './registry.js';
 import { fetcher } from './fetcher.js';
 import type { LoadedModuleSummary } from './types.js';
@@ -19,18 +20,25 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
       .map((ep, i) => ({ moduleId: m.id, key: `${m.id}-${i}`, label: ep.label, rawYaml: ep.rawYaml })),
   );
 
-  if (widgets.length === 0) {
-    return <p>No widgets registered yet.</p>;
-  }
-
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
-      {widgets.map((w) => (
-        <div key={w.key} role="article" aria-label={w.label ?? w.moduleId} style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '8px' }}>
-          {w.label && <h3>{w.label}</h3>}
-          <GenericPageRunner yamlText={w.rawYaml} registry={appRegistry} fetcher={fetcher} />
-        </div>
-      ))}
-    </div>
+    <PageContent
+      sections={
+        <PageSection title="Dashboard">
+          {widgets.length === 0 ? (
+            <p className="text-muted">No widgets registered yet.</p>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+              {widgets.map((w) => (
+                <Card key={w.key} header={w.label ? <h3 className="font-semibold">{w.label}</h3> : undefined}>
+                  <div role="article" aria-label={w.label ?? w.moduleId}>
+                    <GenericPageRunner yamlText={w.rawYaml} registry={appRegistry} fetcher={fetcher} />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </PageSection>
+      }
+    />
   );
 }

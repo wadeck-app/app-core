@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 60 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 61 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -274,6 +274,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 |---|---|---|---|---|
 | 59 | BUG FOUND AND FIXED (part 1, insufficient on its own): the frontend never imported `@wadeck-app/dsl-ui/theme.css` -- fixed by mirroring `orch-app/src/main.tsx`'s pattern. | Decided | 2026-10-11 | User screenshot showed unstyled output. |
 | 60 | BUG FOUND AND FIXED (part 2, the real root cause): `theme.css` only provides CSS custom-property tokens (`--color-*`) and `@font-face` rules -- `dsl-ui`'s actual component styling is Tailwind utility classes, generated via `@tailwind base/components/utilities` directives processed against `dsl-ui`'s own Tailwind preset (`@wadeck-app/dsl-ui/tailwind-preset` + its `dslUiContent` scan paths). app-core's frontend had no Tailwind build configured at all (no `tailwind.config`, no `postcss.config`, no `tailwindcss`/`postcss`/`autoprefixer` deps), so none of those utility classes were ever generated -- components rendered structurally (borders, some colors from `theme.css`'s own non-Tailwind rules) but with zero real typography/spacing/theming. Fixed by replicating `orch-app`'s exact build setup: added the 3 dev dependencies, `postcss.config.js`, `tailwind.config.ts` (using `dslUiPreset` + `dslUiContent`, confirmed required per `orch-app`'s own comment -- Tailwind only reads `content` from the top-level config, the preset can't contribute scan paths itself), new `src/index.css` with the 3 `@tailwind` directives, imported in `main.tsx` after `theme.css`. Verified visually via `agent-browser` (real headless Chromium screenshot, not assumed): CSS output grew from 2.80 kB to 38.04 kB, and the before/after screenshots show real Inter font + correct `StatTile` card styling replacing raw browser-default serif text. | Decided | 2026-10-11 | User: "utilise agent-browser pour tester... y a tjs pas de style" -- the first fix wasn't actually sufficient, caught by the user insisting on a real visual check rather than trusting the build-output size alone. | 2026-10-11 |
+
+## Decision Log (cont. 39)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 61 | Frontend shell redesigned using real `dsl-ui` layout components, mirroring `orch-app`'s actual composition pattern rather than inventing a new one: top `NavBar` (`AppNavBar`, replacing the old vertical `Sidebar`) with brand + nav links, `PageContent`/`PageSection` wrapping routed content, real `Card` components replacing hand-rolled inline-styled divs on the dashboard grid. `Sidebar.tsx`/`.test.tsx` renamed to `NavBar.tsx`/`.test.tsx` (same test assertions, same accessible roles/names, only the visual composition changed). Verified visually via `agent-browser`: dashboard and the Queue History page both render with real styling, correct active-link highlighting, and genuine live data. | Decided | 2026-10-11 | User: "utilise le dsl-ui pour faire une plus belle page, inspire-toi de orchestrator ui!" | 2026-10-11 |
 
 ## Open Questions
 

@@ -1,0 +1,45 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { NavBar as DslNavBar } from '@wadeck-app/dsl-ui';
+import type { LoadedModuleSummary } from './types.js';
+
+export interface NavPage {
+  moduleId: string;
+  routePath: string;
+  label: string;
+}
+
+// Base slot: page/nav -> a top-nav entry routing to a full-page render (frontend-shell.md "Base slots").
+export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
+  return modules.flatMap((m) =>
+    m.extensionPoints
+      .filter((ep) => ep.kind === 'page' && ep.slot === 'nav')
+      .map((ep, i) => ({
+        moduleId: m.id,
+        routePath: `/modules/${m.id}/${i}`,
+        label: ep.label ?? `${m.id} #${i}`,
+      })),
+  );
+}
+
+const linkClass = ({ isActive }: { isActive: boolean }): string =>
+  `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-muted hover:text-content'}`;
+
+export function AppNavBar({ modules }: { modules: LoadedModuleSummary[] }): React.ReactElement {
+  const pages = navPagesFor(modules);
+  return (
+    <header className="border-b border-border bg-surface px-4 py-3">
+      <DslNavBar>
+        <span className="text-base font-semibold text-content mr-6">app-core</span>
+        <NavLink to="/" end className={linkClass}>
+          Dashboard
+        </NavLink>
+        {pages.map((p) => (
+          <NavLink key={p.routePath} to={p.routePath} className={linkClass}>
+            {p.label}
+          </NavLink>
+        ))}
+      </DslNavBar>
+    </header>
+  );
+}

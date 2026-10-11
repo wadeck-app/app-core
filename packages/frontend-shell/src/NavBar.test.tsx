@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
-import { Sidebar } from './Sidebar.js';
+import { AppNavBar } from './NavBar.js';
 import type { LoadedModuleSummary } from './types.js';
 
-describe('Sidebar (base slot: page/nav -> sidebar entry, frontend-shell.md)', () => {
+describe('AppNavBar (base slot: page/nav -> top-nav entry, frontend-shell.md)', () => {
   it('lists a page/nav extensionPoint as a nav link', () => {
     const modules: LoadedModuleSummary[] = [
       {
@@ -17,7 +17,7 @@ describe('Sidebar (base slot: page/nav -> sidebar entry, frontend-shell.md)', ()
     ];
     render(
       <MemoryRouter>
-        <Sidebar modules={modules} />
+        <AppNavBar modules={modules} />
       </MemoryRouter>,
     );
     expect(screen.getByRole('link', { name: 'Fixture B Page' })).toHaveAttribute('href', '/modules/module-b/0');
@@ -29,7 +29,7 @@ describe('Sidebar (base slot: page/nav -> sidebar entry, frontend-shell.md)', ()
     ];
     render(
       <MemoryRouter>
-        <Sidebar modules={modules} />
+        <AppNavBar modules={modules} />
       </MemoryRouter>,
     );
     expect(screen.queryAllByRole('link').length).toBe(1); // only the always-present "Dashboard" link
