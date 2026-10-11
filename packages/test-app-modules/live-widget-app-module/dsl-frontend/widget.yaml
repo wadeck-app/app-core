@@ -1,0 +1,7 @@
+$sources:
+  stats:
+    url: GET /api/modules/module-d/count
+
+$type: Badge
+label: $sources.stats.count
+variant: info

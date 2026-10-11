@@ -1,0 +1,41 @@
+{
+  "name": "@wadeck-app/app-core-sdk",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.bundle.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "app-core-sdk": "./dist/cli.bundle.js"
+  },
+  "files": [
+    "dist/index.bundle.js",
+    "dist/cli.bundle.js",
+    "dist/*.d.ts",
+    "README.md"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.json && node scripts/bundle.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fastify/static": "^8.0.0",
+    "fastify": "^5.0.0",
+    "js-yaml": "^4.1.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@wadeck-app/app-core-server": "*",
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.14"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

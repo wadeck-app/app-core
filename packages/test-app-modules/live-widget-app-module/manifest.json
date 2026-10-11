@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "backendEntryPath": "./api-backend/backend.mjs",
+  "extensionPoints": [
+    {
+      "kind": "widget",
+      "slot": "dashboard",
+      "label": "Fixture D Widget",
+      "view": { "type": "path", "value": "./dsl-frontend/widget.yaml" }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+$sources:
+  greeting:
+    url: GET /api/modules/module-c/greeting
+
+$type: Badge
+label: $sources.greeting.message
+variant: info

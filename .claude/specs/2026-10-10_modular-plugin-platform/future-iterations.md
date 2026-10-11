@@ -1,0 +1,28 @@
+# Future Iterations -- Modular Plugin Platform
+
+Ideas and items explicitly deferred, not forgotten. Nothing here is current scope -- revisit when actually needed, don't build toward these preemptively.
+
+## app-core's own backlog
+
+### Middleware-style module hooks
+A module can only register handlers for its own specific paths (`moduleContext.registerRoute()`, Decision #26) via the single catch-all Fastify route + lookup table (Decision #26's design). There is no way for a module to hook into every app-core request (no `onRequest`/`preHandler`-style cross-cutting hook exposed to modules).
+**Deferred:** 2026-10-11 (Decision #35). **Reason:** not needed by any real module yet; same deferred-not-permanent treatment as npm sourcing (Decision #11) and modules shipping their own components (Decision #30).
+
+### npm-sourced module registration
+`{ type: 'npm', package, version }` registration source exists in the schema but is rejected in v1.
+**Deferred:** Decision #11. **Reason:** `file` source covers every real need so far; resolution mechanics (shell out to `npm install` vs. raw tarball fetch) are designed but unbuilt -- see module-contract.md.
+
+### Modules shipping their own React components
+Decision #16/P-5 mandates DSL-only module UI for v1. Realistically expected to come up eventually (a module needing something no generic `dsl-ui` component can express).
+**Deferred:** Decision #30. **Reason:** requires a real runtime frontend-plugin system (foreign component code loaded into app-core's single running frontend, shared React instance, version conflicts) -- categorically harder than anything built so far, not needed by any real module yet.
+
+## Upstream asks pending (dsl-view, not app-core's own backlog)
+
+### `entriesGenerator` lazy/code-split option
+Filed as a feature request to dsl-owner (Decision #29's finding). `@registryLazy` opt-in tag approach is in progress on dsl-view's side as of 2026-10-11.
+
+### `ExtensionSlot` DSL primitive
+Needed for module-to-module extension points (Decision #32/#33). Design conversation with dsl-owner started 2026-10-11, not yet resolved -- see extension-slots.md "Open design details."
+
+### `useSourceLoader` silent-skip warning
+Fixed by dsl-owner (`console.warn` in `useSourceLoader.ts`) but pending the user's own review/merge on the dsl-view side as of 2026-10-10 -- see Decision #27.

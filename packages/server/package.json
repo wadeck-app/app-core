@@ -1,0 +1,41 @@
+{
+  "name": "@wadeck-app/app-core-server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" },
+    "./manifest": { "import": "./dist/manifest.js", "types": "./dist/manifest.d.ts" },
+    "./moduleContext": { "import": "./dist/moduleContext.js", "types": "./dist/moduleContext.d.ts" },
+    "./moduleRoutes": { "import": "./dist/moduleRoutes.js", "types": "./dist/moduleRoutes.d.ts" },
+    "./loader": { "import": "./dist/loader.js", "types": "./dist/loader.d.ts" },
+    "./registry": { "import": "./dist/registry.js", "types": "./dist/registry.d.ts" },
+    "./configDir": { "import": "./dist/configDir.js", "types": "./dist/configDir.d.ts" },
+    "./port": { "import": "./dist/port.js", "types": "./dist/port.d.ts" },
+    "./server": { "import": "./dist/server.js", "types": "./dist/server.d.ts" }
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.json",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fastify/static": "^8.0.0",
+    "fastify": "^5.0.0",
+    "js-yaml": "^4.1.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.14"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@wadeck-app/app-core-shell",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@wadeck-app/dsl-renderer": "latest",
+    "@wadeck-app/dsl-ui": "^2026.10.10-087-9e4c2751",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "*",
+    "@testing-library/react": "*",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "jsdom": "*",
+    "typescript": "*",
+    "vite": "^6.0.0",
+    "vitest": "*"
+  }
+}
