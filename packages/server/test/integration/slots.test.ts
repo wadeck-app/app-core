@@ -25,7 +25,7 @@ describe('GET /api/slots/:slotId (Decision #40 -- ExtensionSlot wire contract)',
       url: '/api/modules/register',
       payload: {
         id: 'slot-contributor-a',
-        source: { type: 'file', path: path.join(fixturesDir, 'slot-contributor-a-app-module', 'manifest.json') },
+        source: { type: 'file', path: path.join(fixturesDir, 'app-module-slot-contributor-a', 'manifest.json') },
       },
     });
     await server.inject({
@@ -33,7 +33,7 @@ describe('GET /api/slots/:slotId (Decision #40 -- ExtensionSlot wire contract)',
       url: '/api/modules/register',
       payload: {
         id: 'slot-contributor-b',
-        source: { type: 'file', path: path.join(fixturesDir, 'slot-contributor-b-app-module', 'manifest.json') },
+        source: { type: 'file', path: path.join(fixturesDir, 'app-module-slot-contributor-b', 'manifest.json') },
       },
     });
   }

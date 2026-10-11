@@ -10,7 +10,7 @@ describe('app-module/manifest-exists-and-valid', () => {
 
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-manifest-'));
-    const appModuleDir = path.join(dir, 'packages', 'fake-app-module');
+    const appModuleDir = path.join(dir, 'packages', 'app-module-fake');
     fs.mkdirSync(appModuleDir, { recursive: true });
     packageJsonPath = path.join(appModuleDir, 'package.json');
     fs.writeFileSync(packageJsonPath, '{}\n');
@@ -20,7 +20,7 @@ describe('app-module/manifest-exists-and-valid', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it('flags a missing manifest.json -- the real queue-app-module gap', async () => {
+  it('flags a missing manifest.json -- the real-world gap found when a module ships code with no manifest', async () => {
     const violations = await rule.check([packageJsonPath]);
     expect(violations).toHaveLength(1);
     expect(violations[0]!.message).toContain('missing manifest.json');

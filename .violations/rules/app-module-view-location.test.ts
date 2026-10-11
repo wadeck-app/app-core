@@ -10,7 +10,7 @@ describe('app-module/view-location', () => {
 
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-view-loc-'));
-    const appModuleDir = path.join(dir, 'packages', 'fake-app-module');
+    const appModuleDir = path.join(dir, 'packages', 'app-module-fake');
     fs.mkdirSync(appModuleDir, { recursive: true });
     manifestPath = path.join(appModuleDir, 'manifest.json');
   });

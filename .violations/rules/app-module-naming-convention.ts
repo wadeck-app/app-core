@@ -1,14 +1,10 @@
 import type { Rule, Violation } from '@wadeck-app/violations-rules';
 import * as path from 'node:path';
 
-/**
- * Decision #37/#38: any package directory shipping a manifest.json (the
- * signal that it's an app-module) must itself be named `<name>-app-module`
- * (suffix-style, e.g. `queue-app-module` -- matches what queue-owner already
- * shipped). A bare `app-module` (no prefix) is also rejected, not just names
- * missing the suffix.
- */
-const NAME_PATTERN = /^.+-app-module$/;
+// Any package directory shipping a manifest.json (the signal that it's an
+// app-module) must itself be named `app-module-<name>`, e.g. `app-module-queue`.
+// A bare `app-module` (no suffix) is also rejected, not just names missing the prefix.
+const NAME_PATTERN = /^app-module-.+$/;
 
 export const rule: Rule = {
   id: 'app-module/naming-convention',
@@ -25,7 +21,7 @@ export const rule: Rule = {
         violations.push({
           file: manifestPath,
           line: 1,
-          message: `app-module package directory "${dirName}" must be named "<name>-app-module" (Decision #37/#38) -- a bare "app-module" or any other name is not accepted.`,
+          message: `app-module package directory "${dirName}" must be named "app-module-<name>" -- a bare "app-module" or any other name is not accepted.`,
         });
       }
     }

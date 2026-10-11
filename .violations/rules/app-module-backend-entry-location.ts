@@ -3,12 +3,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parseManifest } from '@wadeck-app/app-core-sdk';
 
-// Decision #34: an app-module's backendEntryPath must live inside its own
+// an app-module's backendEntryPath must live inside its own
 // api-backend/ folder -- keeps the backend/view split enforced, not just documented.
 export const rule: Rule = {
   id: 'app-module/backend-entry-location',
   tags: 'ts',
-  defaultScope: ['**/packages/*-app-module/manifest.json'],
+  defaultScope: ['**/packages/app-module-*/manifest.json'],
   defaultSeverity: 'error',
 
   async check(files: string[]): Promise<Violation[]> {
@@ -29,7 +29,7 @@ export const rule: Rule = {
         violations.push({
           file: manifestPath,
           line: 1,
-          message: `backendEntryPath "${manifest.backendEntryPath}" must resolve inside this module's api-backend/ folder (Decision #34), resolved to "${resolvedEntry}".`,
+          message: `backendEntryPath "${manifest.backendEntryPath}" must resolve inside this module's api-backend/ folder, resolved to "${resolvedEntry}".`,
         });
       }
     }

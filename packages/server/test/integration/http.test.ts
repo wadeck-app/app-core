@@ -27,7 +27,7 @@ describe('app-core HTTP integration', () => {
 
   it('POST /api/modules/register loads the module and GET /api/modules reflects it', async () => {
     const { server } = await buildServer({ configDir });
-    const manifestPath = path.join(fixturesDir, 'minimal-app-module', 'manifest.json');
+    const manifestPath = path.join(fixturesDir, 'app-module-minimal', 'manifest.json');
 
     const registerRes = await server.inject({
       method: 'POST',
@@ -64,7 +64,7 @@ describe('app-core HTTP integration', () => {
   });
 
   it('picks up a pre-existing registry entry on startup (Decision #14)', async () => {
-    const manifestPath = path.join(fixturesDir, 'minimal-app-module', 'manifest.json');
+    const manifestPath = path.join(fixturesDir, 'app-module-minimal', 'manifest.json');
     writeRegistryEntry(path.join(configDir, 'modules'), { id: 'module-a', source: { type: 'file', path: manifestPath } });
 
     const { server, manager } = await buildServer({ configDir });
@@ -76,7 +76,7 @@ describe('app-core HTTP integration', () => {
     // Simulates a daemon that could not reach app-core and wrote the registry
     // file itself instead -- app-core's startup load does not distinguish the
     // two write paths, by design (Decision #14).
-    const manifestPath = path.join(fixturesDir, 'lifecycle-app-module', 'manifest.json');
+    const manifestPath = path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json');
     const modulesDir = path.join(configDir, 'modules');
     fs.mkdirSync(modulesDir, { recursive: true });
     fs.writeFileSync(
@@ -96,7 +96,7 @@ describe('app-core HTTP integration', () => {
     await server.inject({
       method: 'POST',
       url: '/api/modules/register',
-      payload: { id: 'module-b', source: { type: 'file', path: path.join(fixturesDir, 'lifecycle-app-module', 'manifest.json') } },
+      payload: { id: 'module-b', source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json') } },
     });
     await wait(20);
     const v1Ticks = (globalThis as any).__fixtureBTicks.v1;
@@ -105,7 +105,7 @@ describe('app-core HTTP integration', () => {
     const updateRes = await server.inject({
       method: 'POST',
       url: '/api/modules/update',
-      payload: { id: 'module-b', source: { type: 'file', path: path.join(fixturesDir, 'lifecycle-app-module', 'v2-fixture', 'manifest.json') } },
+      payload: { id: 'module-b', source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'v2-fixture', 'manifest.json') } },
     });
     expect(updateRes.statusCode).toBe(200);
     expect(updateRes.json()).toMatchObject({ id: 'module-b', version: '2.0.0' });
@@ -122,7 +122,7 @@ describe('app-core HTTP integration', () => {
     await server.inject({
       method: 'POST',
       url: '/api/modules/register',
-      payload: { id: 'module-c', source: { type: 'file', path: path.join(fixturesDir, 'live-page-app-module', 'manifest.json') } },
+      payload: { id: 'module-c', source: { type: 'file', path: path.join(fixturesDir, 'app-module-live-page', 'manifest.json') } },
     });
 
     const greetingRes = await server.inject({ method: 'GET', url: '/api/modules/module-c/greeting' });
@@ -141,7 +141,7 @@ describe('app-core HTTP integration', () => {
     await server.inject({
       method: 'POST',
       url: '/api/modules/register',
-      payload: { id: 'module-c', source: { type: 'file', path: path.join(fixturesDir, 'live-page-app-module', 'manifest.json') } },
+      payload: { id: 'module-c', source: { type: 'file', path: path.join(fixturesDir, 'app-module-live-page', 'manifest.json') } },
     });
 
     const wrongId = await server.inject({ method: 'GET', url: '/api/modules/some-other-module/greeting' });
@@ -155,7 +155,7 @@ describe('app-core HTTP integration', () => {
     await server.inject({
       method: 'POST',
       url: '/api/modules/register',
-      payload: { id: 'module-d', source: { type: 'file', path: path.join(fixturesDir, 'live-widget-app-module', 'manifest.json') } },
+      payload: { id: 'module-d', source: { type: 'file', path: path.join(fixturesDir, 'app-module-live-widget', 'manifest.json') } },
     });
 
     const countRes = await server.inject({ method: 'GET', url: '/api/modules/module-d/count' });

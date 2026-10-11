@@ -10,7 +10,7 @@ describe('app-module/no-react', () => {
 
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-no-react-'));
-    const appModuleDir = path.join(dir, 'packages', 'fake-app-module', 'api-backend');
+    const appModuleDir = path.join(dir, 'packages', 'app-module-fake', 'api-backend');
     fs.mkdirSync(appModuleDir, { recursive: true });
     fileBase = appModuleDir;
   });

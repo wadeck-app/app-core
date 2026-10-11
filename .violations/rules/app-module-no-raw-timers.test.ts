@@ -10,8 +10,8 @@ describe('app-module/no-raw-timers', () => {
     expect(rule.defaultSeverity).toBe('error');
   });
 
-  it('scopes itself to packages/*-app-module/** so it auto-applies with no config (Decision #22/#37)', () => {
-    expect(rule.defaultScope.some((p) => p.includes('packages/*-app-module'))).toBe(true);
+  it('scopes itself to packages/app-module-*/** so it auto-applies with no config', () => {
+    expect(rule.defaultScope.some((p) => p.includes('packages/app-module-*'))).toBe(true);
   });
 
   describe('check()', () => {
@@ -20,7 +20,7 @@ describe('app-module/no-raw-timers', () => {
 
     beforeEach(() => {
       dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-app-module-'));
-      const appModuleDir = path.join(dir, 'packages', 'fake-app-module', 'src');
+      const appModuleDir = path.join(dir, 'packages', 'app-module-fake', 'src');
       fs.mkdirSync(appModuleDir, { recursive: true });
       fakeAppModuleFile = path.join(appModuleDir, 'backend.ts');
     });

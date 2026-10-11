@@ -9,7 +9,7 @@ const fixturesDir = path.resolve(__dirname, '../../test-app-modules');
 
 describe('validateManifestFile', () => {
   it('passes a real valid manifest fixture', () => {
-    const result = validateManifestFile(path.join(fixturesDir, 'minimal-app-module', 'manifest.json'));
+    const result = validateManifestFile(path.join(fixturesDir, 'app-module-minimal', 'manifest.json'));
     expect(result.ok).toBe(true);
   });
 
@@ -35,7 +35,7 @@ describe('runDev', () => {
   });
 
   it('boots the real server against a local module fixture', async () => {
-    const result = await runDev(path.join(fixturesDir, 'minimal-app-module'), { port: 0 });
+    const result = await runDev(path.join(fixturesDir, 'app-module-minimal'), { port: 0 });
     close = result.close;
     expect(result.port).toBeGreaterThan(0);
   });

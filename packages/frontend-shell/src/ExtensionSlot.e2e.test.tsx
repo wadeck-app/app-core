@@ -64,8 +64,8 @@ describe('ExtensionSlot real end-to-end (Decision #32/#40/#44)', () => {
       stdio: ['ignore', 'pipe', 'inherit'],
     });
     await waitForReady(serverProcess);
-    await registerFixture('slot-contributor-a', path.join(fixturesDir, 'slot-contributor-a-app-module'));
-    await registerFixture('slot-contributor-b', path.join(fixturesDir, 'slot-contributor-b-app-module'));
+    await registerFixture('slot-contributor-a', path.join(fixturesDir, 'app-module-slot-contributor-a'));
+    await registerFixture('slot-contributor-b', path.join(fixturesDir, 'app-module-slot-contributor-b'));
   }, 20_000);
 
   afterAll(() => {

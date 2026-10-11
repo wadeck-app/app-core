@@ -3,12 +3,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parseManifest } from '@wadeck-app/app-core-sdk';
 
-// Decision #34: every path-type view in an app-module's manifest must live
+// every path-type view in an app-module's manifest must live
 // inside its own dsl-frontend/ folder -- DSL data only, never code.
 export const rule: Rule = {
   id: 'app-module/view-location',
   tags: 'ts',
-  defaultScope: ['**/packages/*-app-module/manifest.json'],
+  defaultScope: ['**/packages/app-module-*/manifest.json'],
   defaultSeverity: 'error',
 
   async check(files: string[]): Promise<Violation[]> {
@@ -31,7 +31,7 @@ export const rule: Rule = {
           violations.push({
             file: manifestPath,
             line: 1,
-            message: `extensionPoint "${ep.slot}" view path "${ep.view.value}" must resolve inside this module's dsl-frontend/ folder (Decision #34), resolved to "${resolvedView}".`,
+            message: `extensionPoint "${ep.slot}" view path "${ep.view.value}" must resolve inside this module's dsl-frontend/ folder, resolved to "${resolvedView}".`,
           });
         }
       }

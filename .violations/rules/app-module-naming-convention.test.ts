@@ -23,17 +23,17 @@ describe('app-module/naming-convention', () => {
     return manifestPath;
   }
 
-  it('passes a correctly suffixed name', async () => {
-    const manifestPath = manifestAt('queue-app-module');
+  it('passes a correctly prefixed name', async () => {
+    const manifestPath = manifestAt('app-module-queue');
     const violations = await rule.check([manifestPath]);
     expect(violations).toHaveLength(0);
   });
 
-  it('rejects a bare "app-module" with no prefix', async () => {
+  it('rejects a bare "app-module" with no suffix', async () => {
     const manifestPath = manifestAt('app-module');
     const violations = await rule.check([manifestPath]);
     expect(violations).toHaveLength(1);
-    expect(violations[0]!.message).toContain('must be named "<name>-app-module"');
+    expect(violations[0]!.message).toContain('must be named "app-module-<name>"');
   });
 
   it('rejects an unrelated name entirely', async () => {
@@ -42,8 +42,8 @@ describe('app-module/naming-convention', () => {
     expect(violations).toHaveLength(1);
   });
 
-  it('rejects prefix-style naming (app-module-queue)', async () => {
-    const manifestPath = manifestAt('app-module-queue');
+  it('rejects suffix-style naming (queue-app-module)', async () => {
+    const manifestPath = manifestAt('queue-app-module');
     const violations = await rule.check([manifestPath]);
     expect(violations).toHaveLength(1);
   });

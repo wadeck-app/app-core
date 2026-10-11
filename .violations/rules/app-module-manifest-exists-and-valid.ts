@@ -5,9 +5,8 @@ import { ZodError } from 'zod';
 import { parseManifest } from '@wadeck-app/app-core-sdk';
 
 /**
- * Decision #34: every app-module package must ship a valid manifest.json.
- * Catches exactly the real-world gap found in queue-app-module (a backend
- * data layer with no manifest/wiring at all).
+ * Every app-module package must ship a valid manifest.json -- a package with
+ * backend code but no manifest cannot be registered with app-core at all.
  *
  * The violations rule API only hands check() a list of EXISTING files that
  * matched defaultScope -- there is no way to represent "a file is missing"
@@ -16,12 +15,12 @@ import { parseManifest } from '@wadeck-app/app-core-sdk';
  * manifest.json from there, rather than scoping to manifest.json itself
  * (which would never appear in `files` if it's the thing that's missing).
  */
-const FORBIDDEN_MESSAGE = 'app-module package is missing manifest.json (Decision #15/#34) -- an app-module without a manifest cannot be registered with app-core at all.';
+const FORBIDDEN_MESSAGE = 'app-module package is missing manifest.json -- an app-module without a manifest cannot be registered with app-core at all.';
 
 export const rule: Rule = {
   id: 'app-module/manifest-exists-and-valid',
   tags: 'ts',
-  defaultScope: ['**/packages/*-app-module/package.json'],
+  defaultScope: ['**/packages/app-module-*/package.json'],
   defaultSeverity: 'error',
 
   async check(files: string[]): Promise<Violation[]> {

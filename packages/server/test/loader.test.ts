@@ -19,7 +19,7 @@ describe('ModuleManager.loadFromEntry (Decision #8 -- dynamic import with cache-
     const manager = new ModuleManager();
     const loaded = await manager.loadFromEntry({
       id: 'module-a',
-      source: { type: 'file', path: path.join(fixturesDir, 'minimal-app-module', 'manifest.json') },
+      source: { type: 'file', path: path.join(fixturesDir, 'app-module-minimal', 'manifest.json') },
     });
     expect(loaded.manifest.version).toBe('1.0.0');
     expect(loaded.resolvedViews).toMatchObject([
@@ -31,7 +31,7 @@ describe('ModuleManager.loadFromEntry (Decision #8 -- dynamic import with cache-
     const manager = new ModuleManager();
     const loaded = await manager.loadFromEntry({
       id: 'module-b',
-      source: { type: 'file', path: path.join(fixturesDir, 'lifecycle-app-module', 'manifest.json') },
+      source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json') },
     });
     const page = loaded.resolvedViews.find((v) => v.kind === 'page');
     expect(page?.view).toEqual({ $type: 'Badge', label: 'fixture-b-page' });
@@ -41,7 +41,7 @@ describe('ModuleManager.loadFromEntry (Decision #8 -- dynamic import with cache-
     const manager = new ModuleManager();
     await manager.loadFromEntry({
       id: 'module-b',
-      source: { type: 'file', path: path.join(fixturesDir, 'lifecycle-app-module', 'manifest.json') },
+      source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json') },
     });
     await wait(30);
     const ticksAfterV1 = (globalThis as any).__fixtureBTicks.v1;
@@ -50,7 +50,7 @@ describe('ModuleManager.loadFromEntry (Decision #8 -- dynamic import with cache-
     // Simulate an update push: same module id, new manifest/version (module-b-v2 fixture).
     await manager.loadFromEntry({
       id: 'module-b',
-      source: { type: 'file', path: path.join(fixturesDir, 'lifecycle-app-module', 'v2-fixture', 'manifest.json') },
+      source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'v2-fixture', 'manifest.json') },
     });
     const ticksRightAfterSwap = (globalThis as any).__fixtureBTicks.v1;
     await wait(30);
@@ -67,7 +67,7 @@ describe('ModuleManager.loadFromEntry (Decision #8 -- dynamic import with cache-
     const manager = new ModuleManager();
     await manager.loadFromEntry({
       id: 'module-b',
-      source: { type: 'file', path: path.join(fixturesDir, 'lifecycle-app-module', 'manifest.json') },
+      source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json') },
     });
     await wait(30);
     manager.unload('module-b');
