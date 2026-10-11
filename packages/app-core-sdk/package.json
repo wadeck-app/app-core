@@ -3,14 +3,15 @@
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.bundle.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.bundle.d.ts",
   "bin": {
     "app-core-sdk": "./dist/cli.bundle.js"
   },
   "files": [
     "dist/index.bundle.js",
     "dist/cli.bundle.js",
-    "dist/*.d.ts",
+    "dist/index.bundle.d.ts",
+    "dist/public/**",
     "README.md"
   ],
   "publishConfig": {
@@ -29,9 +30,12 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@wadeck-app/app-core-server": "*",
+    "@rollup/plugin-node-resolve": "^16.0.3",
     "@types/node": "^22.10.2",
+    "@wadeck-app/app-core-server": "*",
     "esbuild": "^0.28.2",
+    "rollup": "^4.64.5",
+    "rollup-plugin-dts": "^6.5.1",
     "typescript": "^5.3.3",
     "vitest": "^4.0.14"
   },

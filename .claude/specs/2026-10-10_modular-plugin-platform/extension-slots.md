@@ -28,14 +28,16 @@ Lets one module contribute UI into another module's view (e.g. `queue`'s subscri
 ### Slot naming convention
 `<provider-module-id>:<slot-name>` (e.g. `queue:subscriber-row`) -- prevents accidental collisions between unrelated modules reusing a generic name like `row` or `footer`.
 
-### Open design details (not yet decided)
-- Exact `ExtensionSlot` DSL node shape/params (context passing, multiple-contribution ordering) -- needs a cross-session design conversation with dsl-owner.
-- Whether app-core's existing `GET /api/modules` response needs a new field/endpoint to expose "all extensionPoints for slot X" efficiently, or whether this is computed fresh per `ExtensionSlot` render.
+### `ExtensionSlot` wire contract (resolved with dsl-owner, 2026-10-11)
+- New app-core endpoint: `GET /api/slots/:slotId` -- returns a BARE array of DSL nodes (`[{ "$type": ..., ... }, ...]`), not an envelope. This matches dsl-renderer's proposed `ExtensionSlot` directive exactly (`resolveExpressionValue(node['items'], ctx)` fed straight into `renderChildren`), so zero further dsl-renderer changes are needed beyond what dsl-owner already proposed.
+- A page uses it via a normal `$sources` entry: `$sources: { subscriberRowExtensions: "GET /api/slots/queue:subscriber-row/contributions" }`, then `{ "$type": "ExtensionSlot", "items": "$sources.subscriberRowExtensions" }`.
+- Ordering/multiplicity is app-core's job internally (dsl-renderer just renders array order, per dsl-owner), but WITHOUT app-core needing to know what any slot means (Decision #33/P-3 preserved): each contributing module's `extensionPoints[]` entry gets a generic, slot-agnostic `order` field (number, optional, defaults to registration order if absent) -- a purely structural sort key, not a semantic one. app-core sorts by this field and strips it before emitting the bare array over HTTP.
+- Implementation: `GET /api/slots/:slotId` looks up every registered module's manifest for `extensionPoints` whose `slot` matches `:slotId`, resolves each one's `view` the same way `GET /api/modules` already does, sorts by `order`, and returns just the resolved view nodes.
 
 ## Open questions
 
 <!-- Questions specific to this module that are also in _index.md > Open Questions. -->
-- `ExtensionSlot` DSL node design -- pending a conversation with dsl-owner (not yet started).
+*(none currently -- see _index.md for the broader spec's remaining open questions)*
 
 ## Security considerations
 

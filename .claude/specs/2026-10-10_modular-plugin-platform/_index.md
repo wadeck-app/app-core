@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 39 decisions logged, 0 open questions
+**Status:** In Progress -- v0.1 -- 40 decisions logged, 0 open questions
 **Iteration:** 1
 
 ## Summary
@@ -182,6 +182,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | 37 | app-module naming convention is SUFFIX-style: `<name>-app-module` (e.g. `queue-app-module`, matching what `queue-owner` already shipped), not prefix-style (`app-module-<name>`). Violations rules' glob changes from the literal `**/packages/app-module/**` (Decision #22/#34) to `**/packages/*-app-module/**`. app-core's own test fixtures move to `packages/test-app-modules/<descriptive-name>-app-module/` (e.g. `minimal-app-module`, `lifecycle-app-module`, `live-page-app-module`, `live-widget-app-module` -- descriptive names, not module-a/b/c/d). | Decided | 2026-10-11 | Avoids forcing `queue-owner` to rename an already-shipped, CI-green package for a convention still being finalized -- matches the user's stated goal of minimizing unnecessary churn/back-and-forth. |
 | 38 | New violations rule: any package directory containing a `manifest.json` (the signal that it's an app-module) must itself be named matching `*-app-module`. Catches a module shipped under the wrong folder name automatically. | Decided | 2026-10-11 | User: "une autre regle de violation de s'assurer que tout app-module doit etre appele [app-module-*]... en se basant sur la presence d'un manifest." |
 | 39 | `@wadeck-app/app-core-sdk` is not actually publishable yet -- confirmed no `.github/` workflow exists in app-core's repo at all (verified: `find .github` returns nothing), unlike every other `@wadeck-app/*` package. A CI/publish pipeline must be built (mirroring `violations-framework`'s `publish.yml`: build-and-test job + publish job gated on push to main, using `wadeck-app/ci-templates`'s `compute-version` action) before `queue-owner` can actually `npm install` it. SDK documentation (README) must be thorough enough to be self-explanatory -- no further hand-holding expected once published. | Decided | 2026-10-11 | User: "once you're done... that should be enough for it to refactor its module. If it's not, your documentation must be updated... it's expected to be self-explanatory." Discovered via `queue-owner`'s real 404 when attempting `npm install`. |
+
+## Decision Log (cont. 25)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 40 | `ExtensionSlot` wire contract resolved: new `GET /api/slots/:slotId` endpoint returns a bare array of resolved DSL view nodes (no envelope) -- matches dsl-owner's proposed renderer-side fix with zero further dsl-renderer changes. Multi-contributor ordering is handled by a generic, slot-agnostic `order` field on each contributing `extensionPoints[]` entry; app-core sorts and strips it before emitting the bare array, so app-core still never needs semantic knowledge of what a slot means (P-3 preserved). | Decided | 2026-10-11 | Dictated by consistency with Decision #32/#33 and P-3 once dsl-owner's two already-existing building blocks (`$sources`, `renderChildren`) were confirmed -- no new ceremony needed. |
 
 ## Open Questions
 

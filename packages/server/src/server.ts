@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface BuildServerOptions {
   configDir?: string;
+  publicDir?: string;
 }
 
 export interface AppCoreServer {
@@ -51,7 +52,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   // scripts/copy-app.mjs) -- same static-serving + SPA-fallback pattern as
   // orch-server (its sibling precedent in this workspace). __dirname here is
   // packages/server/dist at runtime, so public/ at the repo root is 3 levels up.
-  const publicDir = path.resolve(__dirname, '../../../public');
+  const publicDir = opts.publicDir ?? path.resolve(__dirname, '../../../public');
   const hasPublic = fs.existsSync(publicDir);
   if (hasPublic) {
     await server.register(fastifyStatic, { root: publicDir });
