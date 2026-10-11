@@ -22,5 +22,6 @@ export default {
     './.violations/rules/app-module-view-location.ts': true,
     './.violations/rules/app-module-no-react.ts': true,
     './.violations/rules/app-module-naming-convention.ts': true,
+    './.violations/rules/app-core-sdk-no-internal-dependencies.ts': true,
   },
 } satisfies ViolationsConfig

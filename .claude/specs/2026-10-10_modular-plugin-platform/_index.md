@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 40 decisions logged, 0 open questions
+**Status:** In Progress -- v0.1 -- 41 decisions logged, 0 open questions
 **Iteration:** 1
 
 ## Summary
@@ -188,6 +188,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 40 | `ExtensionSlot` wire contract resolved: new `GET /api/slots/:slotId` endpoint returns a bare array of resolved DSL view nodes (no envelope) -- matches dsl-owner's proposed renderer-side fix with zero further dsl-renderer changes. Multi-contributor ordering is handled by a generic, slot-agnostic `order` field on each contributing `extensionPoints[]` entry; app-core sorts and strips it before emitting the bare array, so app-core still never needs semantic knowledge of what a slot means (P-3 preserved). | Decided | 2026-10-11 | Dictated by consistency with Decision #32/#33 and P-3 once dsl-owner's two already-existing building blocks (`$sources`, `renderChildren`) were confirmed -- no new ceremony needed. |
+
+## Decision Log (cont. 26)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 41 | New violations rule `app-core-sdk/no-internal-dependencies`: `package.json`'s `dependencies` must never list a sibling in-repo package (dynamically discovered from `packages/*/package.json` names, not hardcoded). Catches the exact class of bug that made the SDK uninstallable, permanently, at dev-time. A SECOND check, a build-time assertion in `scripts/bundle.mjs`, covers what the rule structurally cannot: `dist/**` is globally excluded from violations scanning by design (lints source, not build artifacts), so the published bundle/`.d.ts` output is asserted clean of internal references right after being produced, failing the build loudly if not. | Decided | 2026-10-11 | User (via `queue-owner`): app-core-sdk is the "base" package every app-module depends on, should have zero internal cross-package references of any kind, type-only or runtime -- worth a permanent rule, not just a one-off fix. |
 
 ## Open Questions
 
