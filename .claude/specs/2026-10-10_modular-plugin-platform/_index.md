@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 54 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 55 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -243,10 +243,17 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | 53 | CORRECTION of Decision #37: naming convention is PREFIX-style (`app-module-<name>`, e.g. `app-module-queue`), not suffix-style. The user had already stated this explicitly ("la violation rules doit etre packages/**/app-module-*") before Decision #37 was logged; #37 incorrectly inferred suffix-style from an unrelated later message about documentation self-sufficiency, overriding an explicit instruction that was never actually retracted. All violations rules' globs, the naming-convention rule's pattern, and all 6 test-app-modules fixtures renamed/fixed to match (`app-module-minimal`, `app-module-lifecycle`, `app-module-live-page`, `app-module-live-widget`, `app-module-slot-contributor-a`, `app-module-slot-contributor-b`). `queue`'s real `queue-app-module` will now fail the naming-convention rule -- this is intentional: the user wants the rule itself to be `queue-owner`'s feedback loop, not a direct instruction from app-core to rename. | Decided | 2026-10-11 | User caught the error: "non j'ai jamais dit de garder le suffixe... je veux le app-module-x!!!!" |
 | 54 | New standing rule for all code comments in this repo: no decision-number references ("Decision #N") or historical/incident narrative in code comments. Comments describe the current invariant/behavior only; git history and the spec own the "why/when/who decided" record. Applied retroactively to the files touched during Decision #53's fix; NOT yet applied repo-wide to earlier code (a separate, larger cleanup pass if wanted later). | Decided | 2026-10-11 | User: "pas d'historique de decision dans le code! git et les specs servent a ca!" |
 
+## Decision Log (cont. 34)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 55 | BUG FOUND: the 6 `app-module/*` violations rules (Decisions #22/#34/#37/#38) were built as LOCAL files in app-core's own `.violations/rules/`, which per violations-framework's documented behavior only auto-run inside app-core's own repo -- they never had a path to reach a consumer repo like `queue`. Describing them as "auto-applying to any repo" was incorrect; conflated "no per-repo config within app-core" with "global across every repo." Caught by `queue-owner` attempting to actually trigger one. Fix in progress: migrating all 6 to the real global package (`@wadeck-app/violations-rules`), coordinated with `violations-owner`. `app-core-sdk/no-internal-dependencies` (Decision #41) correctly stays local -- it's inherently app-core-specific. | Open (fix requested, not yet landed) | 2026-10-11 | User: "je pense que ta regle de violation ne trigger pas proprement car elle doit etre globale (dans violations rules) pas dans ton projet ou dans le sdk!" |
+
 ## Open Questions
 
 | # | Question | Priority | Status |
 |---|---|---|---|
+| 1 | Migration of the 6 `app-module/*` rules into `@wadeck-app/violations-rules`: pending `violations-owner`'s response on how they want the handoff (direct migration vs. receiving the rule source/tests). | High | Open |
 
 ## Modules / Sub-files
 
