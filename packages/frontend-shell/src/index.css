@@ -1,0 +1,7 @@
+/* The shared palette (including color-scheme per theme) is imported from
+   @wadeck-app/dsl-ui/theme.css by main.tsx, not here: Vite resolves bare
+   package specifiers in CSS with a resolver that ignores the package exports
+   map. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

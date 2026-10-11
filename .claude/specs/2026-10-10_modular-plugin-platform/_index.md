@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 59 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 60 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -272,7 +272,8 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
-| 59 | BUG FOUND AND FIXED: the frontend never imported `@wadeck-app/dsl-ui/theme.css` at all -- the dashboard rendered with zero styling (raw browser defaults), despite every component underneath genuinely being real `dsl-ui` components. Fixed by mirroring `orch-app/src/main.tsx`'s exact proven pattern: `import '@wadeck-app/dsl-ui/theme.css'` as the very first import in `main.tsx`, before any app-specific CSS (must be a JS-side import, not a plain CSS `@import`, since Vite resolves the bare package specifier through its exports map). Verified for real: build output gained a `dist/assets/index.css` (2.80 kB) and self-hosted Inter font files that didn't exist before, and the already-running server now serves `/assets/index.css` at 200. | Decided | 2026-10-11 | User screenshot showed completely unstyled output; pointed at `orch-app` as the real precedent to copy, not invent a new pattern. | 2026-10-11 |
+| 59 | BUG FOUND AND FIXED (part 1, insufficient on its own): the frontend never imported `@wadeck-app/dsl-ui/theme.css` -- fixed by mirroring `orch-app/src/main.tsx`'s pattern. | Decided | 2026-10-11 | User screenshot showed unstyled output. |
+| 60 | BUG FOUND AND FIXED (part 2, the real root cause): `theme.css` only provides CSS custom-property tokens (`--color-*`) and `@font-face` rules -- `dsl-ui`'s actual component styling is Tailwind utility classes, generated via `@tailwind base/components/utilities` directives processed against `dsl-ui`'s own Tailwind preset (`@wadeck-app/dsl-ui/tailwind-preset` + its `dslUiContent` scan paths). app-core's frontend had no Tailwind build configured at all (no `tailwind.config`, no `postcss.config`, no `tailwindcss`/`postcss`/`autoprefixer` deps), so none of those utility classes were ever generated -- components rendered structurally (borders, some colors from `theme.css`'s own non-Tailwind rules) but with zero real typography/spacing/theming. Fixed by replicating `orch-app`'s exact build setup: added the 3 dev dependencies, `postcss.config.js`, `tailwind.config.ts` (using `dslUiPreset` + `dslUiContent`, confirmed required per `orch-app`'s own comment -- Tailwind only reads `content` from the top-level config, the preset can't contribute scan paths itself), new `src/index.css` with the 3 `@tailwind` directives, imported in `main.tsx` after `theme.css`. Verified visually via `agent-browser` (real headless Chromium screenshot, not assumed): CSS output grew from 2.80 kB to 38.04 kB, and the before/after screenshots show real Inter font + correct `StatTile` card styling replacing raw browser-default serif text. | Decided | 2026-10-11 | User: "utilise agent-browser pour tester... y a tjs pas de style" -- the first fix wasn't actually sufficient, caught by the user insisting on a real visual check rather than trusting the build-output size alone. | 2026-10-11 |
 
 ## Open Questions
 
