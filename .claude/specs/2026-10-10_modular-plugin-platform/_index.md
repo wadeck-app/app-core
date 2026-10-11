@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 51 decisions logged, 0 open questions
+**Status:** In Progress -- v0.1 -- 52 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -229,6 +229,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 51 | Module packaging (zip/link install/update/uninstall, Decision #48/#49/#50) deferred to a future iteration -- documented in module-packaging.md and future-iterations.md, not current work. | Decided | 2026-10-11 | User: "defer a une iteration 2! faut que je me focus sur juste un premier truc qui fonctionne." |
+
+## Decision Log (cont. 32)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 52 | MILESTONE: `queue`'s real `app-module` works end-to-end against a live app-core instance -- registered, two `StatTile` dashboard widgets and a `DataTable` history page, all live-data-backed via `$sources` + `moduleContext.registerRoute()`. Independently verified by the parent (not just trusting `queue-owner`'s report): `GET /api/modules` on the real running instance shows queue's exact manifest/views, `GET /api/modules/queue/history` returns genuine live daemon history data (real task/flow events). `queue-owner` additionally confirmed visually via a real headless-browser screenshot (not independently re-verified by the parent, but credible given the underlying data/manifest are independently confirmed real). First real module to complete the full loop the whole spec was built toward (Decision #20's "queue first" plan). | Decided | 2026-10-11 | First real end-to-end validation of the entire platform, not a test fixture. |
 
 ## Open Questions
 
