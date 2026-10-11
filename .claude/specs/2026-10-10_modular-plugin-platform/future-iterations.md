@@ -16,6 +16,11 @@ A module can only register handlers for its own specific paths (`moduleContext.r
 Decision #16/P-5 mandates DSL-only module UI for v1. Realistically expected to come up eventually (a module needing something no generic `dsl-ui` component can express).
 **Deferred:** Decision #30. **Reason:** requires a real runtime frontend-plugin system (foreign component code loaded into app-core's single running frontend, shared React instance, version conflicts) -- categorically harder than anything built so far, not needed by any real module yet.
 
+### Module packaging (zip/link install/update/uninstall)
+A module (backend + DSL frontend) packaged as a zip/link that app-core can install, replace, and uninstall at runtime -- distinct from today's `{ type: 'file', path }` source, which assumes a pre-built package already on local disk. Strictly install-replace-uninstall, one version at a time (Decision #48); same trusted/no-sandboxing stance as everything else (Decision #49); explicitly NOT bring-your-own-component (Decision #30/#50 -- stays its own separate, further-out v2 item).
+**Deferred:** 2026-10-11. **Reason:** user wants to focus on getting one real end-to-end thing working first (`queue`'s real module registering with app-core) before taking on new scope.
+**See:** module-packaging.md -- design sketch and the A/B source-type question are captured there, ready to pick up.
+
 ## Upstream asks pending (dsl-view, not app-core's own backlog)
 
 ### `entriesGenerator` lazy/code-split option

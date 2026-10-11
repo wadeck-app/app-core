@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 47 decisions logged, 0 open questions
+**Status:** In Progress -- v0.1 -- 51 decisions logged, 0 open questions
 **Iteration:** 1
 
 ## Summary
@@ -216,6 +216,20 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | 46 | Found and fixed during verification: `app-core-cli dev` never actually read `APP_CORE_PORT`, unlike the main server (Decision #7) -- hardcoded 4850 with no override path at all, discovered because it blocked the parent's own verification (a leftover process was already on 4850). Fixed by wiring the same env var through `runDev`'s default port resolution. Verified end-to-end on a real external install, real port override, real HTTP round trip. | Decided | 2026-10-11 | Decision #7 already promised "overridable via env... to support testing" for the main server; `dev` silently didn't honor that promise. | 2026-10-11 |
 | 47 | Real end-to-end `ExtensionSlot` integration test built and passing: a real spawned app-core server process, the real published `@wadeck-app/dsl-renderer@2026.10.11-090` (confirmed `ExtensionSlot` is genuinely present in the published build, not just dsl-owner's local uncommitted source as it briefly was), real HTTP registration of two contributor fixtures, real `GET /api/slots/test:shared-slot` fetch through the real `fetcher`/`GenericPageRunner`, with DOM-position assertions proving the server-side `order` sort is real (not pass-through). | Decided | 2026-10-11 | Requested by `dsl-owner` to validate both sides' work together, not just in isolation. | 2026-10-11 |
 
+## Decision Log (cont. 30)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 48 | New feature area: packaging a module (backend + frontend) as a zip/link that app-core can install/uninstall/update at runtime. Strictly install-replace-uninstall, one version at a time -- no multi-version coexistence during a rollout. | Decided | 2026-10-11 | User: "strictly install-replace-uninstall one at a time? oui." |
+| 49 | Security/trust stance (Decision #6, local trusted-users-only, no sandboxing) extends to this feature too -- dynamically loaded frontend JS from a module package is not treated as a different risk tier. | Decided | 2026-10-11 | User: "pas de souci de securite, c'est du trusted!" |
+| 50 | Bring-your-own-component (a module shipping genuinely new React components, not just DSL referencing dsl-ui) stays v2-deferred (Decision #30) -- NOT part of this new packaging feature's current scope. The user raised it with dsl-owner only so the packaging design doesn't accidentally foreclose it later, not as a current requirement. | Decided | 2026-10-11 | User: "pour le bring-your-own-component c'est une v2, j'indiquais juste a dsl-owner ce qu'il devait imaginer comme plan pour pas casser ca dans le futur." |
+
+## Decision Log (cont. 31)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 51 | Module packaging (zip/link install/update/uninstall, Decision #48/#49/#50) deferred to a future iteration -- documented in module-packaging.md and future-iterations.md, not current work. | Decided | 2026-10-11 | User: "defer a une iteration 2! faut que je me focus sur juste un premier truc qui fonctionne." |
+
 ## Open Questions
 
 | # | Question | Priority | Status |
@@ -233,6 +247,7 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | `frontend-shell.md` | app-core's own frontend: base extension-point slots (navbar/sidebar, dashboard, nav pages) |
 | `extension-slots.md` | Module-to-module extension points: `ExtensionSlot` DSL primitive, provider-owned slot contracts |
 | `app-core-sdk.md` | `@wadeck-app/app-core-sdk`: shared types/schemas, manifest validator, local dev runner |
+| `module-packaging.md` | Zip/link-based module install/update/uninstall at runtime |
 | `future-iterations.md` | Deferred ideas/items for later iterations (middleware, etc.) -- not current scope |
 
 ## Changelog
