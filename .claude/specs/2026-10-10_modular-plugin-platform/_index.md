@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 57 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 58 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -261,11 +261,16 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 |---|---|---|---|---|
 | 57 | BUG FOUND AND FIXED: `app-core-cli`'s self-update was broken since it was first built -- `cli.ts` correctly expected the updater bundle at `app-core-cli-updater.cjs` (matching the universal `<binary-name>-updater.cjs` convention confirmed across queue/orchestrator/flow-cli), but `bundle.mjs` actually produced `updater-entry.bundle.cjs` (named after its source file instead). The two names never matched, so `app-core-cli update` always failed with "updater not found," and because the self-updater can't fix itself from a broken state, every real install stayed stuck on whatever version was first installed. Found via `violations-owner`'s real-world report of a stuck install. Fixed `bundle.mjs`'s output filename and `package.json`'s `files` entry; also added the same updater bundle-size safeguard (500KB limit) every other `@wadeck-app` CLI's bundler has. Verified for real: ran the actual `update` command locally, confirmed it found the updater, executed it, and upgraded to the real published latest version, then passed `self-check`. | Decided | 2026-10-11 | User: "assure toi que le app-core-cli suit les memes principes que flow, task, orch niveau auto-update!" |
 
+## Decision Log (cont. 37)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 58 | RESOLVED: the 6 `app-module/*` rules are genuinely migrated, published (`@wadeck-app/violations-rules@2026.10.11-121`), and verified by the parent via a real scratch consumer repo (not just trusting `violations-owner`'s report) -- a misnamed `queue-app-module` package correctly flags, a correctly-named `app-module-queue` passes clean (0 violations), including the `manifest-exists-and-valid` rule's shell-out to the real `app-core-cli` succeeding. `queue-owner` cleared to rename for real. | Decided | 2026-10-11 | Closes the gap found in Decision #55. |
+
 ## Open Questions
 
 | # | Question | Priority | Status |
 |---|---|---|---|
-| 1 | Migration of the 6 `app-module/*` rules into `@wadeck-app/violations-rules`: `violations-owner` reports migration done locally (380 tests pass, self-check clean), but confirmed via `git status`/`npm view` that it's still uncommitted/unpublished -- not yet verifiable from app-core's side. Waiting on commit+push+publish before real verification. | High | Open |
 
 ## Modules / Sub-files
 
