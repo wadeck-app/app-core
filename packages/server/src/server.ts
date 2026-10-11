@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { modulesRoutes } from './routes/modules.js';
+import { slotsRoutes } from './routes/slots.js';
 import { ModuleManager } from './loader.js';
 import { resolveModulesDir } from './configDir.js';
 import { readRegistryEntries } from './registry.js';
@@ -31,6 +32,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
 
   const server = Fastify({ logger: false });
   await server.register(modulesRoutes, { modulesDir, manager });
+  await server.register(slotsRoutes, { manager });
 
   // Decision #26: a module's own registerRoute()-registered routes are dispatched
   // through a single catch-all, since Fastify/find-my-way has no API to remove a

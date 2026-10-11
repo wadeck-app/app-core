@@ -19,7 +19,7 @@ export interface LoadedModule {
   manifest: Manifest;
   manifestDir: string;
   moduleContext: ModuleContext;
-  resolvedViews: Array<{ kind: string; slot: string; label?: string; view: unknown; rawYaml: string }>;
+  resolvedViews: Array<{ kind: string; slot: string; label?: string; view: unknown; rawYaml: string; order?: number }>;
 }
 
 export class ModuleManager {
@@ -70,6 +70,7 @@ export class ModuleManager {
       label: ep.label,
       view: resolveView(ep, manifestDir),
       rawYaml: resolveRawYaml(ep, manifestDir),
+      order: ep.order,
     }));
 
     const loadedModule: LoadedModule = { id: entry.id, manifest, manifestDir, moduleContext, resolvedViews };

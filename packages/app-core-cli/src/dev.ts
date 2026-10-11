@@ -24,7 +24,7 @@ export async function runDev(appModuleDir: string, opts: DevOptions = {}): Promi
   }
   const moduleId = opts.moduleId ?? path.basename(path.resolve(appModuleDir));
 
-  const scratchConfigDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-sdk-dev-'));
+  const scratchConfigDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-cli-dev-'));
   writeRegistryEntry(resolveModulesDir(scratchConfigDir), {
     id: moduleId,
     source: { type: 'file', path: manifestPath },
@@ -36,7 +36,11 @@ export async function runDev(appModuleDir: string, opts: DevOptions = {}): Promi
   // once this package is installed standalone. See server.ts's `publicDir` option.
   const publicDir = path.join(__dirname, 'public');
   const { server } = await buildServer({ configDir: scratchConfigDir, publicDir });
-  const requestedPort = opts.port ?? 4850;
+  // Decision #7: port is hardcoded but overridable via env, specifically to support
+  // testing -- the main server (packages/server/src/port.ts) already does this,
+  // `dev` needs the same so it doesn't collide with an already-running instance.
+  const envPort = process.env['APP_CORE_PORT'];
+  const requestedPort = opts.port ?? (envPort ? Number(envPort) : 4850);
   await server.listen({ port: requestedPort, host: '127.0.0.1' });
   const address = server.server.address();
   const actualPort = typeof address === 'object' && address ? address.port : requestedPort;

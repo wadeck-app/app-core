@@ -5,3 +5,4 @@ public/
 *.tsbuildinfo
 *.tgz
 .idea
+.e2e-scratch-config/

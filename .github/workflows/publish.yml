@@ -19,9 +19,10 @@ permissions:
   contents: read
   packages: write
 
-# Only packages/app-core-sdk is published -- packages/server and
-# packages/frontend-shell are app-core's own internal implementation, never
-# installed by anyone else.
+# packages/app-core-sdk and packages/app-core-cli are published -- packages/server
+# and packages/frontend-shell are app-core's own internal implementation, never
+# installed by anyone else. sdk publishes first since cli depends on it
+# (Decision #42: types-only sdk, cli as a separate global auto-updating binary).
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -74,13 +75,22 @@ jobs:
           version-input: ${{ github.event.inputs.version || '' }}
           breaking-input: ${{ github.event.inputs.breaking || 'false' }}
 
-      - name: Inject version into app-core-sdk
-        run: npm pkg set version="${{ steps.version.outputs.version }}" --workspace=packages/app-core-sdk
+      - name: Inject version into app-core-sdk and app-core-cli
+        run: |
+          npm pkg set version="${{ steps.version.outputs.version }}" --workspace=packages/app-core-sdk
+          npm pkg set version="${{ steps.version.outputs.version }}" --workspace=packages/app-core-cli
+          npm pkg set dependencies.@wadeck-app/app-core-sdk="${{ steps.version.outputs.version }}" --workspace=packages/app-core-cli
 
       - run: npm run build
 
-      - name: Publish app-core-sdk
+      - name: Publish app-core-sdk first (app-core-cli depends on it)
         working-directory: packages/app-core-sdk
+        run: npm publish --tag ${{ steps.version.outputs.dist_tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish app-core-cli
+        working-directory: packages/app-core-cli
         run: npm publish --tag ${{ steps.version.outputs.dist_tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

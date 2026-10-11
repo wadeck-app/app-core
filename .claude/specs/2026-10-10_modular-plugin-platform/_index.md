@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 41 decisions logged, 0 open questions
+**Status:** In Progress -- v0.1 -- 47 decisions logged, 0 open questions
 **Iteration:** 1
 
 ## Summary
@@ -194,6 +194,27 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 41 | New violations rule `app-core-sdk/no-internal-dependencies`: `package.json`'s `dependencies` must never list a sibling in-repo package (dynamically discovered from `packages/*/package.json` names, not hardcoded). Catches the exact class of bug that made the SDK uninstallable, permanently, at dev-time. A SECOND check, a build-time assertion in `scripts/bundle.mjs`, covers what the rule structurally cannot: `dist/**` is globally excluded from violations scanning by design (lints source, not build artifacts), so the published bundle/`.d.ts` output is asserted clean of internal references right after being produced, failing the build loudly if not. | Decided | 2026-10-11 | User (via `queue-owner`): app-core-sdk is the "base" package every app-module depends on, should have zero internal cross-package references of any kind, type-only or runtime -- worth a permanent rule, not just a one-off fix. |
+
+## Decision Log (cont. 27)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 42 | Approved: split into `@wadeck-app/app-core-sdk` (types/schemas only, stays a project-local dependency -- required by TypeScript module resolution, not a style choice) and a new `@wadeck-app/app-core-cli` (`validate`/`dev` commands, global auto-updating binary via `shared-updater`, matching queue/orch/flow/task's convention). | Decided | 2026-10-11 | User (via `queue-owner`): "Wadeck approved the split -- go ahead." |
+| 43 | CORRECTION: dsl-renderer/dsl-ui are pinned to an exact calver release in app-core's package.json, not `latest`/`*` -- they do NOT demonstrate a deliberate "libraries stay pinned" convention as I originally claimed; that was an overstatement. The underlying technical argument (types require real `node_modules` resolution, ruling out a global-binary distribution for that half) is unaffected by pinning strategy and still holds. The new `app-core-sdk`/`app-core-cli` packages use `latest`/`*` ranges, matching the user's actual stated preference, independent of whatever the ongoing dsl-renderer/dsl-ui pinning investigation (user + dsl-owner) concludes. | Decided | 2026-10-11 | `queue-owner` verified app-core's real package.json directly rather than trusting my earlier claim -- correction accepted, not defended. |
+
+## Decision Log (cont. 28)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 44 | `GET /api/slots/:slotId` built and verified -- aggregates every loaded module's `extensionPoints` matching the slot, sorts by the new optional `order` field (Decision #40's mitigation, ascending, no-order entries last), strips `order`, responds with a bare array (`[]` if nothing matches). Independently re-verified by the parent via a real running server + curl (not just unit tests): sorting proven correct, no `order` key leaks, unused slot returns `[]` not an error. 70/70 tests pass. | Decided | 2026-10-11 | Completes the `ExtensionSlot` mechanism's app-core side; `dsl-owner`'s renderer side was already built and tested. |
+
+## Decision Log (cont. 29)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 45 | `app-core-sdk`/`app-core-cli` split built and independently verified: types-only `app-core-sdk` (pinned per-project), `app-core-cli` (`validate`/`dev`, global auto-update via `shared-updater`'s `without-daemon` strategy, mirroring `queue-cli`'s real `updater-entry.ts` pattern exactly). Kept `app-core-cli` as both package and bin name, no backward-compat alias (nothing shipped against the old name yet). Real external install verified by the parent (not just the implementing agent): `npm pack` both -> fresh scratch install -> `validate` works, real `tsc --strict` consumption test passes. 75/75 tests. | Decided | 2026-10-11 | Completes Decision #42. |
+| 46 | Found and fixed during verification: `app-core-cli dev` never actually read `APP_CORE_PORT`, unlike the main server (Decision #7) -- hardcoded 4850 with no override path at all, discovered because it blocked the parent's own verification (a leftover process was already on 4850). Fixed by wiring the same env var through `runDev`'s default port resolution. Verified end-to-end on a real external install, real port override, real HTTP round trip. | Decided | 2026-10-11 | Decision #7 already promised "overridable via env... to support testing" for the main server; `dev` silently didn't honor that promise. | 2026-10-11 |
+| 47 | Real end-to-end `ExtensionSlot` integration test built and passing: a real spawned app-core server process, the real published `@wadeck-app/dsl-renderer@2026.10.11-090` (confirmed `ExtensionSlot` is genuinely present in the published build, not just dsl-owner's local uncommitted source as it briefly was), real HTTP registration of two contributor fixtures, real `GET /api/slots/test:shared-slot` fetch through the real `fetcher`/`GenericPageRunner`, with DOM-position assertions proving the server-side `order` sort is real (not pass-through). | Decided | 2026-10-11 | Requested by `dsl-owner` to validate both sides' work together, not just in isolation. | 2026-10-11 |
 
 ## Open Questions
 

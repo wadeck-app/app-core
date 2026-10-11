@@ -1,42 +1,29 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import * as path from 'node:path';
-import * as url from 'node:url';
-import { validateManifestFile } from './validate.js';
-import { runDev } from './dev.js';
+import { describe, it, expect } from 'vitest';
+import { ManifestSchema, parseManifest, createModuleContext, UnsupportedSourceTypeError, parseRegistrationPayload } from './index.js';
 
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const fixturesDir = path.resolve(__dirname, '../../test-app-modules');
-
-describe('validateManifestFile', () => {
-  it('passes a real valid manifest fixture', () => {
-    const result = validateManifestFile(path.join(fixturesDir, 'minimal-app-module', 'manifest.json'));
-    expect(result.ok).toBe(true);
+// app-core-sdk is a types/schemas-only package (Decision #42) -- these tests
+// prove the re-exports actually work end to end, not just compile.
+describe('app-core-sdk re-exports', () => {
+  it('ManifestSchema/parseManifest validate a real manifest shape', () => {
+    const manifest = parseManifest({
+      version: '1.0.0',
+      backendEntryPath: './api-backend/index.js',
+      extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: { $type: 'Badge', label: 'ok' } } }],
+    });
+    expect(manifest.version).toBe('1.0.0');
+    expect(ManifestSchema.safeParse(manifest).success).toBe(true);
   });
 
-  it('fails with a clear message when the file is missing', () => {
-    const result = validateManifestFile(path.join(fixturesDir, 'does-not-exist', 'manifest.json'));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.message).toContain('No manifest found');
+  it('createModuleContext produces a usable ModuleContext', () => {
+    const ctx = createModuleContext('test-module', { register: () => {}, unregisterAllForModule: () => {}, find: () => undefined } as any);
+    expect(typeof ctx.setInterval).toBe('function');
+    expect(typeof ctx.registerRoute).toBe('function');
+    ctx.dispose();
   });
 
-  it('fails with zod issue details on an invalid manifest', () => {
-    const result = validateManifestFile(path.join(__dirname, '../test-fixtures/invalid-manifest.json'));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.message).toContain('failed manifest validation');
-  });
-});
-
-describe('runDev', () => {
-  let close: (() => Promise<void>) | undefined;
-
-  afterEach(async () => {
-    if (close) await close();
-    close = undefined;
-  });
-
-  it('boots the real server against a local module fixture', async () => {
-    const result = await runDev(path.join(fixturesDir, 'minimal-app-module'), { port: 0 });
-    close = result.close;
-    expect(result.port).toBeGreaterThan(0);
+  it('parseRegistrationPayload rejects npm source (v1, Decision #11) via UnsupportedSourceTypeError', () => {
+    expect(() => parseRegistrationPayload({ id: 'x', source: { type: 'npm', package: 'y', version: '1.0.0' } })).toThrow(
+      UnsupportedSourceTypeError,
+    );
   });
 });

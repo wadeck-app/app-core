@@ -12,6 +12,11 @@ const ExtensionPointSchema = z.object({
   slot: z.string().min(1),
   label: z.string().optional(),
   view: ViewSchema,
+  // Decision #40: generic, slot-agnostic sort key for ExtensionSlot aggregation
+  // (GET /api/slots/:slotId). Purely structural -- app-core sorts by this
+  // number, it never interprets what it means. Entries without `order` sort
+  // last, in registration order.
+  order: z.number().optional(),
 });
 
 export const ManifestSchema = z.object({

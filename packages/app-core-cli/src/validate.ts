@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import { ZodError } from 'zod';
-import { parseManifest } from '@wadeck-app/app-core-server/manifest';
+import { parseManifest } from '@wadeck-app/app-core-sdk';
 
 // Decision #31: runs the exact same zod schema app-core's server uses, so a
 // module author catches a malformed manifest before ever starting app-core.

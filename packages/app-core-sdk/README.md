@@ -1,14 +1,20 @@
 # @wadeck-app/app-core-sdk
 
-Types, manifest validation, and a local dev runner for authoring an `app-module` package that
-app-core loads at runtime. If you're building a module for Orchestrator, Queue, Flow, or any
-future daemon, this is the only package you need.
+Types and manifest/schema validation for authoring an `app-module` package that app-core loads at
+runtime. If you're building a module for Orchestrator, Queue, Flow, or any future daemon, this
+package gives you the typed contract -- for the `validate`/`dev` CLI commands, see
+`@wadeck-app/app-core-cli` instead (installed globally, auto-updating, like every other
+`@wadeck-app` CLI in this workspace).
 
 ## Install
 
 ```sh
 npm install --save-dev @wadeck-app/app-core-sdk
 ```
+
+This stays a project-local dependency, deliberately -- `import type` statements can only be
+resolved through real `node_modules` in your own project, so there is no "global" version of this
+package. (The CLI tooling has no such constraint; see `@wadeck-app/app-core-cli`.)
 
 ## The contract, end to end
 
@@ -47,11 +53,14 @@ An app-module is a package named `<name>-app-module` (e.g. `queue-app-module`), 
 - `extensionPoints[].kind` is `"widget"` (renders into app-core's dashboard grid) or `"page"`
   (renders into app-core's sidebar nav, routed to a full page). `slot` is `"dashboard"` or
   `"nav"` respectively.
+- `extensionPoints[].order` (optional number) only matters if your module contributes to another
+  module's `ExtensionSlot` -- app-core sorts by it and strips it before rendering; it's a purely
+  structural sort key, app-core never interprets what it means.
 
-Validate it before you ever start app-core:
+Validate it before you ever start app-core (requires `@wadeck-app/app-core-cli`):
 
 ```sh
-npx app-core-sdk validate ./manifest.json
+app-core-cli validate ./manifest.json
 ```
 
 ### Registering the module with app-core
@@ -73,11 +82,12 @@ untrusted input.
 ### The backend entry
 
 `backendEntryPath` points at a file with a single default export: a function receiving
-`ModuleContext`. It's called once when app-core loads (or reloads) your module.
+`ModuleContext` (typed by this package).
 
-```js
-// api-backend/backend.mjs
-export default function (ctx) {
+```ts
+import type { ModuleContext } from '@wadeck-app/app-core-sdk';
+
+export default function (ctx: ModuleContext) {
   // Register an HTTP route under /api/modules/<your-module-id>/history --
   // app-core enforces the id prefix itself, you only give the sub-path.
   ctx.registerRoute('GET', '/history', (_req, reply) => {
@@ -116,40 +126,20 @@ no base-path logic to worry about. Keep the module id a fixed literal in the URL
 a `$route`/dynamic placeholder -- an empty-placeholder path silently skips the fetch in the
 underlying DSL renderer, so a fixed literal is the safe pattern.
 
+### Contributing into another module's slot (`ExtensionSlot`)
+
+If another module exposes an `ExtensionSlot` (e.g. `queue:subscriber-row`), declare an
+`extensionPoints[]` entry with `slot: "queue:subscriber-row"` and depend on that module's own
+published contract package for the typed shape of what it expects -- the contract is owned by the
+providing module, never centralized here.
+
 ### `$type` vocabulary
 
 Every `$type` in your views comes from `@wadeck-app/dsl-ui`'s real component catalogue -- check
 that package directly for what's available (`Badge`, `DataTable`, `StatTile`, and more). Module UI
 is DSL-only: no React, no custom components, by design (consistency and so modules stay easy for
-an AI agent to author).
-
-## CLI reference
-
-### `app-core-sdk validate <path-to-manifest.json>`
-
-Runs the exact same zod schema app-core's server uses. Prints `OK: ...` and exits 0 on success;
-prints the specific validation error(s) and exits 1 on failure.
-
-### `app-core-sdk dev <path-to-app-module-dir>`
-
-Boots a real app-core server, pre-registered with your local module, so you can iterate without a
-separate app-core checkout:
-
-```sh
-npx app-core-sdk dev ./packages/my-app-module
-# app-core-sdk dev: serving ./packages/my-app-module at http://127.0.0.1:4850
-```
-
-`GET /api/modules` and any route your backend registered (`GET /api/modules/<id>/...`) work
-exactly as they would in production.
-
-**Known limitation:** `dev` currently serves the API only -- app-core's dashboard/sidebar frontend
-is NOT served when `app-core-sdk` is installed as a standalone package outside the app-core
-monorepo (it returns 404 for `/`). This is a verified, real gap (not a guess): app-core's static
-frontend resolution is tied to the monorepo's own directory layout, which doesn't exist once this
-package is installed elsewhere. Use `curl`/`validate` to verify your module's data and manifest
-during development; full visual verification currently requires running against a real app-core
-checkout. Tracked as a known gap, not silently papered over.
+an AI agent to author). This is a v1 rule, not a permanent one -- revisit if a real module ever
+needs a genuinely bespoke component.
 
 ## Folder and naming conventions, enforced automatically
 

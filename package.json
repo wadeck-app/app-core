@@ -6,12 +6,13 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/frontend-shell && npm run build --workspace=packages/server && npm run build --workspace=packages/app-core-sdk",
+    "build": "npm run build --workspace=packages/frontend-shell && npm run build --workspace=packages/server && npm run build --workspace=packages/app-core-sdk && npm run build --workspace=packages/app-core-cli",
     "typecheck:tests": "npm run typecheck:tests --workspace=packages/server",
     "test": "npm run test --workspace=packages/server",
     "test:app": "npm run test --workspace=packages/frontend-shell",
     "test:sdk": "npm run test --workspace=packages/app-core-sdk",
-    "test:all": "npm run test && npm run test:app && npm run test:sdk",
+    "test:cli": "npm run test --workspace=packages/app-core-cli",
+    "test:all": "npm run test && npm run test:app && npm run test:sdk && npm run test:cli",
     "test:violations-rules": "vitest run --config .violations/vitest.config.ts",
     "copy-app": "node scripts/copy-app.mjs",
     "build:full": "npm run build && npm run copy-app"

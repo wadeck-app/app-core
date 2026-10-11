@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "backendEntryPath": "./api-backend/backend.mjs",
+  "extensionPoints": [
+    {
+      "kind": "widget",
+      "slot": "dashboard",
+      "label": "Contributor A dashboard widget (not part of the shared slot)",
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "contributor-a-own-widget" } }
+    },
+    {
+      "kind": "widget",
+      "slot": "test:shared-slot",
+      "label": "Contributor A, order 20",
+      "order": 20,
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "contributor-a" } }
+    }
+  ]
+}

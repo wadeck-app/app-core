@@ -18,6 +18,7 @@
     "react-router-dom": "^7.0.0"
   },
   "devDependencies": {
+    "@wadeck-app/app-core-server": "*",
     "@testing-library/jest-dom": "*",
     "@testing-library/react": "*",
     "@types/node": "^22.0.0",
