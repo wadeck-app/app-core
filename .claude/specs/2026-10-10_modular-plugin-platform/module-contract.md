@@ -30,7 +30,7 @@ Defines what a module ships, how app-core loads/unloads it at runtime, and what 
 <!-- Architecture, data flow, contracts, schema, etc. Fill in as decisions are made. -->
 
 ### Loading mechanics (per Decision #8)
-- Backend: `import(entryPath + '?v=' + version)` (cache-busting via query string) so a new version is a fresh module instance, not the cached one.
+- Backend: `import(entryPath + '?v=' + version + '&m=' + mtimeMs + '-' + size)` (cache-busting via query string) so a new version, or a backend file rewritten under the same version, is a fresh module instance, not the cached one (Decision #65).
 - Frontend: no code loading -- the registration payload includes (or references) a DSL view definition consumed directly by `dsl-renderer`.
 - Unload: app-core stops routing to the old module's registered routes/handlers and calls its `moduleContext` cleanup (clears any `moduleContext.setInterval`/`moduleContext.on` registrations). The old module instance itself may not be garbage-collected immediately if it leaked outside `moduleContext` -- an accepted limitation of Decision #9.
 

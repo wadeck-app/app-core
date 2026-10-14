@@ -6,7 +6,7 @@
 
 ## Overview
 
-app-core's own frontend: a base shell (navbar/sidebar, dashboard grid, nav page routing) that renders modules' DSL `extensionPoints` into fixed slots. Does NOT define a module's own view content (see module-contract.md) -- only the slots the shell exposes and how it discovers what to render.
+app-core's own frontend: a base shell (top navbar, dashboard grid, nav page routing) that renders modules' DSL `extensionPoints` into fixed slots. Does NOT define a module's own view content (see module-contract.md) -- only the slots the shell exposes and how it discovers what to render.
 
 ## Decisions
 
@@ -24,7 +24,7 @@ app-core's own frontend: a base shell (navbar/sidebar, dashboard grid, nav page 
 
 ### Base slots
 - `widget` / `dashboard` -- rendered into a grid on the main dashboard page.
-- `page` / `nav` -- appears as a sidebar/navbar entry; selecting it routes to a full-page render of that extension point's view.
+- `page` / `nav` -- appears as a top-navbar entry; selecting it routes to a full-page render of that extension point's view.
 
 (Only these two slot values exist in the manifest shape validated so far -- Decision #15's `extensionPoints[].slot` is a free-form string today; the frontend shell only knows how to place `dashboard` and `nav`. Any other slot value a module declares is undefined behavior until a new slot is added here.)
 
@@ -32,9 +32,15 @@ app-core's own frontend: a base shell (navbar/sidebar, dashboard grid, nav page 
 - Vite + React (required: `@wadeck-app/dsl-renderer`/`dsl-ui` only export React components, confirmed during Phase 1 -- app-core's frontend is the first and only place in this system that actually invokes `DslRenderer`/`GenericPageRunner`).
 - Built assets served by app-core's own Fastify server (mirrors `orch-server`'s `@fastify/static` + `copy-app.mjs` pattern) -- no separate frontend server/port.
 
+### Theme
+- Light and dark, toggled by an icon button in the nav bar; the `dark` class on `<html>` activates the `dsl-ui/theme.css` dark tokens (Decision #62).
+- Uses `dsl-ui`'s `useTheme`; initial value: stored `localStorage.theme`, else `prefers-color-scheme`, applied by an inline script in `index.html` before first paint (Decision #64).
+- The shell is wrapped in dsl-ui's `RouterProvider` so module views can use URL-param-backed components (`urlParam`).
+- Modules inherit the theme with no code; the author rules live in `packages/app-core-sdk/README.md` ("Dark theme").
+
 ### Data flow
 1. Shell loads on `GET /` (or similar), fetches `GET /api/modules` (already built in Phase 1) to get every loaded module's resolved `extensionPoints` (kind/slot/label/view -- already resolved to DSL JSON server-side, no further YAML parsing needed client-side).
-2. Shell places each `widget`/`dashboard` entry into the dashboard grid, each `page`/`nav` entry into the sidebar, rendering their `view` via `DslRenderer`/`GenericPageRunner`.
+2. Shell places each `widget`/`dashboard` entry into the dashboard grid, each `page`/`nav` entry into the top navbar, rendering their `view` via `DslRenderer`/`GenericPageRunner`.
 3. On hot-swap (a module's version changes server-side), the shell polls `GET /api/modules` and re-renders if anything changed (Decision #25). Polling uses exponential backoff when nothing changes, and drops to a very long ("hibernate") interval when `document.hidden`/the tab loses focus; it resets to the fast interval on focus regain.
 
 ## Open questions
