@@ -4,6 +4,7 @@ import React from 'react'
 import { renderChildren, resolveExpressionValue } from '@wadeck-app/dsl-renderer'
 import type { ComponentRegistryEntry, RegistryRenderProps } from '@wadeck-app/dsl-renderer'
 import { useFormContext } from '@wadeck-app/dsl-ui'
+import { LazyBoundary } from '@wadeck-app/dsl-renderer'
 import { ButtonAction } from '@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js'
 import { CheckboxGroup } from '@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js'
 import { ChipButton } from '@wadeck-app/dsl-ui/dist/components/controls/ChipButton.js'
@@ -22,7 +23,8 @@ import { TabButton } from '@wadeck-app/dsl-ui/dist/components/controls/TabButton
 import { ThemePicker } from '@wadeck-app/dsl-ui/dist/components/controls/ThemePicker.js'
 import { Avatar } from '@wadeck-app/dsl-ui/dist/components/display/Avatar.js'
 import { Badge } from '@wadeck-app/dsl-ui/dist/components/display/Badge.js'
-import { Chart } from '@wadeck-app/dsl-ui/dist/components/display/Chart.js'
+const ChartLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').then(m => ({ default: m.Chart })))
+const Chart = (props: React.ComponentProps<typeof ChartLazy>) => <LazyBoundary><ChartLazy {...props} /></LazyBoundary>
 import { FetchSpinner } from '@wadeck-app/dsl-ui/dist/components/display/FetchSpinner.js'
 import { HttpMethodBadge } from '@wadeck-app/dsl-ui/dist/components/display/HttpMethodBadge.js'
 import { HttpStatusBadge } from '@wadeck-app/dsl-ui/dist/components/display/HttpStatusBadge.js'
@@ -242,10 +244,11 @@ export const PageSizeSelectEntry: ComponentRegistryEntry = {
 	name: 'PageSizeSelect', category: 'atomic', tags: ["pagination","select"],
 	nodeSchema: null as never,
 	render: ({ node, ctx }: RegistryRenderProps) => {
+		const urlParam = resolveExpressionValue(node['urlParam'], ctx) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['urlParam']
 		const value = resolveExpressionValue(node['value'], ctx) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['value']
 		const options = resolveExpressionValue(node['options'], ctx) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['options']
 		const onChange = resolveExpressionValue(node['onChange'], ctx) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['onChange']
-		return <PageSizeSelect value={value} options={options} onChange={onChange} />
+		return <PageSizeSelect urlParam={urlParam} value={value} options={options} onChange={onChange} />
 	},
 }
 
@@ -1464,7 +1467,7 @@ export const DataTableEntry: ComponentRegistryEntry = {
 		const onSortDirChange = resolveExpressionValue(node['onSortDirChange'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['onSortDirChange']
 		const defaultFilters = resolveExpressionValue(node['defaultFilters'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['defaultFilters']
 		const expansion = resolveExpressionValue(node['expansion'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['expansion']
-		const renderNode = resolveExpressionValue(node['renderNode'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['renderNode']
+		const renderNode = (n: unknown, extraCtx: Record<string, unknown>) => renderChildren([n], registry, { ...ctx, ...extraCtx })[0] ?? null
 		const selectable = resolveExpressionValue(node['selectable'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['selectable']
 		const batchActions = resolveExpressionValue(node['batchActions'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['batchActions']
 		const onBatchAction = resolveExpressionValue(node['onBatchAction'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['onBatchAction']
@@ -1506,12 +1509,12 @@ export const PaginationEntry: ComponentRegistryEntry = {
 	name: 'Pagination', category: 'atomic', tags: ["pagination"],
 	nodeSchema: null as never,
 	render: ({ node, ctx }: RegistryRenderProps) => {
+		const urlParam = resolveExpressionValue(node['urlParam'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/Pagination.js').PaginationProps['urlParam']
 		const page = resolveExpressionValue(node['page'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/Pagination.js').PaginationProps['page']
 		const onPageChange = resolveExpressionValue(node['onPageChange'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/Pagination.js').PaginationProps['onPageChange']
 		const total = resolveExpressionValue(node['total'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/Pagination.js').PaginationProps['total']
 		const size = resolveExpressionValue(node['size'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/Pagination.js').PaginationProps['size']
-		const onSizeChange = resolveExpressionValue(node['onSizeChange'], ctx) as import('@wadeck-app/dsl-ui/dist/components/table/Pagination.js').PaginationProps['onSizeChange']
-		return <Pagination page={page} onPageChange={onPageChange} total={total} size={size} onSizeChange={onSizeChange} />
+		return <Pagination urlParam={urlParam} page={page} onPageChange={onPageChange} total={total} size={size} />
 	},
 }
 

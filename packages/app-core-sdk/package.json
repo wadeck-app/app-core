@@ -7,7 +7,8 @@
   "files": [
     "dist/index.bundle.js",
     "dist/index.bundle.d.ts",
-    "README.md"
+    "README.md",
+    "docs/module-authoring.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",

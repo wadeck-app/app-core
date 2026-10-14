@@ -34,9 +34,15 @@ export async function slotsRoutes(server: FastifyInstance, opts: SlotsRoutesOpti
     // it keep their encountered order and sort after every ordered entry.
     const indexed = contributions.map((c, i) => ({ ...c, i }));
     indexed.sort((a, b) => {
-      if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
-      if (a.order !== undefined) return -1;
-      if (b.order !== undefined) return 1;
+      if (a.order !== undefined && b.order !== undefined) {
+        return a.order - b.order;
+      }
+      if (a.order !== undefined) {
+        return -1;
+      }
+      if (b.order !== undefined) {
+        return 1;
+      }
       return a.i - b.i;
     });
 

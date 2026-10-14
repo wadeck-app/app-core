@@ -28,7 +28,9 @@ export class ModuleRouteRegistry {
   unregisterAllForModule(moduleId: string): void {
     const prefix = `${moduleId}:`;
     for (const key of this.routes.keys()) {
-      if (key.startsWith(prefix)) this.routes.delete(key);
+      if (key.startsWith(prefix)) {
+        this.routes.delete(key);
+      }
     }
   }
 

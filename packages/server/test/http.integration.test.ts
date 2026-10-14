@@ -3,11 +3,12 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as url from 'node:url';
-import { buildServer } from '../../src/server.js';
-import { writeRegistryEntry } from '../../src/registry.js';
+import { buildServer } from '../src/server.js';
+import { writeRegistryEntry } from '../src/registry.js';
+import { readFixtureBTicks, resetFixtureBTicks } from './fixtureTicks.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const fixturesDir = path.join(__dirname, '..', '..', '..', 'test-app-modules');
+const fixturesDir = path.join(__dirname, '..', '..', 'test-app-modules');
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -18,7 +19,7 @@ describe('app-core HTTP integration', () => {
 
   beforeEach(() => {
     configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-config-'));
-    (globalThis as Record<string, unknown>)['__fixtureBTicks'] = undefined;
+    resetFixtureBTicks();
   });
 
   afterEach(() => {
@@ -99,7 +100,7 @@ describe('app-core HTTP integration', () => {
       payload: { id: 'module-b', source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json') } },
     });
     await wait(20);
-    const v1Ticks = (globalThis as any).__fixtureBTicks.v1;
+    const v1Ticks = readFixtureBTicks().v1;
     expect(v1Ticks).toBeGreaterThan(0);
 
     const updateRes = await server.inject({
@@ -112,7 +113,7 @@ describe('app-core HTTP integration', () => {
     expect(manager.get('module-b')?.manifest.version).toBe('2.0.0');
 
     await wait(20);
-    expect((globalThis as any).__fixtureBTicks.v2).toBeGreaterThan(0);
+    expect(readFixtureBTicks().v2).toBeGreaterThan(0);
 
     await server.close();
   });

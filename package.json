@@ -15,7 +15,8 @@
     "test:all": "npm run test && npm run test:app && npm run test:sdk && npm run test:cli",
     "test:violations-rules": "vitest run --config .violations/vitest.config.ts",
     "copy-app": "node scripts/copy-app.mjs",
-    "build:full": "npm run build && npm run copy-app"
+    "build:full": "npm run build && npm run copy-app",
+    "dev:all": "node scripts/dev-all.mjs"
   },
   "devDependencies": {
     "@wadeck-app/app-core-sdk": "*",
@@ -27,7 +28,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@wadeck-app/dsl-renderer": "^2026.10.11-088-9ca394bf",
-    "@wadeck-app/dsl-ui": "^2026.10.11-088-9ca394bf"
+    "@wadeck-app/dsl-renderer": "latest",
+    "@wadeck-app/dsl-ui": "latest"
   }
 }

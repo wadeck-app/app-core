@@ -48,13 +48,17 @@ export function usePolling<T>(options: PollingOptions<T>): PollingState<T> {
     disposedRef.current = false;
 
     const scheduleNext = (delayMs: number) => {
-      if (disposedRef.current) return;
+      if (disposedRef.current) {
+        return;
+      }
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(tick, delayMs);
     };
 
     async function tick(): Promise<void> {
-      if (disposedRef.current) return;
+      if (disposedRef.current) {
+        return;
+      }
 
       if (isDocumentHidden()) {
         // Hibernate: don't even fetch, just check back much later.
@@ -64,7 +68,9 @@ export function usePolling<T>(options: PollingOptions<T>): PollingState<T> {
 
       try {
         const next = await fetchFn();
-        if (disposedRef.current) return;
+        if (disposedRef.current) {
+          return;
+        }
 
         const changed = lastDataRef.current === undefined || !isEqual(lastDataRef.current, next);
         lastDataRef.current = next;
@@ -74,7 +80,9 @@ export function usePolling<T>(options: PollingOptions<T>): PollingState<T> {
           ? minIntervalMs
           : Math.min(currentIntervalRef.current * backoffFactor, maxIntervalMs);
       } catch (error) {
-        if (disposedRef.current) return;
+        if (disposedRef.current) {
+          return;
+        }
         setState((prev) => ({ data: prev.data, error }));
         currentIntervalRef.current = Math.min(currentIntervalRef.current * backoffFactor, maxIntervalMs);
       }

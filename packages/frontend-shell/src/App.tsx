@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { RouterProvider } from '@wadeck-app/dsl-ui';
 import { AppNavBar } from './NavBar.js';
 import { Dashboard } from './Dashboard.js';
 import { ModulePage } from './ModulePage.js';
@@ -11,18 +12,21 @@ export default function App(): React.ReactElement {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-bg">
-        <AppNavBar modules={modules} />
-        {error ? (
-          <p role="alert" className="px-4 py-3 text-danger">
-            Failed to load modules: {String(error)}
-          </p>
-        ) : null}
-        <Routes>
-          <Route path="/" element={<Dashboard modules={modules} />} />
-          <Route path="/modules/:moduleId/:index" element={<ModulePage modules={modules} />} />
-        </Routes>
-      </div>
+      {/* Provides UrlParamContext/RouterContext: module views bind components to URL params (e.g. Pagination `urlParam`). */}
+      <RouterProvider>
+        <div className="min-h-screen bg-bg">
+          <AppNavBar modules={modules} />
+          {error ? (
+            <p role="alert" className="px-4 py-3 text-danger">
+              Failed to load modules: {String(error)}
+            </p>
+          ) : null}
+          <Routes>
+            <Route path="/" element={<Dashboard modules={modules} />} />
+            <Route path="/modules/:moduleId/:index" element={<ModulePage modules={modules} />} />
+          </Routes>
+        </div>
+      </RouterProvider>
     </BrowserRouter>
   );
 }

@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import * as path from 'node:path';
+import { getErrorMessage } from '../errors.js';
 import { parseRegistrationPayload, UnsupportedSourceTypeError } from '../manifest.js';
 import { writeRegistryEntry, type RegistryEntry } from '../registry.js';
 import type { ModuleManager } from '../loader.js';
@@ -62,10 +63,10 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
 
 function sendError(reply: FastifyReply, err: unknown) {
   if (err instanceof UnsupportedSourceTypeError) {
-    return reply.code(422).send({ error: err.message });
+    return reply.code(422).send({ error: getErrorMessage(err) });
   }
   if (err instanceof ZodError) {
     return reply.code(400).send({ error: 'Invalid payload', issues: err.issues });
   }
-  return reply.code(500).send({ error: err instanceof Error ? err.message : String(err) });
+  return reply.code(500).send({ error: getErrorMessage(err) });
 }

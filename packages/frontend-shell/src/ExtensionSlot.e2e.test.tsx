@@ -37,7 +37,9 @@ async function waitForReady(proc: ChildProcess): Promise<void> {
     });
     proc.on('error', reject);
     proc.on('exit', (code) => {
-      if (code !== 0 && code !== null) reject(new Error(`server exited early with code ${code}`));
+      if (code !== 0 && code !== null) {
+        reject(new Error(`server exited early with code ${code}`));
+      }
     });
   });
 }

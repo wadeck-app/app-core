@@ -16,7 +16,9 @@ export function writeRegistryEntry(modulesDir: string, entry: RegistryEntry): vo
 }
 
 export function readRegistryEntries(modulesDir: string): RegistryEntry[] {
-  if (!fs.existsSync(modulesDir)) return [];
+  if (!fs.existsSync(modulesDir)) {
+    return [];
+  }
   const files = fs.readdirSync(modulesDir).filter((f) => f.endsWith('.json'));
   const entries: RegistryEntry[] = [];
   for (const file of files) {

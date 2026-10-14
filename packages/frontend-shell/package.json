@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@wadeck-app/dsl-renderer": "latest",
-    "@wadeck-app/dsl-ui": "^2026.10.10-087-9e4c2751",
+    "@wadeck-app/dsl-ui": "latest",
+    "lucide-react": "^0.511.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0"

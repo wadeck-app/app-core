@@ -5,6 +5,8 @@ export default {
   globalExclude: [
     'node_modules/**',
     'dist/**',
+    // Build output copied from the frontend bundle (gitignored), not source.
+    'public/**',
     // Internal hot-swap test double (not a real module, deliberately not
     // named app-module-*) -- see loader.test.ts / http.test.ts.
     'packages/test-app-modules/app-module-lifecycle/v2-fixture/**',

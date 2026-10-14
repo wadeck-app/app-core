@@ -3,10 +3,10 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as url from 'node:url';
-import { buildServer } from '../../src/server.js';
+import { buildServer } from '../src/server.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const fixturesDir = path.join(__dirname, '..', '..', '..', 'test-app-modules');
+const fixturesDir = path.join(__dirname, '..', '..', 'test-app-modules');
 
 describe('GET /api/slots/:slotId', () => {
   let configDir: string;

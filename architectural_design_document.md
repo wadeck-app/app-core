@@ -59,14 +59,14 @@ Every external plugin (e.g., your team's GitHub or GitLab module) is built in it
 
 ```text
 manager-plugin-template/
-├── package.json          # Dependencies & build scripts
-├── manifest.json         # Metadata (id, name, version, targets)
-├── src/
-│   ├── backend.ts        # Node.js logic, API routes, data transformers
-│   └── frontend.tsx      # React components (widgets, config pages)
-└── dist/
-    ├── backend.js        # Compiled CommonJS/ESM for Node.js server
-    └── frontend.js       # Compiled bundle for React UI injection
++-- package.json          # Dependencies & build scripts
++-- manifest.json         # Metadata (id, name, version, targets)
++-- src/
+|   +-- backend.ts        # Node.js logic, API routes, data transformers
+|   +-- frontend.tsx      # React components (widgets, config pages)
++-- dist/
+    +-- backend.js        # Compiled CommonJS/ESM for Node.js server
+    +-- frontend.js       # Compiled bundle for React UI injection
 ```
 
 ### Example `manifest.json`:

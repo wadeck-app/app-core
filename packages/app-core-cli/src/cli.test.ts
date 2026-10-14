@@ -22,13 +22,17 @@ describe('validateManifestFile', () => {
   it('fails with a clear message when the file is missing', () => {
     const result = validateManifestFile(path.join(fixturesDir, 'does-not-exist', 'manifest.json'));
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.message).toContain('No manifest found');
+    if (!result.ok) {
+      expect(result.message).toContain('No manifest found');
+    }
   });
 
   it('fails with zod issue details on an invalid manifest', () => {
     const result = validateManifestFile(path.join(__dirname, '../test-fixtures/invalid-manifest.json'));
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.message).toContain('failed manifest validation');
+    if (!result.ok) {
+      expect(result.message).toContain('failed manifest validation');
+    }
   });
 });
 
@@ -58,7 +62,9 @@ describe('runDev', () => {
   let close: (() => Promise<void>) | undefined;
 
   afterEach(async () => {
-    if (close) await close();
+    if (close) {
+      await close();
+    }
     close = undefined;
   });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { NavBar as DslNavBar } from '@wadeck-app/dsl-ui';
+import { Moon, Sun } from 'lucide-react';
+import { IconButton, NavBar as DslNavBar, useTheme } from '@wadeck-app/dsl-ui';
 import type { LoadedModuleSummary } from './types.js';
 
 export interface NavPage {
@@ -27,6 +28,7 @@ const linkClass = ({ isActive }: { isActive: boolean }): string =>
 
 export function AppNavBar({ modules }: { modules: LoadedModuleSummary[] }): React.ReactElement {
   const pages = navPagesFor(modules);
+  const { theme, setTheme } = useTheme();
   return (
     <header className="border-b border-border bg-surface px-4 py-3">
       <DslNavBar>
@@ -39,6 +41,15 @@ export function AppNavBar({ modules }: { modules: LoadedModuleSummary[] }): Reac
             {p.label}
           </NavLink>
         ))}
+        <span className="ml-auto">
+          <IconButton
+            icon={theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            variant="ghost"
+            size="icon-sm"
+          />
+        </span>
       </DslNavBar>
     </header>
   );

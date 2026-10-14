@@ -38,8 +38,8 @@ export class ModuleManager {
   }
 
   // Backend loaded via dynamic import() with cache-busting (not a child
-  // process, not a vm context) so a version bump always yields a fresh module
-  // instance instead of Node's cached one.
+  // process, not a vm context) so a new version or a rewritten backend file
+  // always yields a fresh module instance instead of Node's cached one.
   async loadFromEntry(entry: RegistryEntry): Promise<LoadedModule> {
     const manifestPath = entry.source.path;
     const manifestDir = path.dirname(manifestPath);
@@ -56,7 +56,9 @@ export class ModuleManager {
     }
 
     const backendPath = path.resolve(manifestDir, manifest.backendEntryPath);
-    const specifier = `${pathToFileURL(backendPath).href}?v=${encodeURIComponent(manifest.version)}`;
+    // mtime+size are part of the key: an update pushed without a version bump must still load the new backend.
+    const { mtimeMs, size } = fs.statSync(backendPath);
+    const specifier = `${pathToFileURL(backendPath).href}?v=${encodeURIComponent(manifest.version)}&m=${mtimeMs}-${size}`;
     const mod = (await import(specifier)) as BackendEntryExports;
 
     const moduleContext = createModuleContext(entry.id, this.routeRegistry);
@@ -80,7 +82,9 @@ export class ModuleManager {
 
   unload(id: string): void {
     const existing = this.loaded.get(id);
-    if (!existing) return;
+    if (!existing) {
+      return;
+    }
     existing.moduleContext.dispose();
     this.loaded.delete(id);
   }

@@ -22,25 +22,35 @@ export function createModuleContext(moduleId: string, routeRegistry: ModuleRoute
 
   return {
     setInterval(fn, ms) {
-      if (disposed) throw new Error('moduleContext.setInterval called after dispose()');
+      if (disposed) {
+        throw new Error('moduleContext.setInterval called after dispose()');
+      }
       const handle = globalThis.setInterval(fn, ms);
       intervals.add(handle);
     },
     setTimeout(fn, ms) {
-      if (disposed) throw new Error('moduleContext.setTimeout called after dispose()');
+      if (disposed) {
+        throw new Error('moduleContext.setTimeout called after dispose()');
+      }
       const handle = globalThis.setTimeout(fn, ms);
       timeouts.add(handle);
     },
     on(event, fn) {
-      if (disposed) throw new Error('moduleContext.on called after dispose()');
-      if (!listeners.has(event)) listeners.set(event, new Set());
+      if (disposed) {
+        throw new Error('moduleContext.on called after dispose()');
+      }
+      if (!listeners.has(event)) {
+        listeners.set(event, new Set());
+      }
       listeners.get(event)!.add(fn);
     },
     emit(event, ...args) {
       listeners.get(event)?.forEach((fn) => fn(...args));
     },
     registerRoute(method, subPath, handler) {
-      if (disposed) throw new Error('moduleContext.registerRoute called after dispose()');
+      if (disposed) {
+        throw new Error('moduleContext.registerRoute called after dispose()');
+      }
       routeRegistry.register(moduleId, method, subPath, handler);
     },
     dispose() {

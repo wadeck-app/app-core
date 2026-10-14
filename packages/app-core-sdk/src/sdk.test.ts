@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ModuleRouteRegistry } from '@wadeck-app/app-core-server/moduleRoutes';
 import { ManifestSchema, parseManifest, createModuleContext, UnsupportedSourceTypeError, parseRegistrationPayload } from './index.js';
 
 // app-core-sdk is a types/schemas-only package -- these tests prove the
@@ -15,7 +16,7 @@ describe('app-core-sdk re-exports', () => {
   });
 
   it('createModuleContext produces a usable ModuleContext', () => {
-    const ctx = createModuleContext('test-module', { register: () => {}, unregisterAllForModule: () => {}, find: () => undefined } as any);
+    const ctx = createModuleContext('test-module', new ModuleRouteRegistry());
     expect(typeof ctx.setInterval).toBe('function');
     expect(typeof ctx.registerRoute).toBe('function');
     ctx.dispose();
