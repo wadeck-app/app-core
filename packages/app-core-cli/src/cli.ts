@@ -4,6 +4,8 @@ import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { validateManifestFile } from './validate.js';
 import { runDev } from './dev.js';
+import { runServe } from './serve.js';
+import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
 import { UpdateManager } from '@wadeck-app/shared-cli/UpdateManager';
 import { cliVersionCommand, cliUpdateCommand } from '@wadeck-app/shared-cli/CliMetaCommands';
@@ -70,6 +72,20 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === 'serve') {
+    try {
+      const { port, stop } = await runServe();
+      console.log(`app-core-cli serve: listening on http://127.0.0.1:${port}`);
+      const shutdown = (): void => void stop().finally(() => process.exit(0));
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
+    } catch (err) {
+      console.error(`app-core-cli serve failed: ${getErrorMessage(err)}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   if (command === 'self-check') {
     await runSelfCheck([
       async () => ({ name: `version: ${VERSION}`, ok: VERSION !== 'undefined' && !VERSION.startsWith('0.0.0-dev') }),
@@ -95,7 +111,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.error('Usage: app-core-cli <validate|dev|version|update|self-check> <path>');
+  console.error('Usage: app-core-cli <validate|dev|serve|version|update|self-check> [path]');
   process.exitCode = 1;
 }
 

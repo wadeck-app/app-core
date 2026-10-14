@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 65 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 66 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -299,6 +299,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 65 | Operability and hygiene batch. (a) The backend import cache key is `version` plus the backend file's `mtimeMs` and size, so an update pushed without a version bump still loads the new backend (previously views refreshed but the old backend stayed cached). (b) The server writes `<config-dir>/server.port.json` (`{pid, port}`) after listening and removes it on shutdown if it still owns it; the Orchestrator job `app-core-dev` uses `--liveness-strategy portFile` on it so an automatic start is skipped while the server is alive (a manual `orch trigger` is not filtered; `dev-all.mjs` refuses to start on a busy port). (c) `npm run copy-app` writes `public/build-info.json` (`builtAt`, `dslUi`, `dslRenderer`) so anyone can see from outside which dsl versions the served frontend was built with; asset filenames stay unhashed. (d) The SDK README is a short entry point; the full authoring reference moved to `packages/app-core-sdk/docs/module-authoring.md` (published in `files`), keeping the README under the `readme-system-length` limit. (e) `violations check` is clean: pre-existing findings fixed, `public/**` excluded from scanning, and two entry-point files carry justified `ts/no-barrel-index` suppressions. | Decided | 2026-10-14 | Found while integrating the queue module: a same-version update silently kept the old backend; peers had no way to verify the served frontend or to avoid double starts. |
+
+## Decision Log (cont. 43)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 66 | The production server ships inside the existing global, auto-updating `@wadeck-app/app-core-cli` as the foreground command `app-core-cli serve`; `packages/server` stays private and unpublished. The CLI bundle already inlines the server code and carries the built frontend in `dist/public` (with `build-info.json`); `fastify`, `@fastify/static`, `zod` and `js-yaml` were already runtime dependencies, so no new dependency. `serve` and `packages/server/src/index.ts` share one start sequence (`startServer` in `packages/server/src/start.ts`, exported as `@wadeck-app/app-core-server/start`), which also writes `server.port.json`. `serve` exits 1 with an actionable message if the bundled frontend is missing or the port is taken. Because every CLI invocation schedules the `shared-updater` background check, the server and frontend update with the CLI and a new version is used the next time `serve` starts (Decision #57). `publish.yml` needs no new step: `npm run build` already builds frontend, server and CLI before the CLI is published. Orchestrator job for the installed server: `orch add startup app-core --command "app-core-cli serve" --liveness-strategy portFile --liveness-port-file "~/.config/app-core/server.port.json" --timeout 2000000` (the dev job `app-core-dev` is unchanged). Details: `packages/app-core-cli/docs/serve.md`. | Decided | 2026-10-15 | Reuses the packaging precedent (orchestrator-cli ships server + public assets in its CLI package) instead of a second published package. Verified end to end: `npm pack`, install of the tarball into a temp prefix, `serve` on port 4861 answered API 200, index html, `build-info.json` and a module registration. |
 
 ## Open Questions
 

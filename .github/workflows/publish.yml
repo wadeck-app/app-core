@@ -20,8 +20,9 @@ permissions:
   packages: write
 
 # packages/app-core-sdk and packages/app-core-cli are published -- packages/server
-# and packages/frontend-shell are app-core's own internal implementation, never
-# installed by anyone else. sdk publishes first since cli depends on it
+# and packages/frontend-shell are never published on their own: `npm run build`
+# bundles the server code and the built frontend into app-core-cli (`serve`).
+# sdk publishes first since cli depends on it
 # (Decision #42: types-only sdk, cli as a separate global auto-updating binary).
 jobs:
   build-and-test:

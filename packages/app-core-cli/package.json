@@ -9,7 +9,8 @@
     "dist/cli.bundle.js",
     "dist/app-core-cli-updater.cjs",
     "dist/public/**",
-    "README.md"
+    "README.md",
+    "docs/serve.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",

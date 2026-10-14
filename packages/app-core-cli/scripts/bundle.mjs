@@ -9,6 +9,7 @@ import { build } from 'esbuild';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { writeBuildInfo } from '../../../scripts/build-info.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
@@ -25,6 +26,8 @@ function copyFrontendAssets() {
   fs.rmSync(targetPublic, { recursive: true, force: true });
   fs.cpSync(frontendDist, targetPublic, { recursive: true });
   console.log(`Copied frontend-shell/dist -> ${path.relative(root, targetPublic)}`);
+  const buildInfo = writeBuildInfo(targetPublic, path.join(root, '../..'));
+  console.log(`Wrote dist/public/build-info.json ${JSON.stringify(buildInfo)}`);
 }
 
 copyFrontendAssets();
