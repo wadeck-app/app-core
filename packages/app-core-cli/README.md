@@ -13,7 +13,7 @@ npm install -g @wadeck-app/app-core-cli
 | Command | What it does |
 |---|---|
 | `app-core-cli validate <manifest.json>` | Same zod schema the server uses. `OK: ...` and exit 0, or the errors and exit 1 (`--json` for machines). |
-| `app-core-cli dev <app-module-dir>` | Real server pre-registered with your local module, including the real dashboard frontend. |
+| `app-core-cli dev <app-module-dir> [--id <id>]` | Real server pre-registered with your local module and the real dashboard. The id defaults to the folder name without `app-module-` (`app-module-queue` -> `queue`), which is what `$type: queue:<Component>` refers to. |
 | `app-core-cli serve` | Runs the real app-core server and bundled frontend in the foreground. See [docs/serve.md](docs/serve.md). |
 | `app-core-cli version` / `update` / `self-check` | Standard `@wadeck-app` CLI meta-commands. A background update check runs on every other invocation. |
 

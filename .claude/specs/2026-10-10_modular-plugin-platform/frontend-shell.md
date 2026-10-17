@@ -38,6 +38,11 @@ app-core's own frontend: a base shell (top navbar, dashboard grid, nav page rout
 - The shell is wrapped in dsl-ui's `RouterProvider` so module views can use URL-param-backed components (`urlParam`).
 - Modules inherit the theme with no code; the author rules live in `packages/app-core-sdk/README.md` ("Dark theme").
 
+### Module components and routes (Decisions #69-#71)
+- `sharedGlobals.ts` sets `globalThis.__APP_CORE_SHARED__` before anything imports a module bundle.
+- `useModuleLibs` follows the polled module list: it `import()`s each module's `dslLib.entryUrl` once per URL, registers the entries as `<moduleId>:<Name>` in the single `appRegistry`, injects the module's stylesheet as `<link data-module-lib=<id>>`, and removes entries and link when the module disappears or its URL changes (hot-swap). A module's pages and widgets render only once its components are ready (`ModuleLibGate`: loading state, or an alert with the reason).
+- Pages with a `path` get their own react-router route `/modules/<id><path>` (so the view receives `$route.<param>`); routes derive from the module list and vanish on unload. The shell provides the router, `ToastProvider` and the theme tokens to module components.
+
 ### Data flow
 1. Shell loads on `GET /` (or similar), fetches `GET /api/modules` (already built in Phase 1) to get every loaded module's resolved `extensionPoints` (kind/slot/label/view -- already resolved to DSL JSON server-side, no further YAML parsing needed client-side).
 2. Shell places each `widget`/`dashboard` entry into the dashboard grid, each `page`/`nav` entry into the top navbar, rendering their `view` via `DslRenderer`/`GenericPageRunner`.

@@ -32,7 +32,9 @@ What we are protecting:
 Resolved as an accepted risk -- see T-03. No auth on the registration endpoint or module registry directory, consistent with Decision #6.
 
 ### Tampering
-*(pending -- add decisions that affect data writes and transit)*
+Module component bundles (`dsl-lib`) execute in the shell's browser origin with full DOM access (T-04).
+Registry paths are built only from validated module ids (letters, digits, "_", "-"), and `_lib` file
+requests are confined to the module's `dsl-lib/` folder (Decisions #68, #70).
 
 ### Repudiation
 *(pending)*
@@ -44,7 +46,8 @@ Resolved as an accepted risk -- see T-03. No auth on the registration endpoint o
 *(pending)*
 
 ### Elevation of Privilege
-*(pending)*
+A module's frontend components run with the shell's privileges in the browser (T-04), in addition to its
+backend running in-process (T-02). Same trusted-local stance as Decision #6.
 
 ## Mitigations
 
@@ -53,6 +56,7 @@ Resolved as an accepted risk -- see T-03. No auth on the registration endpoint o
 | T-01 | Denial of Service | A single faulty module (unhandled exception, infinite loop, memory leak) running in-process can take down app-core for every other module, since there is no process isolation (Decision #3) and no sandboxing (Decision #6). | None -- accepted risk by design. | Accepted risk | 3, 6 |
 | T-02 | Elevation of Privilege / Information Disclosure | A loaded module has unrestricted access to app-core's process memory and to any other module's data; there is no permission boundary between modules (Decision #6). | None -- accepted risk by design. | Accepted risk | 6 |
 | T-03 | Spoofing | A local process could send a fake "install module" / "new version" notification to app-core and get arbitrary code loaded and executed in-process. | None -- accepted risk, by extension of Decision #6 (local, trusted-users-only environment; no auth required on `/api/modules/register`/`/update` or on the module registry directory). | Accepted risk | 6 |
+| T-04 | Tampering / Elevation of Privilege | A module's `dsl-lib` bundle is arbitrary JavaScript executed in the shell's origin with full DOM access (it can read or change anything the page can, including other modules' views). | Trusted installs only (Decision #6 stance). Reduced accidental breakage: `_lib` serves files only from the module's own `dsl-lib/` folder (path traversal refused), `dslLib.shared` ranges are checked against the shell's build so a skewed bundle is refused with an actionable error instead of half-working, and the bundle is removed on unload/swap. | Accepted risk (partially mitigated) | 70 |
 
 ## Open security questions
 

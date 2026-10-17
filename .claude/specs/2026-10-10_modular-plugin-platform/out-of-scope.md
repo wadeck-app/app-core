@@ -24,6 +24,10 @@ Raising an excluded item as a requirement is a change-of-scope conversation, not
 ### Arbitrary React in a module's UI (v1)
 **Reason:** module UI must be DSL-only for v1 (view data consumed by `dsl-renderer`/`dsl-ui`). A module cannot ship raw React components as an alternative or escape hatch. EXPLICITLY DEFERRED, NOT PERMANENT, for v2 (Decision #30) -- modules shipping their own specialized component code is realistically expected eventually; v1 just doesn't build the (nontrivial) runtime frontend-plugin mechanism that would require. (Decision #16/#30)
 **Covered by:** guiding-principles.md P-5.
+**Superseded 2026-10-17 by Decision #69:** modules may now ship runtime-loaded components in `dsl-lib/`; views stay YAML.
+
+### Embedding a module's own app in an iframe
+**Reason:** rejected by the user (2026-10-17, Decision #69): it escapes the DSL composition model, splits theme/navigation/toasts across frames and leaves modules unable to combine with each other's slots. Business components are loaded into the shell's own React tree instead.
 
 ### Running provider daemons inside app-core's process
 **Reason:** the daemon itself (Orchestrator, Queue, Flow) is never loaded into app-core's process -- only the module it provides is. (Decision #3)

@@ -39,6 +39,13 @@ app-module-<name>/
 - `extensionPoints[].kind` is `"widget"` (renders into app-core's dashboard grid) or `"page"`
   (renders into app-core's top navbar, routed to a full page). `slot` is `"dashboard"` or
   `"nav"` respectively.
+- `extensionPoints[].path` (optional, pages only, e.g. `"/jobs/:id"`): mounts the page at
+  `/modules/<moduleId><path>` as its own route; `:name` segments reach the view as `$route.name`.
+  Segments are letters, digits, `_` or `-`; no `..`, no trailing slash.
+- `slot: "route"` (with `kind: "page"`): the page is reachable only by link, not listed in the
+  navbar (detail, edit and log pages). Link to it from another view with dsl-ui `Link`/`ButtonLink`
+  (`href: /modules/<moduleId>/jobs/...`). Routes disappear when the module is unloaded or swapped.
+- `dslLib` (optional): runtime-loaded components, see "Shipping components (dsl-lib)" below.
 - `extensionPoints[].order` (optional number) only matters if your module contributes to another
   module's `ExtensionSlot` -- app-core sorts by it and strips it before rendering; it's a purely
   structural sort key, app-core never interprets what it means.
@@ -107,6 +114,22 @@ Raw `setInterval`/`setTimeout`/`addEventListener`, and any React/JSX usage, are 
 `violations` rule that auto-applies to any `packages/app-module-*/**` path -- no per-repo config
 needed. If you use `violations check` in your repo, this is enforced automatically.
 
+#### Route parameters
+
+A sub path may contain `:name` segments. The handler reads them from `req.params`, which holds only
+your own parameters (a parameter may be called `id`):
+
+```ts
+ctx.registerRoute('POST', '/dlq/:id/replay', (req, reply) => reply.send({ replayed: req.params.id }));
+```
+
+- Matching is per segment, on method and segment count; static segments win over parameters
+  (`/jobs/new` before `/jobs/:id`).
+- Values are URL-decoded. A malformed encoding answers 404.
+- Two routes of the same method and shape (`/a/:x` and `/a/:y`) cannot both be registered:
+  `registerRoute` throws, and the module is reported in `failed` instead of silently overwriting one.
+- Names must be letters, digits or `_`; the sub path `/_lib` is reserved (see dsl-lib below).
+
 ### Live data in a view (`$sources`)
 
 A view can fetch live data from a route your own backend registered:
@@ -136,10 +159,82 @@ providing module, never centralized here.
 ### `$type` vocabulary
 
 Every `$type` in your views comes from `@wadeck-app/dsl-ui`'s real component catalogue -- check
-that package directly for what's available (`Badge`, `DataTable`, `StatTile`, and more). Module UI
-is DSL-only: no React, no custom components, by design (consistency and so modules stay easy for
-an AI agent to author). This is a v1 rule, not a permanent one -- revisit if a real module ever
-needs a genuinely bespoke component.
+that package directly for what's available (`Badge`, `DataTable`, `StatTile`, and more). Views are
+always DSL (consistency, and so modules stay easy for an AI agent to author). Prefer a generic
+dsl-ui component; ship your own only when none can express the behaviour (a streaming log viewer,
+say), through `dslLib` below.
+
+## Shipping components (dsl-lib)
+
+A module may bring its own business components. They are loaded into the shell at runtime, so no
+shell rebuild is needed, and removed again when the module is unloaded or swapped.
+
+```
+app-module-<name>/
+  dsl-lib/
+    entries.mjs      prebuilt ESM bundle; default export = ComponentRegistryEntry[]
+    style.css        precompiled CSS for those components (the shell does not scan your classes)
+```
+
+```json
+"dslLib": {
+  "entry": "./dsl-lib/entries.mjs",
+  "css": "./dsl-lib/style.css",
+  "shared": { "react": "^19", "react-router-dom": "^7", "@wadeck-app/dsl-ui": ">=2026.10.14-0" }
+}
+```
+
+- `entry` and `css` must exist and resolve inside `dsl-lib/`. app-core serves them at
+  `/api/modules/<id>/_lib/<file>?v=<version>-<mtime>-<size>`; `_lib` is reserved, so
+  `registerRoute` refuses sub paths under it.
+- Each entry is registered as `<moduleId>:<entry.name>`: a module registered as `orchestrator`
+  with an entry named `JobCardGrid` is used in YAML as `$type: orchestrator:JobCardGrid`. Built-in
+  dsl-ui components keep their plain names. A component that renders children by `$type` must use
+  those exact names.
+- Views of the module are not rendered until its components are loaded (the shell shows a loading
+  state, or an alert with the reason if the import fails).
+- Shared singletons: the shell provides `react`, `react/jsx-runtime`, `react-dom`,
+  `react-dom/client`, `react-router-dom`, `@wadeck-app/dsl-ui` and `@wadeck-app/dsl-renderer` on
+  `globalThis.__APP_CORE_SHARED__`, keyed by package name. Your bundle must not contain its own
+  copy (two Reacts, or two dsl-ui contexts, break hooks, toasts and routing); build it with those
+  specifiers externalized to that global.
+- `shared` declares the ranges you built against. At load, app-core checks them against the
+  versions the shell was built with (`/build-info.json`); a mismatch, an unknown package or an
+  invalid range makes the module fail with a message in `GET /api/modules` `failed`, and the running
+  version is kept. If `build-info.json` is missing the check is skipped with a warning on stderr.
+- The shell provides the router, `ToastProvider` and the theme tokens (use dsl-ui semantic classes,
+  never raw colors). Use relative `/api/modules/<id>/...` URLs for your module's own endpoints.
+
+Reference esbuild plugin (tested by the repo's fixture,
+`packages/test-app-modules/_sources/dsl-lib-fixture/build.mjs`). Keep the React source outside the
+`app-module-*` folder and commit only the built `dsl-lib/` output into it:
+
+```js
+import { build } from 'esbuild';
+
+const SHARED = ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/client', 'react-router-dom',
+  '@wadeck-app/dsl-ui', '@wadeck-app/dsl-renderer'];
+
+const appCoreShared = {
+  name: 'app-core-shared',
+  setup(b) {
+    b.onResolve({ filter: /.*/ }, (args) => {
+      if (SHARED.includes(args.path)) return { path: args.path, namespace: 'app-core-shared' };
+      // Deep imports emitted by entriesGenerator resolve to the shared dsl-ui root.
+      if (args.path.startsWith('@wadeck-app/dsl-ui/dist/')) return { path: '@wadeck-app/dsl-ui', namespace: 'app-core-shared' };
+    });
+    b.onLoad({ filter: /.*/, namespace: 'app-core-shared' }, (args) => ({
+      contents: `module.exports = globalThis.__APP_CORE_SHARED__[${JSON.stringify(args.path)}];`,
+      loader: 'js',
+    }));
+  },
+};
+
+await build({ entryPoints: ['src/entries.mjs'], outfile: 'app-module-x/dsl-lib/entries.mjs',
+  bundle: true, format: 'esm', platform: 'browser', target: 'es2022', plugins: [appCoreShared] });
+```
+
+Components run in the shell's origin with full DOM access: install only modules you trust.
 
 ## Folder and naming conventions, enforced automatically
 
@@ -148,7 +243,8 @@ needs a genuinely bespoke component.
 - `manifest.json` must exist at the package root and pass validation.
 - `backendEntryPath` must resolve inside `api-backend/`.
 - Every path-type view must resolve inside `dsl-frontend/`.
-- No `.tsx` files, no `react`/`react-dom` imports, anywhere in the package.
+- No `.tsx` files, no `react`/`react-dom` imports, anywhere in the package (React source for a
+  `dsl-lib` lives in a separate package; only its built output goes into `dsl-lib/`).
 
 All five are enforced by `violations` rules that auto-apply to any `packages/app-module-*/**`
 path in any repo -- you don't need to configure anything for these to run against your module.

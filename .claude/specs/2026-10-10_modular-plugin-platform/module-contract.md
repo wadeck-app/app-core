@@ -34,6 +34,16 @@ Defines what a module ships, how app-core loads/unloads it at runtime, and what 
 - Frontend: no code loading -- the registration payload includes (or references) a DSL view definition consumed directly by `dsl-renderer`.
 - Unload: app-core stops routing to the old module's registered routes/handlers and calls its `moduleContext` cleanup (clears any `moduleContext.setInterval`/`moduleContext.on` registrations). The old module instance itself may not be garbage-collected immediately if it leaked outside `moduleContext` -- an accepted limitation of Decision #9.
 
+### Runtime-loaded components, `dsl-lib` (per Decisions #69, #70)
+- Layout: `app-module-<name>/{manifest.json, api-backend/, dsl-frontend/, dsl-lib/}`. `dsl-lib/` holds a prebuilt ESM bundle (default export `ComponentRegistryEntry[]`) and its precompiled CSS.
+- Manifest: `dslLib: { entry, css?, shared }`; `entry`/`css` must exist and resolve inside `dsl-lib/` (checked at load, failures go to `failed`); `shared` maps package name to a semver range.
+- Serving: `GET /api/modules/<id>/_lib/<file>?v=<version>-<mtime>-<size>`, only for loaded modules and only inside `dsl-lib/`; the `_lib` segment is reserved (`registerRoute` refuses it).
+- Shared singletons (react, react-dom, react-router-dom, dsl-ui, dsl-renderer) are provided by the shell on `globalThis.__APP_CORE_SHARED__`; the server verifies `shared` against `public/build-info.json` (react, reactDom, reactRouterDom, dslUi, dslRenderer versions) and reports a mismatch through `failed`, keeping any running version. A missing build-info is an explicit stderr warning, not a silent pass.
+- Naming: entries are registered as `<moduleId>:<entry.name>`; YAML uses `$type: <moduleId>:<Name>`.
+
+### Page routes (per Decision #71)
+- An extension point of `kind: page` may declare `path`; `slot: nav` lists it in the navbar, `slot: route` makes it link-only. Nav pages without `path` keep `/modules/<id>/<index>`.
+
 ### Registration source types (per Decision #10)
 - `{ type: 'file', path }` -- v1, implemented. app-core reads the manifest directly from this local path.
 - `{ type: 'npm', package, version }` -- **deferred to v2** (Decision #11). When built, resolution options considered: (A) shell out to `npm install` into a per-module scratch dir, reusing existing `@wadeck-app/*` registry auth (`~/.npmrc`) -- recommended for correctness (handles the package's own deps, auth, integrity); (B) fetch the tarball directly via the registry HTTP API and extract manually -- faster but reimplements what npm already solves. Revisit when v2 is scoped.

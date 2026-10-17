@@ -24,6 +24,7 @@ A daemon is responsible for detecting app-core and pushing registration/update n
 ### P-5: Module UI is DSL-only
 A module's UI is always expressed as DSL view data (consumed by `dsl-renderer`/`dsl-ui`), never as raw React shipped by the module. If a widget can't be expressed in the DSL, that's a signal the DSL/`dsl-ui` component set needs a new primitive, not a reason to allow a React escape hatch.
 **Why:** preserves UI consistency across all modules and keeps modules easy to author for AI agents -- the original motivation for considering DSL view at all. (Decision #16)
+**Amended by Decision #69 (2026-10-17):** a module's views are still always DSL; it may additionally ship business components (`dsl-lib/`) that those views use as new `$type` values. Prefer a generic dsl-ui component when one exists; ship a component only when none can express the behaviour (e.g. a streaming log viewer).
 
 ### P-6: A module lives in its own daemon's repo, in an `app-module` package
 A daemon's app-core module (frontend + backend code per P-2) is published from a dedicated package named `app-module` inside that daemon's own repo (e.g. `queue/packages/app-module`), never inside app-core's own repo. A flat (non-workspaces) repo must first be refactored into a `packages/` layout before this package can be added.
