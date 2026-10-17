@@ -8,6 +8,10 @@ Ideas and items explicitly deferred, not forgotten. Nothing here is current scop
 A module can only register handlers for its own specific paths (`moduleContext.registerRoute()`, Decision #26) via the single catch-all Fastify route + lookup table (Decision #26's design). There is no way for a module to hook into every app-core request (no `onRequest`/`preHandler`-style cross-cutting hook exposed to modules).
 **Deferred:** 2026-10-11 (Decision #35). **Reason:** not needed by any real module yet; same deferred-not-permanent treatment as npm sourcing (Decision #11) and modules shipping their own components (Decision #30).
 
+### Closing long-lived responses on unload
+A module route that streams (SSE log tail through `reply.hijack()`) keeps running after the module is unloaded or swapped: the route disappears but the already-open response and its raw timers live until the browser tab closes. Idea: track hijacked responses per module and destroy them on dispose so clients reconnect to the new version. Needs a way to tell a streaming response from a normal one in flight.
+**Deferred:** 2026-10-17 (reported by orch-owner). **Reason:** no leak across reloads, only until the client disconnects; not needed yet.
+
 ### npm-sourced module registration
 `{ type: 'npm', package, version }` registration source exists in the schema but is rejected in v1.
 **Deferred:** Decision #11. **Reason:** `file` source covers every real need so far; resolution mechanics (shell out to `npm install` vs. raw tarball fetch) are designed but unbuilt -- see module-contract.md.
