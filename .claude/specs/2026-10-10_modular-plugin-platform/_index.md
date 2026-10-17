@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 66 decisions logged, 1 open question -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 67 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -306,12 +306,18 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 |---|---|---|---|---|
 | 66 | The production server ships inside the existing global, auto-updating `@wadeck-app/app-core-cli` as the foreground command `app-core-cli serve`; `packages/server` stays private and unpublished. The CLI bundle already inlines the server code and carries the built frontend in `dist/public` (with `build-info.json`); `fastify`, `@fastify/static`, `zod` and `js-yaml` were already runtime dependencies, so no new dependency. `serve` and `packages/server/src/index.ts` share one start sequence (`startServer` in `packages/server/src/start.ts`, exported as `@wadeck-app/app-core-server/start`), which also writes `server.port.json`. `serve` exits 1 with an actionable message if the bundled frontend is missing or the port is taken. Because every CLI invocation schedules the `shared-updater` background check, the server and frontend update with the CLI and a new version is used the next time `serve` starts (Decision #57). `publish.yml` needs no new step: `npm run build` already builds frontend, server and CLI before the CLI is published. Orchestrator job for the installed server: `orch add startup app-core --command "app-core-cli serve" --liveness-strategy portFile --liveness-port-file "~/.config/app-core/server.port.json" --timeout 2000000` (the dev job `app-core-dev` is unchanged). Details: `packages/app-core-cli/docs/serve.md`. | Decided | 2026-10-15 | Reuses the packaging precedent (orchestrator-cli ships server + public assets in its CLI package) instead of a second published package. Verified end to end: `npm pack`, install of the tarball into a temp prefix, `serve` on port 4861 answered API 200, index html, `build-info.json` and a module registration. |
 
+## Decision Log (cont. 44)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 67 | The Orchestrator job `app-core-dev` uses `--timeout 0` (no timeout). Orchestrator 2026.10.17-408 fixed the ceiling found by measurement (a timeout above 2147483s killed the job after 0.3s because the timer overflowed 32 bits): large values now work, `0` means no timeout (documented in `orch --help`), negative or fractional values are rejected at add/edit. Re-verified on the installed build with temporary jobs: `0` and `31536000` both ran to completion. Supersedes the `2000000` workaround of Decision #63. | Decided | 2026-10-17 | Reported with measurements to orch-owner, who fixed it the same day. |
+
 ## Open Questions
 
 | # | Question | Priority | Status |
 |---|---|---|---|
 | Q1 | `dsl-ui` does not export `useTheme`/`ThemeMode` from its root, so `frontend-shell/src/theme.ts` duplicates it (Decision #62). Waiting on dsl-owner to export and publish; then delete `theme.ts` and use the export. | Medium | Resolved -- Decision #64 |
-| Q2 | Orchestrator job `--timeout`: max supported value unknown (1 year was killed after 0.2s, 2000000s works) and no documented permanent/detached job mode. Job `app-core-dev` uses 2000000s meanwhile (Decision #63). Waiting on orch-owner. | Medium | Open -- asked orch-owner |
+| Q2 | Orchestrator job `--timeout`: max supported value unknown (1 year was killed after 0.2s, 2000000s works) and no documented permanent/detached job mode. Job `app-core-dev` uses 2000000s meanwhile (Decision #63). Measured 2026-10-17 on orch 2026.10.14-407: `--timeout 2147483` runs to completion, `--timeout 2147484` is killed after 0.3s (boundary 2^31-1 ms); results sent to orch-owner, who owns validation, docs and a long-running job mode. | Medium | Resolved -- fixed in orch 2026.10.17-408 (Decision #67) |
 | Q3 | Raw colors in module DSL views are not checked by any rule (`tailwind/no-raw-color-class` covers .ts/.tsx only). violations-owner agreed on a new `app-module/no-raw-color-in-views` rule (feasible with the current runner); spec with tested patterns and fixtures sent, waiting for it to be built and published, then bump app-core's `violations-rules`. | Low | Resolved -- rule published in violations-rules 2026.10.12-126 and installed in app-core |
 
 ## Modules / Sub-files
