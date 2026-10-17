@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 74 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 75 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -343,6 +343,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 74 | Unloading a module ends its streaming responses. The route registry tracks every response handed to a module handler (until `close`); on unload, swap (update) or unregister it destroys those whose headers were already sent and that have not finished (an SSE tail, any hijacked stream), so the module's `req.raw.on('close')` cleanup runs and the client reconnects to the new version. Requests still waiting for their handler (no header sent) are left alone. Heuristic accepted: a normal response being flushed at the exact instant of an unload can be cut. Delivers the follow-up recorded in future-iterations.md. | Decided | 2026-10-17 | orch-owner reported that an open log stream kept running the old backend code, with its raw timers, until the browser tab closed. User asked to build it. Verified with the real server (unregister and update both close an open stream and trigger the module cleanup once). |
+
+## Decision Log (cont. 49)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 75 | CSS contract for `dsl-lib`: the module's stylesheet is built with the dsl-ui Tailwind preset AND `dslUiContent`, plus the module's own sources, so it carries every utility dsl-ui uses in the same canonical order as the shell's sheet. The shell keeps injecting the module link AFTER its own stylesheet; no shell change. Rejected: injecting the module link before the shell's (measured: fixes dsl-ui elements but breaks the module's own shorthand/longhand combinations) and a delta-only sheet (fragile against shell-only longhands). Documented in module-authoring.md. | Decided | 2026-10-17 | orch-owner found the dsl-ui SearchBar icon overlapping its placeholder inside the orchestrator module: its sheet repeated `.px-2` without `.pl-7`. A browser experiment with minimal sheets (8px today, 28px with a superset sheet) showed ordering across two Tailwind sheets cannot be fixed by link order alone. |
 
 ## Open Questions
 

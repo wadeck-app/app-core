@@ -215,6 +215,15 @@ app-module-<name>/
   version is kept. If `build-info.json` is missing the check is skipped with a warning on stderr.
 - The shell provides the router, `ToastProvider` and the theme tokens (use dsl-ui semantic classes,
   never raw colors). Use relative `/api/modules/<id>/...` URLs for your module's own endpoints.
+- Build `style.css` with Tailwind using the dsl-ui preset AND its content globs, exactly like the
+  shell: `presets: [dslUiPreset]` and `content: ['./src/**/*.{ts,tsx}', ...dslUiContent]` (both from
+  `@wadeck-app/dsl-ui/tailwind-preset`). The shell injects your stylesheet after its own, and
+  Tailwind orders utilities (`px-2` before `pl-7`) only inside one sheet. If yours lacks the
+  dsl-ui classes but repeats a shorthand such as `.px-2`, it overrides the shell's longhand
+  `.pl-7` on dsl-ui elements (the SearchBar icon then overlaps its placeholder). Measured: a
+  module sheet without dsl-ui classes gives 8px instead of 28px; loading it before the shell's
+  sheet fixes that element but breaks the module's own `px-2 pl-4` (8px instead of 16px); a sheet
+  that includes the dsl-ui classes gives the right value for both.
 
 Reference esbuild plugin (tested by the repo's fixture,
 `packages/test-app-modules/_sources/dsl-lib-fixture/build.mjs`). Keep the React source outside the
