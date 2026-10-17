@@ -8,6 +8,7 @@ import { slotsRoutes } from './routes/slots.js';
 import { ModuleManager } from './loader.js';
 import { resolveModulesDir } from './configDir.js';
 import { readRegistryEntries } from './registry.js';
+import { getErrorMessage } from './errors.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,8 +75,11 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
     } catch (err) {
       // A single bad registry entry must not block startup for every other
       // module -- app-core has no isolation guarantee, but startup itself
-      // should still succeed.
-      server.log.error({ err, moduleId: entry.id }, 'failed to load module from registry on startup');
+      // should still succeed. Written to stderr explicitly: the Fastify logger is off.
+      process.stderr.write(
+        `[app-core] module "${entry.id}" failed to load from ${entry.source.path}: ${getErrorMessage(err)}. ` +
+          `Fix the manifest, re-register it, or remove it with POST /api/modules/unregister {"id":"${entry.id}"}.\n`,
+      );
     }
   }
 

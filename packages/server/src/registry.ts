@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { MODULE_ID_PATTERN } from './manifest.js';
 
 // `<app-core-config-dir>/modules/<id>.json` IS app-core's module registry --
 // not a separate "pending" dropbox. Both app-core (on a successful
@@ -9,10 +10,28 @@ export interface RegistryEntry {
   source: { type: 'file'; path: string };
 }
 
+// Every registry path is built here, so an id can never escape the modules dir.
+function registryFile(modulesDir: string, id: string): string {
+  if (!MODULE_ID_PATTERN.test(id)) {
+    throw new Error(`Invalid module id "${id}": it must start with a letter or digit and contain only letters, digits, "_" and "-".`);
+  }
+  return path.join(modulesDir, `${id}.json`);
+}
+
 export function writeRegistryEntry(modulesDir: string, entry: RegistryEntry): void {
+  const file = registryFile(modulesDir, entry.id);
   fs.mkdirSync(modulesDir, { recursive: true });
-  const file = path.join(modulesDir, `${entry.id}.json`);
   fs.writeFileSync(file, JSON.stringify(entry, null, 2), 'utf8');
+}
+
+// Returns whether a registry file existed (and was deleted).
+export function removeRegistryEntry(modulesDir: string, id: string): boolean {
+  const file = registryFile(modulesDir, id);
+  if (!fs.existsSync(file)) {
+    return false;
+  }
+  fs.rmSync(file);
+  return true;
 }
 
 export function readRegistryEntries(modulesDir: string): RegistryEntry[] {

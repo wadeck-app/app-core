@@ -28,6 +28,12 @@ Defines how a provider daemon (Orchestrator, Queue, Flow, future tools) tells ap
 2. Daemon `POST`s `{ id, source: { type: 'file', path } }` to `/api/modules/register` (new module) or `/api/modules/update` (new version of a known module).
 3. app-core loads/swaps the module per module-contract.md.
 
+### Removal path (daemon uninstalled)
+1. Daemon `POST`s `{ id }` to `/api/modules/unregister`.
+2. app-core disposes the module, deletes `<app-core-config-dir>/modules/<id>.json` and forgets any recorded load failure; it does not come back on restart. `200 { id, removed: true }`; `404` if the id is unknown everywhere; `400` for an invalid id.
+3. A module whose registration exists but whose load fails (missing manifest, invalid manifest, backend throws) is listed under `failed` in `GET /api/modules` and announced on stderr at startup; the frontend shows it in an alert. Unregistering is the way to clear it for good.
+4. Module ids match `^[A-Za-z0-9][A-Za-z0-9_-]*$` (the id names the registry file and the URL prefix); register, update and unregister reject anything else with `400`.
+
 ### Fallback path (app-core unreachable)
 1. Daemon's push attempt fails (connection refused / timeout) -- no retry loop is implemented by the daemon.
 2. Daemon writes/overwrites `<app-core-config-dir>/modules/<id>.json` directly (same shape as the HTTP payload).

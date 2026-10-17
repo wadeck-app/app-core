@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 67 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 68 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -311,6 +311,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 67 | The Orchestrator job `app-core-dev` uses `--timeout 0` (no timeout). Orchestrator 2026.10.17-408 fixed the ceiling found by measurement (a timeout above 2147483s killed the job after 0.3s because the timer overflowed 32 bits): large values now work, `0` means no timeout (documented in `orch --help`), negative or fractional values are rejected at add/edit. Re-verified on the installed build with temporary jobs: `0` and `31536000` both ran to completion. Supersedes the `2000000` workaround of Decision #63. | Decided | 2026-10-17 | Reported with measurements to orch-owner, who fixed it the same day. |
+
+## Decision Log (cont. 45)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 68 | Failed modules are never silent, and modules can be removed at runtime. (a) `ModuleManager` records every failed load (`id`, `source`, `error`, `failedAt`) until the same id loads or is forgotten; `GET /api/modules` returns `{ modules, failed }` (additive), startup writes one actionable stderr line per failed module (the Fastify logger stays off), and the frontend shows a `role="alert"` banner. (b) New `POST /api/modules/unregister { id }`: disposes the module, deletes its registry file, clears its failure; `200 { id, removed: true }`, `404` when unknown everywhere, `400` on an invalid id. (c) Module ids are restricted to `^[A-Za-z0-9][A-Za-z0-9_-]*$` for register, update and unregister, and every registry path is built through one guarded function: the previous rule (`min(1)`) let `register` write outside the modules dir with an id like `../x`. | Decided | 2026-10-17 | Verified in code: `logger: false` made startup load failures invisible, `ModuleManager.unload()` had no HTTP route and registry files were never removed, and the id was unvalidated. Original goal: modules are loaded AND unloaded without a restart. |
 
 ## Open Questions
 

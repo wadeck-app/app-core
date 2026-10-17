@@ -66,6 +66,19 @@ directly to `<app-core-config-dir>/modules/<id>.json` instead -- app-core picks 
 next startup. `id` must be a fixed literal string your daemon controls, never derived from
 untrusted input.
 
+### Module ids, load failures and removal
+
+- The module `id` must match `^[A-Za-z0-9][A-Za-z0-9_-]*$` (letters, digits, `_`, `-`); anything else is rejected with `400`.
+- A registered module that cannot load (missing or invalid manifest, backend throws) does not stop app-core. It is listed under `failed` in `GET /api/modules` (`id`, `source`, `error`, `failedAt`), printed on stderr at startup, and shown as an alert in the UI. Fix it and re-register, or remove it.
+- When your daemon is uninstalled, unregister the module so it does not come back on restart:
+
+```sh
+curl -X POST http://127.0.0.1:4850/api/modules/unregister \
+  -H 'Content-Type: application/json' -d '{"id": "my-module"}'
+```
+
+`200 { "id": "my-module", "removed": true }`; `404` if app-core does not know the id.
+
 ### The backend entry
 
 `backendEntryPath` points at a file with a single default export: a function receiving

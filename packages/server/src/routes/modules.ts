@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import * as path from 'node:path';
 import { getErrorMessage } from '../errors.js';
-import { parseRegistrationPayload, UnsupportedSourceTypeError } from '../manifest.js';
-import { writeRegistryEntry, type RegistryEntry } from '../registry.js';
+import { parseRegistrationPayload, parseUnregisterPayload, UnsupportedSourceTypeError } from '../manifest.js';
+import { removeRegistryEntry, writeRegistryEntry, type RegistryEntry } from '../registry.js';
 import type { ModuleManager } from '../loader.js';
 import { ZodError } from 'zod';
 
@@ -49,15 +49,34 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
     }
   });
 
+  // Removes a module for good: stops routing to it, disposes its moduleContext and deletes its
+  // registry file, so it does not come back on the next start. A daemon calls this on uninstall.
+  server.post('/api/modules/unregister', async (req, reply) => {
+    try {
+      const { id } = parseUnregisterPayload(req.body);
+      const hadRegistryFile = removeRegistryEntry(modulesDir, id);
+      const wasKnown = manager.forget(id);
+      if (!wasKnown && !hadRegistryFile) {
+        return reply.code(404).send({
+          error: `Module "${id}" is not registered. GET /api/modules lists the loaded modules and the ones that failed to load.`,
+        });
+      }
+      return reply.code(200).send({ id, removed: true });
+    } catch (err) {
+      return sendError(reply, err);
+    }
+  });
+
   // Internal inspection endpoint for tests/dashboard -- lists currently loaded
-  // modules and their resolved views (views are DSL data, not code).
+  // modules and their resolved views (views are DSL data, not code), plus the modules
+  // whose registration exists but failed to load, with the reason.
   server.get('/api/modules', async (_req, reply) => {
     const modules = manager.list().map((m) => ({
       id: m.id,
       version: m.manifest.version,
       extensionPoints: m.resolvedViews,
     }));
-    return reply.code(200).send({ modules });
+    return reply.code(200).send({ modules, failed: manager.listFailed() });
   });
 }
 

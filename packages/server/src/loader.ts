@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { getErrorMessage } from './errors.js';
 import { createModuleContext, type ModuleContext } from './moduleContext.js';
 import { parseManifest, type Manifest } from './manifest.js';
 import { resolveView, resolveRawYaml } from './viewResolver.js';
@@ -22,8 +23,16 @@ export interface LoadedModule {
   resolvedViews: Array<{ kind: string; slot: string; label?: string; view: unknown; rawYaml: string; order?: number }>;
 }
 
+export interface FailedModule {
+  id: string;
+  source: string;
+  error: string;
+  failedAt: string;
+}
+
 export class ModuleManager {
   private loaded = new Map<string, LoadedModule>();
+  private failed = new Map<string, FailedModule>();
   // Shared across all modules so routes stay scoped by moduleId (enforced in
   // ModuleRouteRegistry itself) and so server.ts's single catch-all dispatcher
   // route can look up any module's registered routes.
@@ -37,10 +46,36 @@ export class ModuleManager {
     return [...this.loaded.values()];
   }
 
+  listFailed(): FailedModule[] {
+    return [...this.failed.values()];
+  }
+
+  hasFailed(id: string): boolean {
+    return this.failed.has(id);
+  }
+
+  // A failed load is recorded (and visible via listFailed) until the same id loads
+  // successfully or is forgotten; the error is still thrown to the caller.
+  async loadFromEntry(entry: RegistryEntry): Promise<LoadedModule> {
+    try {
+      const loaded = await this.load(entry);
+      this.failed.delete(entry.id);
+      return loaded;
+    } catch (err) {
+      this.failed.set(entry.id, {
+        id: entry.id,
+        source: entry.source.path,
+        error: getErrorMessage(err),
+        failedAt: new Date().toISOString(),
+      });
+      throw err;
+    }
+  }
+
   // Backend loaded via dynamic import() with cache-busting (not a child
   // process, not a vm context) so a new version or a rewritten backend file
   // always yields a fresh module instance instead of Node's cached one.
-  async loadFromEntry(entry: RegistryEntry): Promise<LoadedModule> {
+  private async load(entry: RegistryEntry): Promise<LoadedModule> {
     const manifestPath = entry.source.path;
     const manifestDir = path.dirname(manifestPath);
     const manifestRaw = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
@@ -87,5 +122,13 @@ export class ModuleManager {
     }
     existing.moduleContext.dispose();
     this.loaded.delete(id);
+  }
+
+  // Unload plus clearing any recorded failure; returns whether the manager knew the id at all.
+  forget(id: string): boolean {
+    const known = this.loaded.has(id) || this.failed.has(id);
+    this.unload(id);
+    this.failed.delete(id);
+    return known;
   }
 }

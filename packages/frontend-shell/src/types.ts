@@ -16,6 +16,15 @@ export interface LoadedModuleSummary {
   extensionPoints: ResolvedExtensionPoint[];
 }
 
+// A registered module that could not be loaded; `error` is the reason, `source` the manifest path.
+export interface FailedModuleSummary {
+  id: string;
+  source: string;
+  error: string;
+  failedAt: string;
+}
+
 export interface ModulesResponse {
   modules: LoadedModuleSummary[];
+  failed?: FailedModuleSummary[];
 }

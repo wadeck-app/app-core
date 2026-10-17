@@ -9,6 +9,7 @@ import { useModules } from './useModules.js';
 export default function App(): React.ReactElement {
   const { data, error } = useModules();
   const modules = data?.modules ?? [];
+  const failedModules = data?.failed ?? [];
 
   return (
     <BrowserRouter>
@@ -20,6 +21,18 @@ export default function App(): React.ReactElement {
             <p role="alert" className="px-4 py-3 text-danger">
               Failed to load modules: {String(error)}
             </p>
+          ) : null}
+          {failedModules.length > 0 ? (
+            <div role="alert" className="px-4 py-3 text-danger">
+              <p>Modules that failed to load (fix them, re-register, or unregister):</p>
+              <ul className="list-disc pl-6">
+                {failedModules.map((f) => (
+                  <li key={f.id}>
+                    <strong>{f.id}</strong>: {f.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
           <Routes>
             <Route path="/" element={<Dashboard modules={modules} />} />

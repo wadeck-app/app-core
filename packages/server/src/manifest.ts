@@ -35,8 +35,22 @@ const FileSourceSchema = z.object({
   path: z.string().min(1),
 });
 
+// The id names the registry file (`<modules-dir>/<id>.json`) and the URL prefix
+// `/api/modules/<id>/`, so it must never contain a path separator or dots.
+export const MODULE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
+export const ModuleIdSchema = z
+  .string()
+  .regex(MODULE_ID_PATTERN, 'module id must start with a letter or digit and contain only letters, digits, "_" and "-"');
+
+export const UnregisterPayloadSchema = z.object({ id: ModuleIdSchema });
+
+export function parseUnregisterPayload(input: unknown): { id: string } {
+  return UnregisterPayloadSchema.parse(input);
+}
+
 export const RegistrationPayloadSchema = z.object({
-  id: z.string().min(1),
+  id: ModuleIdSchema,
   source: z.discriminatedUnion('type', [
     FileSourceSchema,
     z.object({ type: z.literal('npm'), package: z.string(), version: z.string() }),
