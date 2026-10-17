@@ -82,6 +82,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
     if (!found) {
       return reply.code(404).send({ error: 'not-found' });
     }
+    manager.routeRegistry.trackResponse(id, reply.raw);
     // The handler sees only its own `:name` segments, never the catch-all's `id` (module id) and `*`.
     delete req.params['id'];
     delete req.params['*'];

@@ -1,3 +1,4 @@
+import type { ServerResponse } from 'node:http';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 // `req.params` holds exactly the `:name` segments of the route the module registered (a module may
@@ -77,6 +78,7 @@ function sameShape(a: string[], b: string[]): boolean {
 // server.ts), not as real Fastify route registration/deregistration.
 export class ModuleRouteRegistry {
   private routes = new Map<string, RouteEntry[]>();
+  private openResponses = new Map<string, Set<ServerResponse>>();
 
   register(moduleId: string, method: string, subPath: string, handler: ModuleRouteHandler): void {
     const normalized = normalizeSubPath(subPath);
@@ -100,8 +102,31 @@ export class ModuleRouteRegistry {
     this.routes.set(moduleId, entries);
   }
 
+  // Remembers a response handed to one of the module's handlers until it closes, so unloading the
+  // module can end the ones that stream (see unregisterAllForModule).
+  trackResponse(moduleId: string, response: ServerResponse): void {
+    const open = this.openResponses.get(moduleId) ?? new Set<ServerResponse>();
+    open.add(response);
+    this.openResponses.set(moduleId, open);
+    response.once('close', () => {
+      open.delete(response);
+    });
+  }
+
+  // Drops the module's routes and ends its streaming responses (headers sent, not finished, e.g. an
+  // SSE log tail): the route is gone but such a response would otherwise keep running the old
+  // code until the client disconnects. The client reconnects (EventSource does it by itself) and
+  // reaches the new version; the module's `req.raw.on('close')` cleanup runs. Requests still
+  // waiting for their handler (no header sent yet) are left alone.
   unregisterAllForModule(moduleId: string): void {
     this.routes.delete(moduleId);
+    const open = this.openResponses.get(moduleId);
+    this.openResponses.delete(moduleId);
+    for (const response of open ?? []) {
+      if (response.headersSent && !response.writableEnded) {
+        response.destroy();
+      }
+    }
   }
 
   find(moduleId: string, method: string, subPath: string): FoundRoute | undefined {

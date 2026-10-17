@@ -115,6 +115,16 @@ Raw `setInterval`/`setTimeout`/`addEventListener`, and any React/JSX usage, are 
 `violations` rule that auto-applies to any `packages/app-module-*/**` path -- no per-repo config
 needed. If you use `violations check` in your repo, this is enforced automatically.
 
+#### Streaming responses (SSE)
+
+A handler may stream: call `reply.hijack()`, then write to `reply.raw` (`writeHead(200, { 'Content-Type':
+'text/event-stream' })`, `write('data: ...\n\n')`). Clean up in `req.raw.on('close', ...)`.
+
+When your module is unloaded, swapped by an update or unregistered, app-core ends the streams it
+already started (headers sent, not finished): your `close` handler runs and the client reconnects
+(`EventSource` does it by itself) to the new version. Requests still waiting for their handler are not
+touched.
+
 #### Route parameters
 
 A sub path may contain `:name` segments. The handler reads them from `req.params`, which holds only

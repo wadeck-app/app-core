@@ -11,6 +11,7 @@ A module can only register handlers for its own specific paths (`moduleContext.r
 ### Closing long-lived responses on unload
 A module route that streams (SSE log tail through `reply.hijack()`) keeps running after the module is unloaded or swapped: the route disappears but the already-open response and its raw timers live until the browser tab closes. Idea: track hijacked responses per module and destroy them on dispose so clients reconnect to the new version. Needs a way to tell a streaming response from a normal one in flight.
 **Deferred:** 2026-10-17 (reported by orch-owner). **Reason:** no leak across reloads, only until the client disconnects; not needed yet.
+**Delivered 2026-10-17 (Decision #74):** on unload, swap or unregister the module's responses that already sent headers and have not finished are destroyed.
 
 ### npm-sourced module registration
 `{ type: 'npm', package, version }` registration source exists in the schema but is rejected in v1.

@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 73 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 74 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -337,6 +337,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 73 | Review adjustments after the first dsl-lib implementation. (a) A page `path` of `"/"` is valid and is the module home page, mounted at `/modules/<id>` (with or without a trailing slash); its navbar link is exact-match so it is not highlighted on the module's other pages. (b) All side-effect-free checks of an update (dsl-lib files and shared ranges, view YAML) run before the running instance is disposed: a broken update (e.g. invalid YAML) is rejected and recorded in `failed`, and the previous version keeps serving its routes and views; the shell banner says "The previous version is still running." (c) Shell: a module dropped and re-registered with the same lib URL during an import no longer injects a second stylesheet; bundle entries must have a `render` function and a plain name (no ":"; the shell adds `<moduleId>:`). (d) Docs: the built `dsl-lib/` may be committed or generated in CI, but must exist when the module registers. | Decided | 2026-10-17 | Independent review plus a real two-module browser run (alpha with a "/" home, beta; routes with params, broken-YAML update, unregister of one module). orch-owner needed "/" for orch-ui's "Back to jobs" links; before the reorder, a YAML typo in an update removed the running module from the list. |
+
+## Decision Log (cont. 48)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 74 | Unloading a module ends its streaming responses. The route registry tracks every response handed to a module handler (until `close`); on unload, swap (update) or unregister it destroys those whose headers were already sent and that have not finished (an SSE tail, any hijacked stream), so the module's `req.raw.on('close')` cleanup runs and the client reconnects to the new version. Requests still waiting for their handler (no header sent) are left alone. Heuristic accepted: a normal response being flushed at the exact instant of an unload can be cut. Delivers the follow-up recorded in future-iterations.md. | Decided | 2026-10-17 | orch-owner reported that an open log stream kept running the old backend code, with its raw timers, until the browser tab closed. User asked to build it. Verified with the real server (unregister and update both close an open stream and trigger the module cleanup once). |
 
 ## Open Questions
 
