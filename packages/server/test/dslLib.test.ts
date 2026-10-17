@@ -27,7 +27,7 @@ describe('manifest: page path and dslLib', () => {
     expect(manifest.dslLib?.entry).toBe('./dsl-lib/entries.mjs');
   });
 
-  it.each(['jobs', '/', '/jobs/', '/../x', '/jobs/..', '/a b', '/jobs\\x', '/jobs/:1x'])('rejects the page path %s', (bad) => {
+  it.each(['jobs', '/jobs/', '/../x', '/jobs/..', '/a b', '/jobs\\x', '/jobs/:1x', '//'])('rejects the page path %s', (bad) => {
     expect(() => parseManifest(page({ path: bad }))).toThrow();
   });
 

@@ -41,7 +41,8 @@ app-module-<name>/
   `"nav"` respectively.
 - `extensionPoints[].path` (optional, pages only, e.g. `"/jobs/:id"`): mounts the page at
   `/modules/<moduleId><path>` as its own route; `:name` segments reach the view as `$route.name`.
-  Segments are letters, digits, `_` or `-`; no `..`, no trailing slash.
+  Segments are letters, digits, `_` or `-`; no `..`, no trailing slash. The path `"/"` alone is the
+  module's home page, mounted at `/modules/<moduleId>` (with or without a trailing slash).
 - `slot: "route"` (with `kind: "page"`): the page is reachable only by link, not listed in the
   navbar (detail, edit and log pages). Link to it from another view with dsl-ui `Link`/`ButtonLink`
   (`href: /modules/<moduleId>/jobs/...`). Routes disappear when the module is unloaded or swapped.
@@ -207,7 +208,9 @@ app-module-<name>/
 
 Reference esbuild plugin (tested by the repo's fixture,
 `packages/test-app-modules/_sources/dsl-lib-fixture/build.mjs`). Keep the React source outside the
-`app-module-*` folder and commit only the built `dsl-lib/` output into it:
+`app-module-*` folder; only the built `dsl-lib/` output goes into it. Commit it, or generate it in CI
+before the package is published: app-core refuses a module whose declared `dsl-lib/` files do not exist
+when it registers:
 
 ```js
 import { build } from 'esbuild';

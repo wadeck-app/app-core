@@ -133,6 +133,40 @@ describe('useModuleLibs', () => {
     expect(status?.state === 'error' ? status.message : '').toContain('default-export an array');
     expect(appRegistry['orchestrator:Hello']).toBeUndefined();
   });
+
+  it('rejects an entry without a render function and one whose name already has a prefix', async () => {
+    const noRender: LibImporter = async () => ({ default: [{ name: 'Broken' }] });
+    const first = renderHook(() => useModuleLibs([moduleWithLib('orchestrator', '/lib/a.mjs?v=1')], noRender));
+    await waitFor(() => expect(first.result.current['orchestrator']?.state).toBe('error'));
+
+    const prefixed: LibImporter = async () => ({ default: [{ ...hello('x'), name: 'orchestrator:Hello' }] });
+    const second = renderHook(() => useModuleLibs([moduleWithLib('orchestrator', '/lib/b.mjs?v=1')], prefixed));
+    await waitFor(() => expect(second.result.current['orchestrator']?.state).toBe('error'));
+    const status = second.result.current['orchestrator'];
+    expect(status?.state === 'error' ? status.message : '').toContain('without ":"');
+    expect(appRegistry['orchestrator:orchestrator:Hello']).toBeUndefined();
+  });
+
+  it('injects one stylesheet when a module is dropped and re-registered with the same URL during an import', async () => {
+    const resolvers: Array<() => void> = [];
+    const importer: LibImporter = (url) =>
+      new Promise((resolve) => {
+        resolvers.push(() => resolve({ default: [hello(url)] }));
+      });
+    const lib = moduleWithLib('orchestrator', '/lib/a.mjs?v=1', '/lib/a.css?v=1');
+    const { result, rerender } = renderHook(({ list }) => useModuleLibs(list, importer), { initialProps: { list: [lib] } });
+
+    rerender({ list: [] });
+    rerender({ list: [moduleWithLib('orchestrator', '/lib/a.mjs?v=1', '/lib/a.css?v=1')] });
+    expect(resolvers).toHaveLength(2);
+
+    await act(async () => {
+      resolvers[0]?.();
+      resolvers[1]?.();
+    });
+    await waitFor(() => expect(result.current['orchestrator']?.state).toBe('ready'));
+    expect(document.head.querySelectorAll('link[data-module-lib="orchestrator"]')).toHaveLength(1);
+  });
 });
 
 describe('ModuleLibGate', () => {

@@ -8,6 +8,14 @@ vi.mock('./useModules.js', () => ({
     data: {
       modules: [
         {
+          id: 'home-mod',
+          version: '1.0.0',
+          extensionPoints: [
+            { kind: 'page', slot: 'nav', path: '/', label: 'Home', view: {}, rawYaml: '$type: Badge\nlabel: home-page\n' },
+            { kind: 'page', slot: 'nav', path: '/other', label: 'Other', view: {}, rawYaml: '$type: Badge\nlabel: other-page\n' },
+          ],
+        },
+        {
           id: 'jobs-mod',
           version: '1.0.0',
           extensionPoints: [
@@ -43,6 +51,25 @@ describe('App: parameterised module pages', () => {
     expect(await screen.findByText('7')).toBeInTheDocument();
   });
 
+  it('mounts a page declared with path "/" as the module home, with and without a trailing slash', async () => {
+    window.history.pushState({}, '', '/modules/home-mod');
+    const first = render(<App />);
+    expect(await screen.findByText('home-page')).toBeInTheDocument();
+    first.unmount();
+
+    window.history.pushState({}, '', '/modules/home-mod/');
+    render(<App />);
+    expect(await screen.findByText('home-page')).toBeInTheDocument();
+  });
+
+  it('highlights the module home link only on the home page, not on the module\'s other pages', async () => {
+    window.history.pushState({}, '', '/modules/home-mod/other');
+    render(<App />);
+    expect(await screen.findByText('other-page')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Other' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('keeps the legacy index route for nav pages', async () => {
     window.history.pushState({}, '', '/modules/jobs-mod/0');
     render(<App />);
@@ -59,6 +86,7 @@ describe('App: parameterised module pages', () => {
     render(<App />);
     expect(screen.getByRole('link', { name: 'Jobs list' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Job detail' })).toBeNull();
-    expect(screen.getAllByRole('link')).toHaveLength(2);
+    // Dashboard + the three nav pages (Home, Other, Jobs list); the two route-only pages are absent.
+    expect(screen.getAllByRole('link')).toHaveLength(4);
   });
 });

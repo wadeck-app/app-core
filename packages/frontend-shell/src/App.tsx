@@ -4,6 +4,7 @@ import { RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { AppNavBar } from './NavBar.js';
 import { Dashboard } from './Dashboard.js';
 import { ModulePage } from './ModulePage.js';
+import { modulePagePath } from './modulePaths.js';
 import { useModules } from './useModules.js';
 import { ModuleLibsProvider, useModuleLibs } from './useModuleLibs.js';
 import type { LoadedModuleSummary } from './types.js';
@@ -43,6 +44,7 @@ export default function App(): React.ReactElement {
                     {failedModules.map((f) => (
                       <li key={f.id}>
                         <strong>{f.id}</strong>: {f.error}
+                        {modules.some((m) => m.id === f.id) ? ' The previous version is still running.' : ''}
                       </li>
                     ))}
                   </ul>
@@ -63,7 +65,7 @@ export default function App(): React.ReactElement {
                 {pageRoutes.map((r) => (
                   <Route
                     key={`${r.moduleId}${r.path}`}
-                    path={`/modules/${r.moduleId}${r.path}`}
+                    path={modulePagePath(r.moduleId, r.path)}
                     element={<ModulePage modules={modules} target={r} />}
                   />
                 ))}

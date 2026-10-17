@@ -2,12 +2,15 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Moon, Sun } from 'lucide-react';
 import { IconButton, NavBar as DslNavBar, useTheme } from '@wadeck-app/dsl-ui';
+import { modulePagePath } from './modulePaths.js';
 import type { LoadedModuleSummary } from './types.js';
 
 export interface NavPage {
   moduleId: string;
   routePath: string;
   label: string;
+  // A module home page ("/") must not stay highlighted on the module's other pages.
+  exact: boolean;
 }
 
 // Base slot: page/nav -> a top-nav entry routing to a full-page render (frontend-shell.md "Base slots").
@@ -18,8 +21,9 @@ export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
       .map((ep, i) => ({
         moduleId: m.id,
         // A nav page with a static path is linked there; one with route params can only be reached by index.
-        routePath: ep.path !== undefined && !ep.path.includes(':') ? `/modules/${m.id}${ep.path}` : `/modules/${m.id}/${i}`,
+        routePath: ep.path !== undefined && !ep.path.includes(':') ? modulePagePath(m.id, ep.path) : `/modules/${m.id}/${i}`,
         label: ep.label ?? `${m.id} #${i}`,
+        exact: ep.path === '/',
       })),
   );
 }
@@ -38,7 +42,7 @@ export function AppNavBar({ modules }: { modules: LoadedModuleSummary[] }): Reac
           Dashboard
         </NavLink>
         {pages.map((p) => (
-          <NavLink key={p.routePath} to={p.routePath} className={linkClass}>
+          <NavLink key={p.routePath} to={p.routePath} end={p.exact} className={linkClass}>
             {p.label}
           </NavLink>
         ))}

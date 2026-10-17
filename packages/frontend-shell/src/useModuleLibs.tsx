@@ -36,7 +36,24 @@ function injectCss(moduleId: string, href: string): HTMLLinkElement {
 }
 
 function isEntryList(value: unknown): value is ComponentRegistryEntry[] {
-  return Array.isArray(value) && value.every((v) => typeof v === 'object' && v !== null && typeof (v as { name?: unknown }).name === 'string');
+  return (
+    Array.isArray(value) &&
+    value.every((v) => {
+      if (typeof v !== 'object' || v === null) {
+        return false;
+      }
+      const candidate = v as { name?: unknown; render?: unknown };
+      return typeof candidate.name === 'string' && typeof candidate.render === 'function';
+    })
+  );
+}
+
+// The shell adds the "<moduleId>:" prefix itself; a name already containing ":" would be double-prefixed.
+function checkEntryNames(entries: ComponentRegistryEntry[]): void {
+  const bad = entries.find((entry) => entry.name.includes(':') || entry.name === '');
+  if (bad) {
+    throw new Error(`the component name "${bad.name}" must be a plain name without ":" (app-core registers it as "<moduleId>:<name>")`);
+  }
 }
 
 // Keeps the registry in step with the polled module list: loads the dsl-lib of every module that
@@ -90,12 +107,15 @@ export function useModuleLibs(modules: LoadedModuleSummary[], importer: LibImpor
       setStatus(id, { state: 'loading' });
       void importer(want.entryUrl)
         .then((mod) => {
-          if (attempts.current.get(id) !== want.entryUrl) {
+          // A module dropped and re-registered with the same URL while this import was in flight has a
+          // second import pending: only the first to finish may register and inject the stylesheet.
+          if (attempts.current.get(id) !== want.entryUrl || loaded.current.has(id)) {
             return;
           }
           if (!isEntryList(mod.default)) {
             throw new Error('the bundle must default-export an array of component registry entries ({ name, render, ... })');
           }
+          checkEntryNames(mod.default);
           registerModuleEntries(id, mod.default);
           const link = want.cssUrl === undefined ? undefined : injectCss(id, want.cssUrl);
           loaded.current.set(id, { entryUrl: want.entryUrl, cssUrl: want.cssUrl, link });

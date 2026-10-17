@@ -97,8 +97,18 @@ export class ModuleManager {
     const manifestRaw = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const manifest = parseManifest(manifestRaw);
 
-    // Checked before the running instance is replaced: a bad update must not take down a working module.
+    // Everything that can be checked without side effects (dsl-lib files and ranges, view YAML) is
+    // done before the running instance is replaced: a bad update must not take down a working module.
     const dslLib = this.checkDslLib(entry.id, manifest, manifestDir);
+    const resolvedViews = manifest.extensionPoints.map((ep) => ({
+      kind: ep.kind,
+      slot: ep.slot,
+      label: ep.label,
+      view: resolveView(ep, manifestDir),
+      rawYaml: resolveRawYaml(ep, manifestDir),
+      order: ep.order,
+      path: ep.path,
+    }));
 
     const existing = this.loaded.get(entry.id);
     if (existing) {
@@ -119,16 +129,6 @@ export class ModuleManager {
     if (typeof mod.default === 'function') {
       await mod.default(moduleContext);
     }
-
-    const resolvedViews = manifest.extensionPoints.map((ep) => ({
-      kind: ep.kind,
-      slot: ep.slot,
-      label: ep.label,
-      view: resolveView(ep, manifestDir),
-      rawYaml: resolveRawYaml(ep, manifestDir),
-      order: ep.order,
-      path: ep.path,
-    }));
 
     const loadedModule: LoadedModule = { id: entry.id, manifest, manifestDir, moduleContext, resolvedViews, dslLib };
     this.loaded.set(entry.id, loadedModule);

@@ -56,3 +56,24 @@ describe('parseRegistrationPayload', () => {
     expect(() => parseRegistrationPayload({ source: { type: 'file', path: '/tmp/manifest.json' } })).toThrow();
   });
 });
+
+describe('page path', () => {
+  const page = (pagePath: string) =>
+    parseManifest({
+      version: '1.0.0',
+      backendEntryPath: './api-backend/backend.mjs',
+      extensionPoints: [{ kind: 'page', slot: 'nav', path: pagePath, view: { type: 'inline', value: {} } }],
+    });
+
+  it('accepts "/" as the module home page, plain paths and parameterised paths', () => {
+    for (const ok of ['/', '/jobs', '/jobs/:id', '/jobs/:id/logs', '/a-b_c/:job_id']) {
+      expect(() => page(ok), ok).not.toThrow();
+    }
+  });
+
+  it('rejects empty, relative, trailing-slash, dot-segment and double-slash paths', () => {
+    for (const bad of ['', 'jobs', '/jobs/', '/jobs//x', '/../x', '/jobs/:', '/a b']) {
+      expect(() => page(bad), bad).toThrow();
+    }
+  });
+});

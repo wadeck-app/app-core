@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 72 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 73 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -331,6 +331,12 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 72 | `registerRoute` supports `:name` segments (BUG FOUND: routes were matched by exact string, so queue's `/history/:eventId`, `/dlq/:id/replay` and every parameterised route answered 404 or ran with the literal ":eventId"). Matching is per segment (method + segment count, static beats parameter, leftmost first); `req.params` contains only the module's own parameters, never the catch-all's internal `id` and `*` (so a module may name a parameter `id`, as queue and orchestrator do); two routes with the same method and shape throw at registration instead of overwriting; `ModuleRouteHandler` is typed with `Params: Record<string, string>`. Also: `app-core-cli dev` defaults the module id to the folder name without `app-module-` (production id), accepts `--id` and a `manifest.json` path, and prints the id. | Decided | 2026-10-17 | Reported with a live reproduction by orch-owner. Reserving the name `id` (their first suggestion) would have made queue fail to load, so the internal params are hidden instead. `dev` registering `app-module-<name>` as its folder name made `$type: <name>:Component` unresolvable in dev. |
+
+## Decision Log (cont. 47)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 73 | Review adjustments after the first dsl-lib implementation. (a) A page `path` of `"/"` is valid and is the module home page, mounted at `/modules/<id>` (with or without a trailing slash); its navbar link is exact-match so it is not highlighted on the module's other pages. (b) All side-effect-free checks of an update (dsl-lib files and shared ranges, view YAML) run before the running instance is disposed: a broken update (e.g. invalid YAML) is rejected and recorded in `failed`, and the previous version keeps serving its routes and views; the shell banner says "The previous version is still running." (c) Shell: a module dropped and re-registered with the same lib URL during an import no longer injects a second stylesheet; bundle entries must have a `render` function and a plain name (no ":"; the shell adds `<moduleId>:`). (d) Docs: the built `dsl-lib/` may be committed or generated in CI, but must exist when the module registers. | Decided | 2026-10-17 | Independent review plus a real two-module browser run (alpha with a "/" home, beta; routes with params, broken-YAML update, unregister of one module). orch-owner needed "/" for orch-ui's "Back to jobs" links; before the reorder, a YAML typo in an update removed the running module from the list. |
 
 ## Open Questions
 

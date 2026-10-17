@@ -9,8 +9,8 @@ const ViewSchema = z.object({
 
 // A page `path` is mounted by the shell at /modules/<moduleId><path> as a react-router route:
 // static segments are letters, digits, "_" and "-"; a segment starting with ":" is a route
-// parameter that reaches the view as `$route.<name>`.
-const PAGE_PATH_PATTERN = /^(?:\/(?:[A-Za-z0-9_-]+|:[A-Za-z_][A-Za-z0-9_]*))+$/;
+// parameter that reaches the view as `$route.<name>`. "/" alone is the module home page (/modules/<moduleId>).
+const PAGE_PATH_PATTERN = /^(?:\/|(?:\/(?:[A-Za-z0-9_-]+|:[A-Za-z_][A-Za-z0-9_]*))+)$/;
 
 const ExtensionPointSchema = z
   .object({
