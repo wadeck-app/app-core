@@ -438,7 +438,8 @@ export const JsonViewerEntry: ComponentRegistryEntry = {
 	render: ({ node, ctx }: RegistryRenderProps) => {
 		const row = resolveExpressionValue(node['row'], ctx) as import('@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js').JsonViewerProps['row']
 		const field = resolveExpressionValue(node['field'], ctx) as import('@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js').JsonViewerProps['field']
-		return <JsonViewer row={row} field={field} />
+		const maxHeight = resolveExpressionValue(node['maxHeight'], ctx) as import('@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js').JsonViewerProps['maxHeight']
+		return <JsonViewer row={row} field={field} maxHeight={maxHeight} />
 	},
 }
 
