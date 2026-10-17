@@ -75,6 +75,7 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
       id: m.id,
       version: m.manifest.version,
       extensionPoints: m.resolvedViews,
+      dslLib: m.dslLib,
     }));
     return reply.code(200).send({ modules, failed: manager.listFailed() });
   });

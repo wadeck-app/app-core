@@ -28,6 +28,7 @@
     "@wadeck-app/shared-updater": "latest",
     "fastify": "^5.0.0",
     "js-yaml": "^4.1.1",
+    "semver": "^7.8.5",
     "zod": "^3.24.0"
   },
   "devDependencies": {

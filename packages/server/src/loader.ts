@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { getErrorMessage } from './errors.js';
 import { createModuleContext, type ModuleContext } from './moduleContext.js';
 import { parseManifest, type Manifest } from './manifest.js';
+import { checkSharedRanges, resolveDslLib, type DslLibUrls, type SharedVersions } from './dslLib.js';
 import { resolveView, resolveRawYaml } from './viewResolver.js';
 import type { RegistryEntry } from './registry.js';
 import { ModuleRouteRegistry } from './moduleRoutes.js';
@@ -20,7 +21,20 @@ export interface LoadedModule {
   manifest: Manifest;
   manifestDir: string;
   moduleContext: ModuleContext;
-  resolvedViews: Array<{ kind: string; slot: string; label?: string; view: unknown; rawYaml: string; order?: number }>;
+  resolvedViews: Array<{ kind: string; slot: string; label?: string; view: unknown; rawYaml: string; order?: number; path?: string }>;
+  // Cache-busted URLs of the module's runtime-loaded components (served from /api/modules/<id>/_lib/).
+  dslLib?: DslLibUrls;
+}
+
+export interface ModuleManagerOptions {
+  // Versions of the shared singletons the served frontend was built with (from build-info.json);
+  // undefined when unavailable, in which case dslLib.shared ranges cannot be verified.
+  sharedVersions?: SharedVersions;
+  onWarning?: (message: string) => void;
+}
+
+function writeWarning(message: string): void {
+  process.stderr.write(`[app-core] ${message}\n`);
 }
 
 export interface FailedModule {
@@ -37,6 +51,8 @@ export class ModuleManager {
   // ModuleRouteRegistry itself) and so server.ts's single catch-all dispatcher
   // route can look up any module's registered routes.
   readonly routeRegistry = new ModuleRouteRegistry();
+
+  constructor(private readonly options: ModuleManagerOptions = {}) {}
 
   get(id: string): LoadedModule | undefined {
     return this.loaded.get(id);
@@ -81,6 +97,9 @@ export class ModuleManager {
     const manifestRaw = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const manifest = parseManifest(manifestRaw);
 
+    // Checked before the running instance is replaced: a bad update must not take down a working module.
+    const dslLib = this.checkDslLib(entry.id, manifest, manifestDir);
+
     const existing = this.loaded.get(entry.id);
     if (existing) {
       // Unload = stop routing to the old instance + clear its moduleContext
@@ -108,11 +127,26 @@ export class ModuleManager {
       view: resolveView(ep, manifestDir),
       rawYaml: resolveRawYaml(ep, manifestDir),
       order: ep.order,
+      path: ep.path,
     }));
 
-    const loadedModule: LoadedModule = { id: entry.id, manifest, manifestDir, moduleContext, resolvedViews };
+    const loadedModule: LoadedModule = { id: entry.id, manifest, manifestDir, moduleContext, resolvedViews, dslLib };
     this.loaded.set(entry.id, loadedModule);
     return loadedModule;
+  }
+
+  private checkDslLib(id: string, manifest: Manifest, manifestDir: string): DslLibUrls | undefined {
+    const dslLib = resolveDslLib(id, manifest, manifestDir);
+    if (manifest.dslLib === undefined) {
+      return undefined;
+    }
+    const { unverified } = checkSharedRanges(manifest.dslLib.shared, this.options.sharedVersions);
+    if (unverified.length > 0) {
+      (this.options.onWarning ?? writeWarning)(
+        `module "${id}": cannot verify dslLib.shared for ${unverified.join(', ')} (no build-info.json with these versions next to the served frontend; run "npm run build:full").`,
+      );
+    }
+    return dslLib;
   }
 
   unload(id: string): void {

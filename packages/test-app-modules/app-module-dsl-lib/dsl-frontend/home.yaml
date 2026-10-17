@@ -1,0 +1,3 @@
+# Registered as module id "dsllib": its components are $type "dsllib:<Name>".
+$type: dsllib:Hello
+who: nav-page

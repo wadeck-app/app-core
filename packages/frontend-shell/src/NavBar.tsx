@@ -17,7 +17,8 @@ export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
       .filter((ep) => ep.kind === 'page' && ep.slot === 'nav')
       .map((ep, i) => ({
         moduleId: m.id,
-        routePath: `/modules/${m.id}/${i}`,
+        // A nav page with a static path is linked there; one with route params can only be reached by index.
+        routePath: ep.path !== undefined && !ep.path.includes(':') ? `/modules/${m.id}${ep.path}` : `/modules/${m.id}/${i}`,
         label: ep.label ?? `${m.id} #${i}`,
       })),
   );

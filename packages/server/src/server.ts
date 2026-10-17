@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { modulesRoutes } from './routes/modules.js';
 import { slotsRoutes } from './routes/slots.js';
+import { libContentType, resolveLibRequest, sharedVersionsFromBuildInfo, type SharedVersions } from './dslLib.js';
 import { ModuleManager } from './loader.js';
 import { resolveModulesDir } from './configDir.js';
 import { readRegistryEntries } from './registry.js';
@@ -27,35 +28,67 @@ export interface AppCoreServer {
 // directory -- this covers both modules that pushed successfully earlier and
 // modules a daemon dropped via the fallback-file path while app-core was
 // unreachable. No separate reconciliation step.
+// Versions of the shared singletons the served frontend was built with, from the
+// build-info.json written next to it. Undefined (with an explicit stderr line) when unreadable.
+function readSharedVersions(publicDir: string): SharedVersions | undefined {
+  const file = path.join(publicDir, 'build-info.json');
+  if (!fs.existsSync(file)) {
+    process.stderr.write(`[app-core] ${file} not found: dslLib.shared ranges of modules cannot be verified (run "npm run build:full").\n`);
+    return undefined;
+  }
+  try {
+    return sharedVersionsFromBuildInfo(JSON.parse(fs.readFileSync(file, 'utf8')));
+  } catch (err) {
+    process.stderr.write(`[app-core] ${file} is unreadable (${getErrorMessage(err)}): dslLib.shared ranges of modules cannot be verified.\n`);
+    return undefined;
+  }
+}
+
 export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCoreServer> {
   const modulesDir = resolveModulesDir(opts.configDir);
-  const manager = new ModuleManager();
-
-  const server = Fastify({ logger: false });
-  await server.register(modulesRoutes, { modulesDir, manager });
-  await server.register(slotsRoutes, { manager });
-
-  // A module's own registerRoute()-registered routes are dispatched through a
-  // single catch-all, since Fastify/find-my-way has no API to remove a route
-  // from a running instance (see moduleRoutes.ts). This route requires at
-  // least one path segment after :id, so it never collides with the static
-  // /api/modules, /api/modules/register, /api/modules/update routes above.
-  server.all('/api/modules/:id/*', async (req, reply) => {
-    const { id } = req.params as Record<string, string>;
-    const wildcard = (req.params as Record<string, string>)['*'] ?? '';
-    const handler = manager.routeRegistry.find(id, req.method, `/${wildcard}`);
-    if (!handler) {
-      return reply.code(404).send({ error: 'not-found' });
-    }
-    return handler(req, reply);
-  });
-
   // app-core serves its own frontend shell (built from packages/frontend-shell,
   // copied into the repo root's public/ by scripts/copy-app.mjs) -- same
   // static-serving + SPA-fallback pattern as orch-server. __dirname here is
   // packages/server/dist at runtime, so public/ at the repo root is 3 levels up.
   const publicDir = opts.publicDir ?? path.resolve(__dirname, '../../../public');
   const hasPublic = fs.existsSync(publicDir);
+  const manager = new ModuleManager({ sharedVersions: hasPublic ? readSharedVersions(publicDir) : undefined });
+
+  const server = Fastify({ logger: false });
+  await server.register(modulesRoutes, { modulesDir, manager });
+  await server.register(slotsRoutes, { manager });
+
+  // Files of a module's dsl-lib folder (runtime-loaded components). Registered before the
+  // catch-all below, and `_lib` is reserved so a module cannot register a route under it.
+  server.get('/api/modules/:id/_lib/*', async (req, reply) => {
+    const params = req.params as Record<string, string>;
+    const mod = manager.get(params['id'] ?? '');
+    const file = mod?.dslLib === undefined ? undefined : resolveLibRequest(mod.manifestDir, params['*'] ?? '');
+    if (file === undefined) {
+      return reply.code(404).send({ error: 'not-found' });
+    }
+    return reply.header('Cache-Control', 'no-cache').type(libContentType(file)).send(fs.createReadStream(file));
+  });
+
+  // A module's own registerRoute()-registered routes are dispatched through a
+  // single catch-all, since Fastify/find-my-way has no API to remove a route
+  // from a running instance (see moduleRoutes.ts). This route requires at
+  // least one path segment after :id, so it never collides with the static
+  // /api/modules, /api/modules/register, /api/modules/update routes above.
+  server.all<{ Params: Record<string, string> }>('/api/modules/:id/*', async (req, reply) => {
+    const { id } = req.params;
+    const wildcard = req.params['*'] ?? '';
+    const found = manager.routeRegistry.find(id, req.method, `/${wildcard}`);
+    if (!found) {
+      return reply.code(404).send({ error: 'not-found' });
+    }
+    // The handler sees only its own `:name` segments, never the catch-all's `id` (module id) and `*`.
+    delete req.params['id'];
+    delete req.params['*'];
+    Object.assign(req.params, found.params);
+    return found.handler(req, reply);
+  });
+
   if (hasPublic) {
     await server.register(fastifyStatic, { root: publicDir });
   }

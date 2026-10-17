@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import * as url from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { validateManifestFile } from './validate.js';
-import { runDev } from './dev.js';
+import { defaultModuleId, parseIdFlag, runDev } from './dev.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const fixturesDir = path.resolve(__dirname, '../../test-app-modules');
@@ -72,5 +72,36 @@ describe('runDev', () => {
     const result = await runDev(path.join(fixturesDir, 'app-module-minimal'), { port: 0 });
     close = result.close;
     expect(result.port).toBeGreaterThan(0);
+  });
+
+  it('registers app-module-<name> as <name>, matching its production id', async () => {
+    const result = await runDev(path.join(fixturesDir, 'app-module-minimal'), { port: 0 });
+    close = result.close;
+    expect(result.moduleId).toBe('minimal');
+  });
+
+  it('honours an explicit module id and accepts the manifest.json path', async () => {
+    const result = await runDev(path.join(fixturesDir, 'app-module-minimal', 'manifest.json'), { port: 0, moduleId: 'custom' });
+    close = result.close;
+    expect(result.moduleId).toBe('custom');
+  });
+
+  it('explains what to pass when no manifest.json is found', async () => {
+    await expect(runDev(path.join(fixturesDir, 'does-not-exist'), { port: 0 })).rejects.toThrow(/Pass the module folder/);
+  });
+});
+
+describe('dev id helpers', () => {
+  it('defaultModuleId strips the app-module- prefix only', () => {
+    expect(defaultModuleId('/x/app-module-queue')).toBe('queue');
+    expect(defaultModuleId('/x/queue')).toBe('queue');
+    expect(defaultModuleId('/x/app-module-')).toBe('app-module-');
+  });
+
+  it('parseIdFlag reads --id and rejects a missing value', () => {
+    expect(parseIdFlag([])).toBeUndefined();
+    expect(parseIdFlag(['--id', 'orchestrator'])).toBe('orchestrator');
+    expect(() => parseIdFlag(['--id'])).toThrow(/needs a value/);
+    expect(() => parseIdFlag(['--id', '--other'])).toThrow(/needs a value/);
   });
 });

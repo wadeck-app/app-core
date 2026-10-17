@@ -3,6 +3,7 @@ import { GenericPageRunner } from '@wadeck-app/dsl-renderer';
 import { Card, PageContent, PageSection } from '@wadeck-app/dsl-ui';
 import { appRegistry } from './registry.js';
 import { fetcher } from './fetcher.js';
+import { ModuleLibGate } from './useModuleLibs.js';
 import type { LoadedModuleSummary } from './types.js';
 
 export interface DashboardProps {
@@ -31,7 +32,9 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
               {widgets.map((w) => (
                 <Card key={w.key} header={w.label ? <h3 className="font-semibold">{w.label}</h3> : undefined}>
                   <div role="article" aria-label={w.label ?? w.moduleId}>
-                    <GenericPageRunner yamlText={w.rawYaml} registry={appRegistry} fetcher={fetcher} />
+                    <ModuleLibGate moduleId={w.moduleId}>
+                      <GenericPageRunner yamlText={w.rawYaml} registry={appRegistry} fetcher={fetcher} />
+                    </ModuleLibGate>
                   </div>
                 </Card>
               ))}

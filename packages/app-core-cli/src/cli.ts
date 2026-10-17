@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { validateManifestFile } from './validate.js';
-import { runDev } from './dev.js';
+import { parseIdFlag, runDev } from './dev.js';
 import { runServe } from './serve.js';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
@@ -61,14 +61,19 @@ async function main(): Promise<void> {
 
   if (command === 'dev') {
     if (!target) {
-      console.error('Usage: app-core-cli dev <path-to-app-module-dir>');
+      console.error('Usage: app-core-cli dev <path-to-app-module-dir> [--id <module-id>]');
       process.exitCode = 1;
       return;
     }
-    const { port, close } = await runDev(target);
-    console.log(`app-core-cli dev: serving ${target} at http://127.0.0.1:${port}`);
-    process.on('SIGINT', () => void close().then(() => process.exit(0)));
-    process.on('SIGTERM', () => void close().then(() => process.exit(0)));
+    try {
+      const { port, moduleId, close } = await runDev(target, { moduleId: parseIdFlag(rest) });
+      console.log(`app-core-cli dev: serving ${target} as module "${moduleId}" at http://127.0.0.1:${port}`);
+      process.on('SIGINT', () => void close().then(() => process.exit(0)));
+      process.on('SIGTERM', () => void close().then(() => process.exit(0)));
+    } catch (err) {
+      console.error(`app-core-cli dev failed: ${getErrorMessage(err)}`);
+      process.exitCode = 1;
+    }
     return;
   }
 

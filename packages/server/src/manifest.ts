@@ -7,22 +7,56 @@ const ViewSchema = z.object({
   value: z.unknown(),
 });
 
-const ExtensionPointSchema = z.object({
-  kind: z.string().min(1),
-  slot: z.string().min(1),
-  label: z.string().optional(),
-  view: ViewSchema,
-  // Generic, slot-agnostic sort key for ExtensionSlot aggregation (GET
-  // /api/slots/:slotId). Purely structural -- app-core sorts by this number,
-  // it never interprets what it means. Entries without `order` sort last, in
-  // registration order.
-  order: z.number().optional(),
+// A page `path` is mounted by the shell at /modules/<moduleId><path> as a react-router route:
+// static segments are letters, digits, "_" and "-"; a segment starting with ":" is a route
+// parameter that reaches the view as `$route.<name>`.
+const PAGE_PATH_PATTERN = /^(?:\/(?:[A-Za-z0-9_-]+|:[A-Za-z_][A-Za-z0-9_]*))+$/;
+
+const ExtensionPointSchema = z
+  .object({
+    kind: z.string().min(1),
+    // `nav` lists a page in the navbar; `route` makes it reachable only by link.
+    slot: z.string().min(1),
+    label: z.string().optional(),
+    view: ViewSchema,
+    // Generic, slot-agnostic sort key for ExtensionSlot aggregation (GET
+    // /api/slots/:slotId). Purely structural -- app-core sorts by this number,
+    // it never interprets what it means. Entries without `order` sort last, in
+    // registration order.
+    order: z.number().optional(),
+    path: z
+      .string()
+      .regex(PAGE_PATH_PATTERN, 'path must look like "/jobs/:id": segments of letters, digits, "_" or "-", or ":param"')
+      .optional(),
+  })
+  .refine((ep) => ep.path === undefined || ep.kind === 'page', {
+    message: 'path is only valid on extension points of kind "page"',
+    path: ['path'],
+  });
+
+export const DSL_LIB_DIR = 'dsl-lib';
+
+// entry and css are paths inside the module's dsl-lib/ folder; the loader additionally checks
+// that the files exist and that their real path stays inside it.
+const DslLibFileSchema = z
+  .string()
+  .min(1)
+  .refine((p) => !p.includes('\\') && !p.split('/').includes('..') && new RegExp(`^(?:\\./)?${DSL_LIB_DIR}/.+`).test(p), {
+    message: `must be a path inside ${DSL_LIB_DIR}/ (e.g. "./${DSL_LIB_DIR}/entries.mjs")`,
+  });
+
+const DslLibSchema = z.object({
+  entry: DslLibFileSchema,
+  css: DslLibFileSchema.optional(),
+  // Shared singletons the bundle was built against: package name -> semver range.
+  shared: z.record(z.string().min(1)).default({}),
 });
 
 export const ManifestSchema = z.object({
   version: z.string().min(1),
   backendEntryPath: z.string().min(1),
   extensionPoints: z.array(ExtensionPointSchema).min(1),
+  dslLib: DslLibSchema.optional(),
 });
 
 export type Manifest = z.infer<typeof ManifestSchema>;

@@ -13,16 +13,46 @@ export interface DevOptions {
   port?: number;
 }
 
+const MODULE_DIR_PREFIX = 'app-module-';
+
+// A module folder named `app-module-<name>` registers as `<name>` in production (queue registers as
+// "queue"), and the module's own `$type: <name>:<Component>` references depend on that id.
+export function defaultModuleId(appModuleDir: string): string {
+  const dirName = path.basename(path.resolve(appModuleDir));
+  return dirName.startsWith(MODULE_DIR_PREFIX) && dirName.length > MODULE_DIR_PREFIX.length
+    ? dirName.slice(MODULE_DIR_PREFIX.length)
+    : dirName;
+}
+
+// `--id <id>` overrides the default id; returns undefined when the flag is absent.
+export function parseIdFlag(args: string[]): string | undefined {
+  const index = args.indexOf('--id');
+  if (index === -1) {
+    return undefined;
+  }
+  const value = args[index + 1];
+  if (value === undefined || value.startsWith('--')) {
+    throw new Error('--id needs a value, e.g. "app-core-cli dev ./app-module-orchestrator --id orchestrator".');
+  }
+  return value;
+}
+
 // Boots the REAL server (buildServer, same code app-core's own index.ts uses)
 // against a scratch config dir pre-populated with a registry entry for the
 // given local module -- reuses the real loading logic rather than
 // reimplementing it, so there's no drift between `dev` and production.
-export async function runDev(appModuleDir: string, opts: DevOptions = {}): Promise<{ port: number; close: () => Promise<void> }> {
-  const manifestPath = path.resolve(appModuleDir, 'manifest.json');
+export async function runDev(
+  appModuleDir: string,
+  opts: DevOptions = {},
+): Promise<{ port: number; moduleId: string; close: () => Promise<void> }> {
+  // Accept the module folder, or its manifest.json directly.
+  const resolved = path.resolve(appModuleDir);
+  const moduleDir = path.basename(resolved) === 'manifest.json' ? path.dirname(resolved) : resolved;
+  const manifestPath = path.join(moduleDir, 'manifest.json');
   if (!fs.existsSync(manifestPath)) {
-    throw new Error(`No manifest.json found at ${manifestPath}`);
+    throw new Error(`No manifest.json found in ${moduleDir}. Pass the module folder (the one containing manifest.json).`);
   }
-  const moduleId = opts.moduleId ?? path.basename(path.resolve(appModuleDir));
+  const moduleId = opts.moduleId ?? defaultModuleId(moduleDir);
 
   const scratchConfigDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-cli-dev-'));
   writeRegistryEntry(resolveModulesDir(scratchConfigDir), {
@@ -47,6 +77,7 @@ export async function runDev(appModuleDir: string, opts: DevOptions = {}): Promi
 
   return {
     port: actualPort,
+    moduleId,
     close: async () => {
       await server.close();
     },
