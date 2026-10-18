@@ -89,3 +89,14 @@ Done: `app-module-example` + `exampleModule.test.ts`, spec decisions #85-#91 (Q5
 ## Status: known limitations removed (2026-10-18)
 
 Decisions 93-99 in the spec. L1 cascade and auto-recovery, L2 persistent `dev` dir (`--reset`, `--previous-version`), L3 teardown `reason`, L4 parallel shutdown per level, L5 explicit retained/not-retained registration (+ 400 for a missing manifest path), L6 `instance` handed to teardown, L7 timer handles, `clearInterval/clearTimeout`, `ctx.off`. Tests first for each: `cascade`, `registrationOutcome`, `teardownContext`, `shutdownParallel`, `moduleContextHandles` (server), `devPersistence` (cli), SDK type test. Left as inherent: uncancellable timed-out promises, leaks outside `ctx`, no rollback after a teardown.
+
+## Follow-up: published violations-rules (not delivered, violations-owner unreachable on 2026-10-18)
+
+The published `@wadeck-app/violations-rules` (source: violations-framework, seen by queue-owner on 2026.10.18-133-57f3fc38; 129 installed here) still assumes the old module layout. Observed false positives on a migrated module: `app-module/manifest-exists-and-valid` validates the source manifest against the packaged schema (`backendEntryPath: Required`); `app-module/naming-convention` flags the generated `dist-module/manifest.json`.
+
+Requested of violations-owner:
+- Port the nine rules to the new layout (decisions 81-83): `backend-entry-location`, `view-location`, `manifest-exists-and-valid`, `no-react`, `naming-convention`, `no-raw-timers`, and the three new ones `source-layout`, `import-boundaries`, `publishing`.
+- Exclude `**/dist-module/**` and `**/.app-core-dev/**` by default; scope to `**/app-module-*/**`.
+- Reference port, tested: `.violations/rules/app-module-*.ts`, `.violations/lib/appModuleLayout.js` (+ `.d.ts`), parity test `.violations/lib/appModuleLayoutParity.test.ts` (same verdict as `app-core-cli check` on 30 inline modules). The SDK exports `SourceManifestSchema` / `parseSourceManifest`. Port the logic or shell out to `app-core-cli check`; the parity test is the contract.
+
+Meanwhile consumers keep their own excludes and rely on `app-core-cli check .`.
