@@ -4,11 +4,32 @@
   "type": "module",
   "main": "./dist/index.bundle.js",
   "types": "./dist/index.bundle.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.bundle.d.ts",
+      "import": "./dist/index.bundle.js",
+      "default": "./dist/index.bundle.js"
+    },
+    "./register": {
+      "types": "./dist/register.bundle.d.ts",
+      "import": "./dist/register.bundle.js",
+      "default": "./dist/register.bundle.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "register": ["dist/register.bundle.d.ts"]
+    }
+  },
   "files": [
     "dist/index.bundle.js",
     "dist/index.bundle.d.ts",
+    "dist/register.bundle.js",
+    "dist/register.bundle.d.ts",
     "README.md",
-    "docs/module-authoring.md"
+    "docs/module-authoring.md",
+    "docs/registering-a-module.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",

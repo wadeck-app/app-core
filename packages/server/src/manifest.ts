@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MODULE_ID_PATTERN, MODULE_ID_RULE } from './moduleId.js';
 
 // Manifest shape: a module declares any number of UI contributions
 // (widgets, pages) in a single manifest/version.
@@ -69,13 +70,9 @@ const FileSourceSchema = z.object({
   path: z.string().min(1),
 });
 
-// The id names the registry file (`<modules-dir>/<id>.json`) and the URL prefix
-// `/api/modules/<id>/`, so it must never contain a path separator or dots.
-export const MODULE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+export { MODULE_ID_PATTERN };
 
-export const ModuleIdSchema = z
-  .string()
-  .regex(MODULE_ID_PATTERN, 'module id must start with a letter or digit and contain only letters, digits, "_" and "-"');
+export const ModuleIdSchema = z.string().regex(MODULE_ID_PATTERN, `module id must ${MODULE_ID_RULE}`);
 
 export const UnregisterPayloadSchema = z.object({ id: ModuleIdSchema });
 

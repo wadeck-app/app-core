@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { portFilePath, removePortFile, writePortFile } from '../src/portFile.js';
+import { portFilePath, readServerPort, removePortFile, writePortFile } from '../src/portFile.js';
 
 describe('port file (orch portFile liveness contract)', () => {
   let configDir: string;
@@ -35,5 +35,20 @@ describe('port file (orch portFile liveness contract)', () => {
 
   it('does nothing when there is no file', () => {
     expect(() => removePortFile(configDir)).not.toThrow();
+  });
+
+  it('reads back the port app-core really bound', () => {
+    writePortFile(4861, configDir);
+    expect(readServerPort(configDir)).toBe(4861);
+  });
+
+  it('has no port when the file is missing, not JSON, or carries no valid port', () => {
+    expect(readServerPort(configDir)).toBeUndefined();
+    fs.writeFileSync(portFilePath(configDir), 'not json');
+    expect(readServerPort(configDir)).toBeUndefined();
+    for (const port of ['4861', 0, -1, 70000, 48.5, null]) {
+      fs.writeFileSync(portFilePath(configDir), JSON.stringify({ pid: 1, port }));
+      expect(readServerPort(configDir), String(port)).toBeUndefined();
+    }
   });
 });

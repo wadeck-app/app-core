@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { MODULE_ID_PATTERN } from './manifest.js';
+import { MODULE_ID_PATTERN } from './moduleId.js';
 
 // `<app-core-config-dir>/modules/<id>.json` IS app-core's module registry --
 // not a separate "pending" dropbox. Both app-core (on a successful

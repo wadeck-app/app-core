@@ -22,6 +22,7 @@ package. (The CLI tooling has no such constraint; see `@wadeck-app/app-core-cli`
 An app-module is a package named `app-module-<name>` with a `manifest.json`, an `api-backend/`
 entry and DSL views in `dsl-frontend/`. Full reference (manifest, registration, backend entry,
 `$sources`, `ExtensionSlot`, naming rules): [docs/module-authoring.md](docs/module-authoring.md).
+A daemon registers its module with `@wadeck-app/app-core-sdk/register`: [docs/registering-a-module.md](docs/registering-a-module.md).
 
 ## Dark theme
 

@@ -13,6 +13,22 @@ export function writePortFile(port: number, configDir = resolveConfigDir()): voi
   fs.writeFileSync(portFilePath(configDir), JSON.stringify({ pid: process.pid, port }) + '\n');
 }
 
+// The port the running (or last started) app-core really bound, which differs from the default when
+// that one was taken. Undefined when there is no usable port file: app-core was never started here,
+// or the file is not the JSON this module writes.
+export function readServerPort(configDir = resolveConfigDir()): number | undefined {
+  const file = portFilePath(configDir);
+  if (!fs.existsSync(file)) {
+    return undefined;
+  }
+  try {
+    const { port } = JSON.parse(fs.readFileSync(file, 'utf8')) as { port?: unknown };
+    return typeof port === 'number' && Number.isInteger(port) && port > 0 && port <= 65535 ? port : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // Only removes a file this process wrote: after a crash and restart the file belongs to the successor.
 export function removePortFile(configDir = resolveConfigDir()): void {
   const file = portFilePath(configDir);

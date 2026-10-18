@@ -12,23 +12,28 @@ import dts from 'rollup-plugin-dts';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import path from 'node:path';
 import fs from 'node:fs';
+import { builtinModules } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const external = ['zod', 'fastify'];
 
-await build({
-  entryPoints: [path.join(root, 'dist/index.js')],
-  bundle: true,
-  platform: 'node',
-  target: 'node22',
-  format: 'esm',
-  outfile: path.join(root, 'dist/index.bundle.js'),
-  external,
-  logLevel: 'warning',
-});
-console.log('Bundled dist/index.bundle.js');
+// Two published entries: the main one (types and schemas, importable from browser code) and the
+// node-only `register` subpath (a daemon telling app-core about its module).
+for (const entry of ['index', 'register']) {
+  await build({
+    entryPoints: [path.join(root, `dist/${entry}.js`)],
+    bundle: true,
+    platform: 'node',
+    target: 'node22',
+    format: 'esm',
+    outfile: path.join(root, `dist/${entry}.bundle.js`),
+    external,
+    logLevel: 'warning',
+  });
+  console.log(`Bundled dist/${entry}.bundle.js`);
+}
 
 // tsc's own dist/index.d.ts re-exports by path from '@wadeck-app/app-core-server/...',
 // which resolves fine inside the monorepo (a real workspace package) but is a dangling
@@ -37,17 +42,18 @@ console.log('Bundled dist/index.bundle.js');
 // locally at build time, not hand-copied, so there's no drift to keep in sync manually),
 // producing a single flattened declaration file with zero external
 // @wadeck-app/app-core-server references.
-async function bundleTypes() {
+async function bundleTypes(entry) {
   const bundle = await rollup({
-    input: path.join(root, 'dist/index.d.ts'),
+    input: path.join(root, `dist/${entry}.d.ts`),
     plugins: [nodeResolve(), dts()],
   });
-  await bundle.write({ file: path.join(root, 'dist/index.bundle.d.ts'), format: 'es' });
+  await bundle.write({ file: path.join(root, `dist/${entry}.bundle.d.ts`), format: 'es' });
   await bundle.close();
-  console.log('Bundled dist/index.bundle.d.ts');
+  console.log(`Bundled dist/${entry}.bundle.d.ts`);
 }
 
-await bundleTypes();
+await bundleTypes('index');
+await bundleTypes('register');
 
 // app-core-sdk is the "base" package every app-module depends on -- it must have
 // ZERO internal cross-package references in what actually gets published, runtime
@@ -70,7 +76,12 @@ function assertNoInternalReferences() {
     })
     .filter(Boolean);
 
-  const publishedFiles = ['dist/index.bundle.js', 'dist/index.bundle.d.ts'].map((f) => path.join(root, f));
+  const publishedFiles = [
+    'dist/index.bundle.js',
+    'dist/index.bundle.d.ts',
+    'dist/register.bundle.js',
+    'dist/register.bundle.d.ts',
+  ].map((f) => path.join(root, f));
 
   for (const file of publishedFiles) {
     const content = fs.readFileSync(file, 'utf-8');
@@ -89,3 +100,40 @@ function assertNoInternalReferences() {
 }
 
 assertNoInternalReferences();
+
+// Module specifiers a bundle imports or requires, as written in its code.
+function importedSpecifiers(file) {
+  const content = fs.readFileSync(path.join(root, file), 'utf-8');
+  return [...content.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)["']([^"']+)["']/g)].map((m) => m[1]);
+}
+
+const isNodeBuiltin = (specifier) => specifier.startsWith('node:') || builtinModules.includes(specifier);
+
+// The main entry is what browser code (the shell, tooling) imports for types and schemas: it must
+// never pull in a node builtin, or a bundler targeting the browser breaks on it.
+function assertMainEntryIsBrowserClean() {
+  const offending = importedSpecifiers('dist/index.bundle.js').filter(isNodeBuiltin);
+  if (offending.length > 0) {
+    throw new Error(
+      `dist/index.bundle.js imports node builtins (${[...new Set(offending)].join(', ')}). Node-only code belongs in ` +
+        `the "./register" subpath (src/register.ts), never in the main entry.`,
+    );
+  }
+  console.log('Verified: main entry imports no node builtin.');
+}
+
+// The register entry is node-only and must stay self-contained: node builtins and nothing else, so
+// a daemon that installs the SDK gets no extra runtime dependency from it.
+function assertRegisterEntryIsSelfContained() {
+  const offending = importedSpecifiers('dist/register.bundle.js').filter((specifier) => !isNodeBuiltin(specifier));
+  if (offending.length > 0) {
+    throw new Error(
+      `dist/register.bundle.js imports ${[...new Set(offending)].join(', ')}: it may only import node builtins. ` +
+        `Inline the code from the server package instead of adding a runtime dependency.`,
+    );
+  }
+  console.log('Verified: register entry imports only node builtins.');
+}
+
+assertMainEntryIsBrowserClean();
+assertRegisterEntryIsSelfContained();

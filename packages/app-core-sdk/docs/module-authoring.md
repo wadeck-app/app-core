@@ -160,6 +160,27 @@ no base-path logic to worry about. Keep the module id a fixed literal in the URL
 a `$route`/dynamic placeholder -- an empty-placeholder path silently skips the fetch in the
 underlying DSL renderer, so a fixed literal is the safe pattern.
 
+### Navbar and overlay widgets
+
+Two more widget slots exist for things that live outside any page:
+
+```json
+{ "kind": "widget", "slot": "navbar", "order": 1, "view": { "type": "path", "value": "./dsl-frontend/stats.yaml" } },
+{ "kind": "widget", "slot": "overlay", "view": { "type": "path", "value": "./dsl-frontend/failures.yaml" } }
+```
+
+- `navbar`: rendered inline on the right of the navbar, before the theme toggle, on every page. Keep it
+  compact; entries are sorted by `order` (none last), then module order.
+- `overlay`: mounted once on every page, at the app root. The shell gives no position: your component
+  places itself (e.g. `position: fixed`, bottom-right). The shell does not manage z-index between
+  modules, so overlays of different modules may overlap; pick a modest `z-index` and keep a small footprint.
+- Both are DSL views like dashboard widgets (`$sources` and `dsl-lib` components work), shown only once
+  your components are loaded, and removed when the module is unloaded or swapped.
+- Each widget has its own error boundary: if a component throws, the shell shows `<moduleId>: widget error`
+  (inline in the navbar, bottom-left for an overlay), logs the error with `console.error` naming your
+  module, and keeps the page and other widgets working. The notice resets when the view or lib changes.
+- They render on every page: poll sparingly and clean up timers in your components.
+
 ### Contributing into another module's slot (`ExtensionSlot`)
 
 If another module exposes an `ExtensionSlot` (e.g. `queue:subscriber-row`), declare an
