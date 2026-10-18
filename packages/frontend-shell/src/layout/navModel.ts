@@ -1,7 +1,30 @@
-import { navPagesFor, type NavPage } from '../NavBar.js';
+import { modulePagePath } from '../modulePaths.js';
 import type { LoadedModuleSummary } from '../types.js';
 
-// One module as the layouts see it: a title (top level) and its pages (side menu).
+export interface NavPage {
+  moduleId: string;
+  routePath: string;
+  label: string;
+  // A module home page ("/") must not stay highlighted on the module's other pages.
+  exact: boolean;
+}
+
+// Base slot: page/nav -> a navigation entry routing to a full-page render (frontend-shell.md "Base slots").
+export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
+  return modules.flatMap((m) =>
+    m.extensionPoints
+      .filter((ep) => ep.kind === 'page' && ep.slot === 'nav')
+      .map((ep, i) => ({
+        moduleId: m.id,
+        // A nav page with a static path is linked there; one with route params can only be reached by index.
+        routePath: ep.path !== undefined && !ep.path.includes(':') ? modulePagePath(m.id, ep.path) : `/modules/${m.id}/${i}`,
+        label: ep.label ?? `${m.id} #${i}`,
+        exact: ep.path === '/',
+      })),
+  );
+}
+
+// One module as the layout sees it: a title (top level) and its pages (side menu).
 export interface NavModule {
   id: string;
   title: string;

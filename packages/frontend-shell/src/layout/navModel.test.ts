@@ -1,9 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import type { LoadedModuleSummary } from '../types.js';
-import { activeNavModule, activeNavPage, navModulesFor, titleFromId } from './navModel.js';
+import { activeNavModule, activeNavPage, navModulesFor, navPagesFor, titleFromId } from './navModel.js';
 
 const page = (slot: string, label: string, path?: string) => ({ kind: 'page', slot, label, path, view: {}, rawYaml: '' });
 const mod = (id: string, ...extensionPoints: LoadedModuleSummary['extensionPoints']): LoadedModuleSummary => ({ id, version: '1.0.0', extensionPoints });
+
+// Base slot: page/nav -> a navigation entry (frontend-shell.md "Base slots"). Migrated from the former AppNavBar tests.
+describe('navPagesFor (base slot page/nav)', () => {
+  it('lists a page/nav extensionPoint, reachable by index when it has no path', () => {
+    const pages = navPagesFor([mod('module-b', page('nav', 'Fixture B Page'))]);
+    expect(pages).toEqual([{ moduleId: 'module-b', routePath: '/modules/module-b/0', label: 'Fixture B Page', exact: false }]);
+  });
+
+  it('does not list widget/dashboard extensionPoints', () => {
+    const pages = navPagesFor([mod('module-a', { kind: 'widget', slot: 'dashboard', view: {}, rawYaml: '' })]);
+    expect(pages).toEqual([]);
+  });
+
+  it('links a static path directly, and marks the module home "/" as exact', () => {
+    const pages = navPagesFor([mod('billing', page('nav', 'Overview', '/'), page('nav', 'Invoices', '/invoices'))]);
+    expect(pages.map((p) => [p.routePath, p.exact])).toEqual([
+      ['/modules/billing', true],
+      ['/modules/billing/invoices', false],
+    ]);
+  });
+
+  it('falls back to "<id> #<index>" for a page without a label', () => {
+    expect(navPagesFor([mod('billing', { kind: 'page', slot: 'nav', view: {}, rawYaml: '' })])[0].label).toBe('billing #0');
+  });
+});
 
 describe('titleFromId', () => {
   it('humanizes separators and capitalizes', () => {

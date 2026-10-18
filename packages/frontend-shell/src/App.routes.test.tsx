@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
 
@@ -82,11 +82,25 @@ describe('App: parameterised module pages', () => {
     expect(await screen.findByText(/Page not found/)).toBeInTheDocument();
   });
 
-  it('lists only nav pages in the navbar, not route-only pages', () => {
-    render(<App />);
-    expect(screen.getByRole('link', { name: 'Jobs list' })).toBeInTheDocument();
+  it('lists only nav pages in the sidebar of their module, not route-only pages', () => {
+    window.history.pushState({}, '', '/modules/jobs-mod/0');
+    const jobs = render(<App />);
+    const jobsPages = within(screen.getByRole('navigation', { name: 'Jobs mod pages' }));
+    expect(jobsPages.getByRole('link', { name: 'Jobs list' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Job detail' })).toBeNull();
-    // Dashboard + the three nav pages (Home, Other, Jobs list); the two route-only pages are absent.
-    expect(screen.getAllByRole('link')).toHaveLength(4);
+    // The module declares three pages, two of them route-only: one entry is listed.
+    expect(jobsPages.getAllByRole('link')).toHaveLength(1);
+    jobs.unmount();
+
+    window.history.pushState({}, '', '/modules/home-mod');
+    render(<App />);
+    expect(within(screen.getByRole('navigation', { name: 'Home mod pages' })).getAllByRole('link').map((l) => l.textContent)).toEqual(['Home', 'Other']);
+  });
+
+  it('lists every module in the top tabs and on the dashboard, but none of their pages', () => {
+    render(<App />);
+    const tabs = within(screen.getByRole('navigation', { name: 'Modules' }));
+    expect(tabs.getAllByRole('link').map((l) => l.textContent)).toEqual(['Dashboard', 'HMHome mod', 'JMJobs mod']);
+    expect(screen.queryByRole('link', { name: 'Other' })).toBeNull();
   });
 });

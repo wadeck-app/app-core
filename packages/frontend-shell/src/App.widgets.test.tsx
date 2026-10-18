@@ -66,7 +66,8 @@ describe('App: navbar and overlay widgets of modules', () => {
     state.modules = [{ id: 'plain', version: '1.0.0', extensionPoints: [{ kind: 'page', slot: 'nav', label: 'P', view: {}, rawYaml: badge('p') }] }];
     render(<App />);
     expect(widgetElements()).toHaveLength(0);
-    expect(within(navbar()).getByRole('link', { name: 'P' })).toBeInTheDocument();
+    // The module is in the navigation under its title (derived from the id: "plain" -> "Plain").
+    expect(within(navbar()).getByRole('link', { name: 'Plain' })).toBeInTheDocument();
   });
 
   it('removes the widgets when the module disappears', async () => {
@@ -111,7 +112,7 @@ describe('App: navbar and overlay widgets of modules', () => {
     expect(screen.getAllByText('boom: widget error')).toHaveLength(2);
     expect(within(navbar()).getByText('nav-a')).toBeInTheDocument();
     expect(screen.getByText('overlay-a')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
     expect(logged.mock.calls.some((call) => String(call[0]).includes('"boom"'))).toBe(true);
   });
 });

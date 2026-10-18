@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
-import { LAYOUT_VARIANT_KEY } from './layout/LayoutSwitcher.js';
+import { HIDDEN_TESTS_KEY } from './layout/AbSwitcher.js';
+import { TAB_HIGHLIGHT_KEY } from './layout/tabHighlight.js';
 
 vi.mock('./useModules.js', () => ({
   useModules: () => ({
@@ -21,62 +22,25 @@ vi.mock('./useModules.js', () => ({
   }),
 }));
 
-// Dev server only: the switcher A/B tests the navigation layouts on the real pages (vitest runs with import.meta.env.DEV).
-describe('App: layout switcher', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    window.history.pushState({}, '', '/modules/jobs-mod');
-  });
+const accentStyles = () => Array.from(document.head.querySelectorAll('[data-module-accent]'));
 
-  afterEach(() => {
-    window.history.pushState({}, '', '/');
-  });
+beforeEach(() => {
+  localStorage.clear();
+  window.history.pushState({}, '', '/modules/jobs-mod');
+});
 
-  const switcher = () => within(screen.getByRole('group', { name: 'Layout' }));
+afterEach(() => {
+  window.history.pushState({}, '', '/');
+});
 
-  it('starts on the classic layout, with the switcher visible on the real page', async () => {
+describe('App: layout', () => {
+  it('shows the module tab with its logo and the module pages in the always-visible sidebar', async () => {
     render(<App />);
     expect(await screen.findByText('overview-page')).toBeInTheDocument();
-    expect(switcher().getByRole('button', { name: 'Classic' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByTestId('module-sidebar')).not.toBeInTheDocument();
-  });
-
-  it('switches to A: module tabs on top, its pages in the sidebar, same page content', async () => {
-    render(<App />);
-    fireEvent.click(switcher().getByRole('button', { name: 'A' }));
-    expect(await screen.findByText('overview-page')).toBeInTheDocument();
+    const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' });
+    expect(tab.querySelector('[data-logo]')).toHaveAttribute('data-logo', 'JM');
     expect(within(screen.getByTestId('module-sidebar')).getByRole('link', { name: 'History' })).toBeInTheDocument();
-    expect(localStorage.getItem(LAYOUT_VARIANT_KEY)).toBe('a');
   });
-
-  it('switches to B and remembers the choice after a reload', async () => {
-    const first = render(<App />);
-    fireEvent.click(switcher().getByRole('button', { name: 'B' }));
-    expect(await screen.findByRole('button', { name: 'Jobs mod' })).toHaveAttribute('aria-expanded', 'true');
-    first.unmount();
-
-    render(<App />);
-    expect(switcher().getByRole('button', { name: 'B' })).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('keeps the panel identical whatever the variant: the description lives outside it', async () => {
-    render(<App />);
-    const panel = screen.getByRole('group', { name: 'Layout' });
-    const classes = panel.className;
-    const cells = within(panel).getAllByRole('button').map((b) => b.textContent);
-    expect(cells).toEqual(['Classic', 'A', 'B', 'C', 'D', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7']);
-    expect(within(panel).queryByTestId('layout-description')).not.toBeInTheDocument();
-    expect(screen.getByTestId('layout-description')).toHaveTextContent('Classic');
-
-    fireEvent.click(within(panel).getByRole('button', { name: 'D3' }));
-    expect(await screen.findByText('overview-page')).toBeInTheDocument();
-    const same = screen.getByRole('group', { name: 'Layout' });
-    expect(same.className).toBe(classes);
-    expect(within(same).getAllByRole('button').map((b) => b.textContent)).toEqual(cells);
-    expect(screen.getByTestId('layout-description')).toHaveTextContent('D3 - dark + 1-letter logo');
-  });
-
-  const accentStyles = () => Array.from(document.head.querySelectorAll('[data-module-accent]'));
 
   it('recolors the accent with the module being viewed, and not on the dashboard', async () => {
     const { unmount } = render(<App />);
@@ -89,145 +53,138 @@ describe('App: layout switcher', () => {
     render(<App />);
     expect(accentStyles()).toHaveLength(0);
   });
+});
 
-  it('stops recoloring when the module accent toggle is switched off, and remembers it', async () => {
-    const first = render(<App />);
-    expect(await screen.findByText('overview-page')).toBeInTheDocument();
-    const accent = () => within(screen.getByRole('group', { name: 'Module accent' }));
-    expect(accent().getByRole('button', { name: 'On' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(accent().getByRole('button', { name: 'Off' }));
-    expect(accent().getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
-    expect(accentStyles()).toHaveLength(0);
-    first.unmount();
+// Dev server only (vitest runs with import.meta.env.DEV): the active-tab style is the one choice still open.
+describe('App: A/B test bar', () => {
+  const dock = () => within(screen.getByTestId('ab-dock'));
+  const tabRow = () => within(screen.getByRole('group', { name: 'Active tab' }));
 
+  it('offers the two open tests, each with its name on the left, muted and apart from the options', () => {
     render(<App />);
-    expect(accent().getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('puts the name of every A/B test on the left of its row, muted and apart from the options', () => {
-    render(<App />);
-    for (const label of ['Logo font', 'Active tab', 'Module accent', 'Layout']) {
+    expect(screen.getAllByRole('group').filter((g) => g.closest('[data-testid="ab-dock"]'))).toHaveLength(2);
+    for (const label of ['Sidebar header', 'Active tab']) {
       const group = screen.getByRole('group', { name: label });
-      const row = group.parentElement!;
-      const name = row.firstElementChild!;
+      const name = group.parentElement!.firstElementChild!;
       expect(name).toHaveTextContent(label);
-      // Label column: muted text with a divider; it is a sibling of the options, not one of them.
       expect(name.className).toContain('text-muted');
       expect(name.className).toContain('border-r');
       expect(within(group).queryByText(label)).not.toBeInTheDocument();
-      // Every row has the same width, so the labels line up.
-      expect(row.className).toContain('w-[46rem]');
     }
   });
 
-  it('explains every option of every A/B row in a tooltip', () => {
+  it('stacks Sidebar header above Active tab', () => {
     render(<App />);
-    for (const label of ['Logo font', 'Active tab', 'Module accent', 'Layout']) {
-      for (const button of within(screen.getByRole('group', { name: label })).getAllByRole('button')) {
-        // A tooltip that says something: longer than the button name itself.
-        expect(button.getAttribute('title'), `${label} / ${button.textContent}`).toBeTruthy();
-        expect(button.getAttribute('title')!.length, `${label} / ${button.textContent}`).toBeGreaterThan(20);
-      }
-    }
-    const optical = within(screen.getByRole('group', { name: 'Logo font' })).getByRole('button', { name: 'Optical' });
-    expect(optical.getAttribute('title')).toMatch(/ink is centered/);
+    const order = Array.from(document.querySelectorAll('[data-testid="ab-dock"] [role="group"]')).map((g) => g.getAttribute('aria-label'));
+    expect(order).toEqual(['Sidebar header', 'Active tab']);
   });
 
-  describe('hiding a test row', () => {
-    it('hides a row and leaves a reminder chip that shows its choice, which stays applied', async () => {
-      localStorage.setItem(LAYOUT_VARIANT_KEY, 'd7');
-      localStorage.setItem('shell.logoFont', 'cells');
+  it('lists the thirty-two styles on four lines, each with a tooltip that says what it changes', () => {
+    render(<App />);
+    const buttons = tabRow().getAllByRole('button');
+    expect(buttons).toHaveLength(32);
+    expect(screen.getByRole('group', { name: 'Active tab' }).style.gridTemplateColumns).toContain('repeat(9,');
+    for (const b of buttons) expect(b.getAttribute('title')!.length, b.textContent ?? '').toBeGreaterThan(30);
+    expect(buttons.map((b) => b.textContent)).toEqual(
+      expect.arrayContaining(['Current', 'Invert', 'Outline', 'Contrast', 'Chip', 'Ghost', 'Gradient', 'Topline', 'Dot']),
+    );
+  });
+
+  it('applies the chosen style to the tabs and remembers it after a reload', async () => {
+    const first = render(<App />);
+    expect(await screen.findByText('overview-page')).toBeInTheDocument();
+    expect(tabRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(tabRow().getByRole('button', { name: 'Contrast' }));
+    const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' });
+    expect(tab.className).toContain('bg-content');
+    first.unmount();
+
+    render(<App />);
+    expect(tabRow().getByRole('button', { name: 'Contrast' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('warns and falls back to Current when the stored style is unknown', () => {
+    localStorage.setItem(TAB_HIGHLIGHT_KEY, 'zzz');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    render(<App />);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown tab highlight "zzz"'));
+    expect(tabRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
+    warn.mockRestore();
+  });
+
+  describe('Sidebar header test', () => {
+    const headerRow = () => within(screen.getByRole('group', { name: 'Sidebar header' }));
+    const side = () => screen.getByTestId('module-sidebar');
+
+    it('offers Icon + name (reference), Name, Icon and None, each with a tooltip', () => {
       render(<App />);
-      expect(await screen.findByText('overview-page')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole('button', { name: 'Hide Logo font' }));
-      expect(screen.queryByRole('group', { name: 'Logo font' })).not.toBeInTheDocument();
-      const chip = screen.getByRole('button', { name: 'Show Logo font' });
-      expect(chip).toHaveTextContent('Logo font: Cells');
-      // Hidden is not reset: the Cells font is still the one rendered.
-      expect(screen.getByTestId('module-sidebar').querySelectorAll('.w-\\[0\\.72em\\]')).toHaveLength(2);
-
-      fireEvent.click(chip);
-      expect(screen.getByRole('group', { name: 'Logo font' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Show Logo font' })).not.toBeInTheDocument();
+      const buttons = headerRow().getAllByRole('button');
+      expect(buttons.map((b) => b.textContent)).toEqual(['Icon + name', 'Name', 'Icon', 'None']);
+      expect(headerRow().getByRole('button', { name: 'Icon + name' })).toHaveAttribute('aria-pressed', 'true');
+      for (const b of buttons) expect(b.getAttribute('title')!.length, b.textContent ?? '').toBeGreaterThan(30);
     });
 
-    it('remembers hidden rows after a reload', () => {
+    it('applies the chosen mode to the sidebar and remembers it after a reload', async () => {
       const first = render(<App />);
-      fireEvent.click(screen.getByRole('button', { name: 'Hide Active tab' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Hide Module accent' }));
+      expect(await screen.findByText('overview-page')).toBeInTheDocument();
+      expect(side().querySelector('[data-logo]')).not.toBeNull();
+
+      fireEvent.click(headerRow().getByRole('button', { name: 'Name' }));
+      expect(side()).toHaveAttribute('data-header', 'name');
+      expect(side().querySelector('[data-logo]')).toBeNull();
+      expect(within(side()).getByRole('heading', { name: 'Jobs mod' }).className).not.toContain('sr-only');
       first.unmount();
 
       render(<App />);
-      expect(screen.queryByRole('group', { name: 'Active tab' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('group', { name: 'Module accent' })).not.toBeInTheDocument();
-      expect(screen.getByRole('group', { name: 'Logo font' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Show Active tab' })).toHaveTextContent('Active tab: Current');
-      expect(screen.getByRole('button', { name: 'Show Module accent' })).toHaveTextContent('Module accent: On');
+      expect(headerRow().getByRole('button', { name: 'Name' })).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('never offers to hide the Layout row: it is the fixed anchor', () => {
-      render(<App />);
-      expect(screen.queryByRole('button', { name: 'Hide Layout' })).not.toBeInTheDocument();
-      expect(screen.getByRole('group', { name: 'Layout' })).toBeInTheDocument();
-    });
-
-    it('reports an invalid stored value instead of silently ignoring it', () => {
-      localStorage.setItem('shell.abHidden', '{not json');
+    it('warns and falls back to Icon + name when the stored mode is unknown', () => {
+      localStorage.setItem('shell.sidebarHeader', 'zzz');
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       render(<App />);
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining('shell.abHidden'));
-      // Nothing hidden by mistake.
-      expect(screen.getByRole('group', { name: 'Logo font' })).toBeInTheDocument();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown sidebar header "zzz"'));
+      expect(headerRow().getByRole('button', { name: 'Icon + name' })).toHaveAttribute('aria-pressed', 'true');
       warn.mockRestore();
     });
   });
 
-  it('stacks the extra tests above the layout row: font, tab, accent, then layout', () => {
-    render(<App />);
-    const order = Array.from(document.querySelectorAll('[role="group"][aria-label]')).map((g) => g.getAttribute('aria-label'));
-    expect(order.filter((l) => ['Logo font', 'Active tab', 'Module accent', 'Layout'].includes(l!))).toEqual(['Logo font', 'Active tab', 'Module accent', 'Layout']);
-  });
+  describe('hiding the row', () => {
+    it('hides it and leaves a reminder chip with the current choice, which stays applied', async () => {
+      localStorage.setItem(TAB_HIGHLIGHT_KEY, 'contrast');
+      render(<App />);
+      expect(await screen.findByText('overview-page')).toBeInTheDocument();
 
-  it('changes the logo font from the Logo font row and remembers it', async () => {
-    localStorage.setItem(LAYOUT_VARIANT_KEY, 'd7');
-    const first = render(<App />);
-    expect(await screen.findByText('overview-page')).toBeInTheDocument();
-    const fonts = () => within(screen.getByRole('group', { name: 'Logo font' }));
-    expect(fonts().getAllByRole('button').map((b) => b.textContent)).toEqual(['Inter', 'Optical', 'Mono', 'Cells', 'Serif']);
+      fireEvent.click(screen.getByRole('button', { name: 'Hide Active tab' }));
+      expect(screen.queryByRole('group', { name: 'Active tab' })).not.toBeInTheDocument();
+      const chip = dock().getByRole('button', { name: 'Show Active tab' });
+      expect(chip).toHaveTextContent('Active tab: Contrast');
+      // Hidden is not reset: the Contrast style is still the one rendered.
+      expect(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' }).className).toContain('bg-content');
 
-    fireEvent.click(fonts().getByRole('button', { name: 'Cells' }));
-    const logo = screen.getByTestId('module-sidebar').querySelector('[data-logo]')!;
-    // Cells: every letter in its own equal-width cell.
-    expect(logo.querySelectorAll('.w-\\[0\\.72em\\]')).toHaveLength(2);
-    first.unmount();
+      fireEvent.click(chip);
+      expect(screen.getByRole('group', { name: 'Active tab' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show Active tab' })).not.toBeInTheDocument();
+    });
 
-    render(<App />);
-    expect(fonts().getByRole('button', { name: 'Cells' })).toHaveAttribute('aria-pressed', 'true');
-  });
+    it('remembers a hidden row after a reload', () => {
+      const first = render(<App />);
+      fireEvent.click(screen.getByRole('button', { name: 'Hide Active tab' }));
+      first.unmount();
 
-  it('offers the active-tab styles above the panel, applies the chosen one and remembers it', async () => {
-    localStorage.setItem(LAYOUT_VARIANT_KEY, 'd7');
-    const first = render(<App />);
-    expect(await screen.findByText('overview-page')).toBeInTheDocument();
-    const styles = within(screen.getByRole('group', { name: 'Active tab' }));
-    expect(styles.getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
+      render(<App />);
+      expect(screen.queryByRole('group', { name: 'Active tab' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Show Active tab' })).toHaveTextContent('Active tab: Current');
+    });
 
-    fireEvent.click(styles.getByRole('button', { name: 'Solid' }));
-    const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' });
-    expect(tab.className).toContain('bg-primary-solid');
-    first.unmount();
-
-    render(<App />);
-    expect(within(screen.getByRole('group', { name: 'Active tab' })).getByRole('button', { name: 'Solid' })).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('warns and falls back to classic when the stored layout is unknown', () => {
-    localStorage.setItem(LAYOUT_VARIANT_KEY, 'zzz');
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    render(<App />);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown layout "zzz"'));
-    expect(switcher().getByRole('button', { name: 'Classic' })).toHaveAttribute('aria-pressed', 'true');
-    warn.mockRestore();
+    it('reports an invalid stored value instead of silently ignoring it, and hides nothing', () => {
+      localStorage.setItem(HIDDEN_TESTS_KEY, '{not json');
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<App />);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(HIDDEN_TESTS_KEY));
+      expect(screen.getByRole('group', { name: 'Active tab' })).toBeInTheDocument();
+      warn.mockRestore();
+    });
   });
 });

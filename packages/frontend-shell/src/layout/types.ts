@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { FailedModuleSummary, LoadedModuleSummary } from '../types.js';
 import type { NavModule } from './navModel.js';
+import type { SidebarHeader } from './sidebarHeader.js';
 import type { TabHighlight } from './tabHighlight.js';
 
 export interface LayoutProps {
@@ -10,5 +11,7 @@ export interface LayoutProps {
   failed?: FailedModuleSummary[];
   // How the active top tab stands out (A/B tested); layouts without top tabs ignore it.
   tabHighlight?: TabHighlight;
+  // What the top of the sidebar shows (A/B tested).
+  sidebarHeader?: SidebarHeader;
   children: ReactNode;
 }

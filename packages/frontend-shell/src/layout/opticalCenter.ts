@@ -25,14 +25,9 @@ export function opticalOffset(m: InkMetrics): { x: number; y: number } {
   return { x, y };
 }
 
-let canvas: CanvasRenderingContext2D | null | undefined;
-const context = (): CanvasRenderingContext2D | null => {
-  canvas ??= document.createElement('canvas').getContext('2d');
-  return canvas;
-};
-
 function measure(el: HTMLElement, text: string): InkMetrics | undefined {
-  const ctx = context();
+  // A canvas per measurement: only a handful of logos are measured, and no hidden state to reset in tests.
+  const ctx = document.createElement('canvas').getContext('2d');
   // No 2D canvas (e.g. jsdom): nothing can be measured, the text keeps its default centering.
   if (!ctx) return undefined;
   const cs = getComputedStyle(el);
@@ -40,7 +35,7 @@ function measure(el: HTMLElement, text: string): InkMetrics | undefined {
   if ('letterSpacing' in ctx) ctx.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing;
   const t = ctx.measureText(text);
   const fontSize = parseFloat(cs.fontSize);
-  return {
+  const metrics: InkMetrics = {
     width: t.width,
     inkLeft: t.actualBoundingBoxLeft,
     inkRight: t.actualBoundingBoxRight,
@@ -49,6 +44,8 @@ function measure(el: HTMLElement, text: string): InkMetrics | undefined {
     capHeight: ctx.measureText('H').actualBoundingBoxAscent,
     lineHeight: cs.lineHeight === 'normal' ? fontSize * 1.2 : parseFloat(cs.lineHeight),
   };
+  // A metric the environment cannot give (NaN, undefined) would produce a NaN transform: measure nothing instead.
+  return Object.values(metrics).every(Number.isFinite) ? metrics : undefined;
 }
 
 // Applies the optical offset to `ref` (a text span inside the chip). Re-measures once the fonts are loaded.

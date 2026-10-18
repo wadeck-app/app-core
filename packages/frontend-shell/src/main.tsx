@@ -14,15 +14,4 @@ if (!root) {
   throw new Error('#root element not found');
 }
 
-// Layout comparison page, dev server only (dynamic import: absent from the production bundle).
-if (import.meta.env.DEV && window.location.pathname.startsWith('/__layout-lab')) {
-  void Promise.all([import('react-router-dom'), import('./layout/LayoutLab.js')]).then(([{ BrowserRouter }, { LayoutLab }]) => {
-    createRoot(root).render(
-      <BrowserRouter>
-        <LayoutLab />
-      </BrowserRouter>,
-    );
-  });
-} else {
-  createRoot(root).render(<App />);
-}
+createRoot(root).render(<App />);

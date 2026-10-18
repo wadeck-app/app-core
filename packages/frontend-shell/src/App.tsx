@@ -1,63 +1,40 @@
 import React from 'react';
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
-import { AppNavBar } from './NavBar.js';
 import { Dashboard } from './Dashboard.js';
 import { ModulePage } from './ModulePage.js';
 import { OverlayWidgets } from './OverlayWidgets.js';
 import { modulePagePath } from './modulePaths.js';
 import { useModules } from './useModules.js';
 import { ModuleLibsProvider, useModuleLibs } from './useModuleLibs.js';
-import { LayoutSwitcher, useLayoutVariant } from './layout/LayoutSwitcher.js';
-import { LayoutByVariant } from './layout/LayoutByVariant.js';
-import { moduleColor } from './layout/Logo.js';
-import { useModuleAccent } from './layout/moduleAccent.js';
-import { activeNavModule, navModulesFor } from './layout/navModel.js';
-import { LogoFontContext, useLogoFont } from './layout/logoFont.js';
-import { useTabHighlight } from './layout/tabHighlight.js';
-import { usePersistentFlag } from './layout/usePersistentFlag.js';
+import { AbDock } from './layout/AbSwitcher.js';
+import { AppLayout } from './layout/AppLayout.js';
+import { navModulesFor } from './layout/navModel.js';
+import { sidebarHeaderTest, useSidebarHeader } from './layout/sidebarHeader.js';
+import { tabHighlightTest, useTabHighlight } from './layout/tabHighlight.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 
 const NO_MODULES: LoadedModuleSummary[] = [];
-const MODULE_ACCENT_KEY = 'shell.moduleAccent';
 
-// Navigation chrome around the page content. On the dev server a floating switcher A/B tests the navigation
-// layouts on the real pages; in production only the classic layout exists.
+// Navigation chrome around the page content. On the dev server a floating bar A/B tests the choices still open (how the
+// active tab is emphasized, what the sidebar header shows); in production the reference options apply.
 function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[]; children: React.ReactNode }): React.ReactElement {
-  const [variant, setVariant] = useLayoutVariant();
-  const [accentOn, toggleAccent] = usePersistentFlag(MODULE_ACCENT_KEY, true);
   const [tabHighlight, setTabHighlight] = useTabHighlight();
-  const [logoFont, setLogoFont] = useLogoFont();
-  const { pathname } = useLocation();
-  const active = import.meta.env.DEV ? variant : 'classic';
-  const navModules = navModulesFor(modules);
-  const layoutProps = { modules, navModules, failed, tabHighlight };
-  // Dev-only experiment: the accent (dsl-ui's --color-primary*) follows the module being viewed; the dashboard keeps the default.
-  const activeModule = activeNavModule(pathname, navModules);
-  useModuleAccent(import.meta.env.DEV && accentOn && activeModule ? moduleColor(activeModule.id) : undefined);
+  const [sidebarHeader, setSidebarHeader] = useSidebarHeader();
   return (
-    <LogoFontContext.Provider value={import.meta.env.DEV ? logoFont : 'inter'}>
-      {active === 'classic' ? (
-        <div className="min-h-screen bg-bg">
-          <AppNavBar modules={modules} failed={failed} />
-          {children}
-        </div>
-      ) : (
-        <LayoutByVariant variant={active} {...layoutProps}>
-          {children}
-        </LayoutByVariant>
-      )}
+    <>
+      <AppLayout
+        modules={modules}
+        navModules={navModulesFor(modules)}
+        failed={failed}
+        tabHighlight={import.meta.env.DEV ? tabHighlight : 'current'}
+        sidebarHeader={import.meta.env.DEV ? sidebarHeader : 'icon-name'}
+      >
+        {children}
+      </AppLayout>
       <OverlayWidgets modules={modules} />
-      {import.meta.env.DEV ? (
-        <LayoutSwitcher
-          variant={variant}
-          onChange={setVariant}
-          accent={{ on: accentOn, onToggle: toggleAccent }}
-          tabStyle={{ value: tabHighlight, onChange: setTabHighlight }}
-          logoFont={{ value: logoFont, onChange: setLogoFont }}
-        />
-      ) : null}
-    </LogoFontContext.Provider>
+      {import.meta.env.DEV ? <AbDock tests={[sidebarHeaderTest(sidebarHeader, setSidebarHeader), tabHighlightTest(tabHighlight, setTabHighlight)]} /> : null}
+    </>
   );
 }
 

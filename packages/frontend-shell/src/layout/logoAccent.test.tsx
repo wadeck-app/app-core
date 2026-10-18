@@ -11,10 +11,6 @@ describe('logoOf', () => {
     expect(logoOf('Payment methods and more')).toBe('PM');
   });
 
-  it("'initial' keeps one letter", () => {
-    expect(logoOf('Audit log', 'initial')).toBe('A');
-  });
-
   it('copes with a one-letter name and an empty one', () => {
     expect(logoOf('X')).toBe('X');
     expect(logoOf('')).toBe('?');
