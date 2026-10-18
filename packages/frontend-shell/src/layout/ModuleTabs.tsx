@@ -36,6 +36,12 @@ function tabLook(highlight: TabHighlight, a: boolean, color: string, color2: str
   const mix = (c: string, pct: number): string => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
   // Gradient of the "Gradient" family: the module color, strongest at the left, fading out to the right.
   const fadeRight = `linear-gradient(90deg, ${mix(color, 28)}, transparent)`;
+  // A tab as tall as the top bar, painted with `css` when active. Used by the "Full" families.
+  const fullHeight = (css: React.CSSProperties): TabLook => ({
+    className: `gap-1.5 self-stretch px-4 ${a ? 'font-semibold text-content' : `${INACTIVE} hover:bg-bg`}`,
+    style: a ? css : undefined,
+    logo: { tone: 'solid' },
+  });
   switch (highlight) {
     case 'current':
       return { className: `gap-1.5 ${a ? 'text-primary' : INACTIVE}`, logo: { tone: 'solid' } };
@@ -139,6 +145,48 @@ function tabLook(highlight: TabHighlight, a: boolean, color: string, color2: str
         style: a ? { background: `linear-gradient(0deg, ${mix(color, 28)}, transparent)` } : undefined,
         logo: { tone: 'solid' },
       };
+    // Four takes on Full up (bottom to top), playing on intensity, shape and shade of the module color.
+    case 'fullUpStrong':
+      return {
+        className: `gap-1.5 self-stretch px-4 ${a ? 'font-semibold text-content' : `${INACTIVE} hover:bg-bg`}`,
+        style: a ? { background: `linear-gradient(0deg, ${mix(color, 50)}, transparent 90%)` } : undefined,
+        logo: { tone: 'solid' },
+      };
+    case 'fullUpSoft':
+      return {
+        className: `gap-1.5 self-stretch px-4 ${a ? 'font-semibold text-content' : `${INACTIVE} hover:bg-bg`}`,
+        style: a ? { background: `linear-gradient(0deg, ${mix(color, 14)}, transparent)` } : undefined,
+        logo: { tone: 'solid' },
+      };
+    // Steps between Up soft (linear, very light) and Up glow (radial at the bottom center, strong), in that order.
+    case 'upBlend':
+      // Up soft's light base plus a small radial glow at the bottom center.
+      return fullHeight({ backgroundImage: `radial-gradient(60% 90% at 50% 100%, ${mix(color, 32)}, transparent 100%), linear-gradient(0deg, ${mix(color, 14)}, transparent)` });
+    case 'upGlowSoft':
+      // Up glow's shape at roughly half its intensity.
+      return fullHeight({ backgroundImage: `radial-gradient(75% 100% at 50% 100%, ${mix(color, 28)}, transparent 100%)` });
+    case 'upGlowLine':
+      return fullHeight({ backgroundImage: `radial-gradient(75% 100% at 50% 100%, ${mix(color, 28)}, transparent 100%)`, boxShadow: `inset 0 -1px 0 ${mix(color, 55)}` });
+    case 'upGlowTall':
+      // The ellipse is taller than the tab, so the glow reaches the top of the bar.
+      return fullHeight({ backgroundImage: `radial-gradient(75% 150% at 50% 100%, ${mix(color, 32)}, transparent 100%)` });
+    case 'upGlowWide':
+      // The ellipse is wider than the tab, so the glow spreads over its whole width.
+      return fullHeight({ backgroundImage: `radial-gradient(120% 100% at 50% 100%, ${mix(color, 32)}, transparent 100%)` });
+    case 'fullUpGlow':
+      // A glow centered on the bottom edge of the tab: strongest at the bottom center, softer toward the sides and the top.
+      return {
+        className: `gap-1.5 self-stretch px-4 ${a ? 'font-semibold text-content' : `${INACTIVE} hover:bg-bg`}`,
+        style: a ? { backgroundImage: `radial-gradient(75% 100% at 50% 100%, ${mix(color, 50)}, transparent 100%)` } : undefined,
+        logo: { tone: 'solid' },
+      };
+    case 'fullUpDeep':
+      // A shade variation of the same color: a darker version at the very bottom, the module color in the middle, then nothing.
+      return {
+        className: `gap-1.5 self-stretch px-4 ${a ? 'font-semibold text-content' : `${INACTIVE} hover:bg-bg`}`,
+        style: a ? { background: `linear-gradient(0deg, ${mix(`color-mix(in srgb, ${color} 70%, black)`, 45)}, ${mix(color, 20)} 55%, transparent)` } : undefined,
+        logo: { tone: 'solid' },
+      };
     case 'gradientFullEdges':
       // Full height, and the color starting at both edges to meet in the middle.
       return {
@@ -168,11 +216,12 @@ function tabLook(highlight: TabHighlight, a: boolean, color: string, color2: str
         logo: { tone: a ? 'glass' : 'solid' },
       };
     case 'sweepSoft':
-      // Sweep, calmer: the gradient starts at the right with the module color and runs left to a lighter tint of it (no
-      // dark end), with a lighter highlight mirrored on the right.
+      // Sweep, calmer: the gradient starts at the right with the module color and runs left to a slightly more
+      // transparent version of the same color (no dark end, and no white: mixing with white washed the pill out and let it
+      // dominate), with a lighter highlight mirrored on the right.
       return {
         className: `gap-1.5 rounded-full px-3 py-1 ${a ? 'font-semibold text-white shadow-sm' : `${INACTIVE} hover:bg-bg`}`,
-        style: a ? { backgroundImage: `linear-gradient(245deg, rgba(255,255,255,0.18), transparent 45%), linear-gradient(270deg, ${color}, color-mix(in srgb, ${color} 72%, white))` } : undefined,
+        style: a ? { backgroundImage: `linear-gradient(245deg, rgba(255,255,255,0.18), transparent 45%), linear-gradient(270deg, ${color}, ${mix(color, 78)})` } : undefined,
         logo: { tone: a ? 'glass' : 'solid' },
       };
     case 'aurora':
@@ -272,7 +321,7 @@ export function ModuleTabs({ navModules, highlight = 'current' }: { navModules: 
             style={look.style}
             aria-current={isActive ? 'true' : undefined}
           >
-            <Logo size="sm" tone={look.logo.tone} ring={look.logo.ring} glow={look.logo.glow} title={m.title} moduleId={m.id} />
+            <Logo tone={look.logo.tone} ring={look.logo.ring} glow={look.logo.glow} title={m.title} moduleId={m.id} />
             <span className={look.iconOnly ? 'sr-only' : ''} style={look.nameStyle}>
               {m.title}
             </span>

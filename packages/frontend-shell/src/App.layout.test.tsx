@@ -63,7 +63,7 @@ describe('App: A/B test bar', () => {
   it('offers the two open tests, each with its name on the left, muted and apart from the options', () => {
     render(<App />);
     expect(screen.getAllByRole('group').filter((g) => g.closest('[data-testid="ab-dock"]'))).toHaveLength(2);
-    for (const label of ['Sidebar header', 'Active tab']) {
+    for (const label of ['Top bar', 'Active tab']) {
       const group = screen.getByRole('group', { name: label });
       const name = group.parentElement!.firstElementChild!;
       expect(name).toHaveTextContent(label);
@@ -73,17 +73,62 @@ describe('App: A/B test bar', () => {
     }
   });
 
-  it('stacks Sidebar header above Active tab', () => {
+  it('stacks Top bar above Active tab', () => {
     render(<App />);
     const order = Array.from(document.querySelectorAll('[data-testid="ab-dock"] [role="group"]')).map((g) => g.getAttribute('aria-label'));
-    expect(order).toEqual(['Sidebar header', 'Active tab']);
+    expect(order).toEqual(['Top bar', 'Active tab']);
   });
 
-  it('lists the thirty-two styles on four lines, each with a tooltip that says what it changes', () => {
+  describe('Top bar test', () => {
+    const barRow = () => within(screen.getByRole('group', { name: 'Top bar' }));
+    const header = () => screen.getByRole('banner');
+
+    it('offers seven heights and styles, the current one first, each with a tooltip', () => {
+      render(<App />);
+      const buttons = barRow().getAllByRole('button');
+      expect(buttons.map((b) => b.textContent)).toEqual(['Current', 'Cozy', 'Compact', 'Slim', 'Dense', 'Compact flat', 'Compact blend']);
+      expect(barRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
+      for (const b of buttons) expect(b.getAttribute('title')!.length, b.textContent ?? '').toBeGreaterThan(20);
+    });
+
+    it('applies the chosen height to the bar and remembers it after a reload', () => {
+      const first = render(<App />);
+      expect(header().className).toContain('h-[61px]');
+      fireEvent.click(barRow().getByRole('button', { name: 'Compact' }));
+      expect(header().className).toContain('h-[45px]');
+      expect(header().className).not.toContain('h-[61px]');
+      first.unmount();
+
+      render(<App />);
+      expect(barRow().getByRole('button', { name: 'Compact' })).toHaveAttribute('aria-pressed', 'true');
+      expect(header().className).toContain('h-[45px]');
+    });
+
+    it('warns and falls back to Current when the stored option is unknown', () => {
+      localStorage.setItem('shell.topBar', 'zzz');
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(<App />);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown top bar "zzz"'));
+      expect(barRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
+      warn.mockRestore();
+    });
+  });
+
+  it('no longer offers the decided tests (sidebar header, layout, logo font, module accent)', () => {
+    render(<App />);
+    for (const label of ['Sidebar header', 'Layout', 'Logo font', 'Module accent']) {
+      expect(screen.queryByRole('group', { name: label }), label).not.toBeInTheDocument();
+    }
+  });
+
+  it('lists the forty-one styles, each with a tooltip that says what it changes, with the steps from Up soft to Up glow in order', () => {
     render(<App />);
     const buttons = tabRow().getAllByRole('button');
-    expect(buttons).toHaveLength(32);
-    expect(screen.getByRole('group', { name: 'Active tab' }).style.gridTemplateColumns).toContain('repeat(9,');
+    expect(buttons).toHaveLength(41);
+    const labels = buttons.map((b) => b.textContent);
+    const from = labels.indexOf('Up soft');
+    expect(labels.slice(from, from + 7)).toEqual(['Up soft', 'Up blend', 'Glow soft', 'Glow line', 'Glow tall', 'Glow wide', 'Up glow']);
+    expect(screen.getByRole('group', { name: 'Active tab' }).style.gridTemplateColumns).toContain('repeat(10,');
     for (const b of buttons) expect(b.getAttribute('title')!.length, b.textContent ?? '').toBeGreaterThan(30);
     expect(buttons.map((b) => b.textContent)).toEqual(
       expect.arrayContaining(['Current', 'Invert', 'Outline', 'Contrast', 'Chip', 'Ghost', 'Gradient', 'Topline', 'Dot']),
@@ -111,43 +156,6 @@ describe('App: A/B test bar', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown tab highlight "zzz"'));
     expect(tabRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
     warn.mockRestore();
-  });
-
-  describe('Sidebar header test', () => {
-    const headerRow = () => within(screen.getByRole('group', { name: 'Sidebar header' }));
-    const side = () => screen.getByTestId('module-sidebar');
-
-    it('offers Icon + name (reference), Name, Icon and None, each with a tooltip', () => {
-      render(<App />);
-      const buttons = headerRow().getAllByRole('button');
-      expect(buttons.map((b) => b.textContent)).toEqual(['Icon + name', 'Name', 'Icon', 'None']);
-      expect(headerRow().getByRole('button', { name: 'Icon + name' })).toHaveAttribute('aria-pressed', 'true');
-      for (const b of buttons) expect(b.getAttribute('title')!.length, b.textContent ?? '').toBeGreaterThan(30);
-    });
-
-    it('applies the chosen mode to the sidebar and remembers it after a reload', async () => {
-      const first = render(<App />);
-      expect(await screen.findByText('overview-page')).toBeInTheDocument();
-      expect(side().querySelector('[data-logo]')).not.toBeNull();
-
-      fireEvent.click(headerRow().getByRole('button', { name: 'Name' }));
-      expect(side()).toHaveAttribute('data-header', 'name');
-      expect(side().querySelector('[data-logo]')).toBeNull();
-      expect(within(side()).getByRole('heading', { name: 'Jobs mod' }).className).not.toContain('sr-only');
-      first.unmount();
-
-      render(<App />);
-      expect(headerRow().getByRole('button', { name: 'Name' })).toHaveAttribute('aria-pressed', 'true');
-    });
-
-    it('warns and falls back to Icon + name when the stored mode is unknown', () => {
-      localStorage.setItem('shell.sidebarHeader', 'zzz');
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      render(<App />);
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown sidebar header "zzz"'));
-      expect(headerRow().getByRole('button', { name: 'Icon + name' })).toHaveAttribute('aria-pressed', 'true');
-      warn.mockRestore();
-    });
   });
 
   describe('hiding the row', () => {

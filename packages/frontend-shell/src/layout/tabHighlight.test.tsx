@@ -25,13 +25,14 @@ const tabs = (highlight: TabHighlight) => {
 };
 
 describe('tab highlight options', () => {
-  it('offers thirty-two styles, each with a tooltip', () => {
+  it('offers forty-one styles, each with a tooltip', () => {
     const ids = Object.keys(TAB_HIGHLIGHTS);
     expect(ids).toEqual([
       'current', 'pill', 'solid', 'underline', 'ring', 'invert', 'outline', 'glow', 'expand', 'lift',
       'contrast', 'chip', 'ghost', 'gradient', 'topline', 'dot',
       'gradientSoft', 'gradientFull', 'gradientEdges',
-      'gradientEdgesInv', 'gradientFullDown', 'gradientFullUp', 'gradientFullEdges', 'gradientUnder', 'innerGlow',
+      'gradientEdgesInv', 'gradientFullDown', 'gradientFullUp', 'fullUpStrong', 'fullUpSoft', 'upBlend', 'upGlowSoft', 'upGlowLine', 'upGlowTall', 'upGlowWide', 'fullUpGlow', 'fullUpDeep',
+      'gradientFullEdges', 'gradientUnder', 'innerGlow',
       'sweep', 'sweepSoft', 'aurora', 'underglow', 'spotlight', 'mesh', 'aura',
     ]);
     for (const id of ids) expect(TAB_HIGHLIGHT_HINTS[id as TabHighlight].length, id).toBeGreaterThan(30);

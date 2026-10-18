@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AppLayout } from './AppLayout.js';
-import type { SidebarHeader } from './sidebarHeader.js';
 import { FIXTURE_NAV } from './testFixtures.js';
 
 const billing = FIXTURE_NAV[0];
@@ -64,13 +63,16 @@ describe('AppLayout: sidebar, always visible', () => {
     expect(logosIn(nav)).toEqual(['DA', 'BI', 'IN', 'RE', 'AL', 'SE']);
   });
 
-  it('shows the module logo in the sidebar header, in the same color as its tab', () => {
+  it('has no visible header: the active tab already names the module, which stays a heading for screen readers', () => {
     renderAt(billing.basePath);
-    const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Billing' }).querySelector<HTMLElement>('[data-logo]')!;
-    const header = screen.getByTestId('module-sidebar').querySelector<HTMLElement>('[data-logo]')!;
-    expect(header.getAttribute('data-logo')).toBe('BI');
-    expect(header.style.backgroundColor).not.toBe('');
-    expect(header.style.backgroundColor).toBe(tab.style.backgroundColor);
+    const side = screen.getByTestId('module-sidebar');
+    // Neither a logo nor a visible title above the pages.
+    expect(side.querySelector('[data-logo]')).toBeNull();
+    const heading = within(side).getByRole('heading', { name: 'Billing' });
+    expect(heading.className).toContain('sr-only');
+    // The pages start right at the top of the sidebar.
+    expect(side.firstElementChild).toBe(heading);
+    expect(side.children[1]).toBe(within(side).getByRole('navigation', { name: 'Billing pages' }));
   });
 
   it('follows the theme: dsl-ui surface in light mode, deep slate only through dark: variants', () => {
@@ -90,45 +92,6 @@ describe('AppLayout: sidebar, always visible', () => {
       expect(c, link.textContent ?? '').not.toContain('text-slate-400');
     }
     expect(within(side).getByRole('heading', { name: 'Billing' }).className.split(/\s+/)).not.toContain('text-white');
-  });
-});
-
-describe('AppLayout: sidebar header modes', () => {
-  const renderWith = (header: SidebarHeader) =>
-    render(
-      <MemoryRouter initialEntries={[billing.basePath]}>
-        <AppLayout modules={[]} navModules={FIXTURE_NAV} sidebarHeader={header}>
-          <p>content</p>
-        </AppLayout>
-      </MemoryRouter>,
-    );
-  const side = () => screen.getByTestId('module-sidebar');
-  const heading = () => within(side()).getByRole('heading', { name: 'Billing' });
-
-  it('icon-name (reference): the logo and the visible name', () => {
-    renderWith('icon-name');
-    expect(side().querySelector('[data-logo]')).toHaveAttribute('data-logo', 'BI');
-    expect(heading().className).not.toContain('sr-only');
-  });
-
-  it('name: the visible name, no logo', () => {
-    renderWith('name');
-    expect(side().querySelector('[data-logo]')).toBeNull();
-    expect(heading().className).not.toContain('sr-only');
-  });
-
-  it('icon: the logo only; the name is a tooltip and stays a heading for screen readers', () => {
-    renderWith('icon');
-    expect(side().querySelector('[data-logo]')).not.toBeNull();
-    expect(heading().className).toContain('sr-only');
-    expect(heading().parentElement).toHaveAttribute('title', 'Billing');
-  });
-
-  it('none: no header at all, but the module is still named for screen readers and the pages are all there', () => {
-    renderWith('none');
-    expect(side().querySelector('[data-logo]')).toBeNull();
-    expect(heading().className).toContain('sr-only');
-    expect(within(screen.getByRole('navigation', { name: 'Billing pages' })).getAllByRole('link')).toHaveLength(billing.pages.length);
   });
 });
 

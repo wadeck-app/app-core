@@ -10,17 +10,17 @@ import { ModuleLibsProvider, useModuleLibs } from './useModuleLibs.js';
 import { AbDock } from './layout/AbSwitcher.js';
 import { AppLayout } from './layout/AppLayout.js';
 import { navModulesFor } from './layout/navModel.js';
-import { sidebarHeaderTest, useSidebarHeader } from './layout/sidebarHeader.js';
 import { tabHighlightTest, useTabHighlight } from './layout/tabHighlight.js';
+import { topBarTest, useTopBar } from './layout/topBar.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 
 const NO_MODULES: LoadedModuleSummary[] = [];
 
-// Navigation chrome around the page content. On the dev server a floating bar A/B tests the choices still open (how the
-// active tab is emphasized, what the sidebar header shows); in production the reference options apply.
+// Navigation chrome around the page content. On the dev server a floating bar A/B tests the choices still open (the top
+// bar height and style, how the active tab is emphasized); in production the reference options apply.
 function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[]; children: React.ReactNode }): React.ReactElement {
   const [tabHighlight, setTabHighlight] = useTabHighlight();
-  const [sidebarHeader, setSidebarHeader] = useSidebarHeader();
+  const [topBar, setTopBar] = useTopBar();
   return (
     <>
       <AppLayout
@@ -28,12 +28,12 @@ function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[
         navModules={navModulesFor(modules)}
         failed={failed}
         tabHighlight={import.meta.env.DEV ? tabHighlight : 'current'}
-        sidebarHeader={import.meta.env.DEV ? sidebarHeader : 'icon-name'}
+        topBar={import.meta.env.DEV ? topBar : 'current'}
       >
         {children}
       </AppLayout>
       <OverlayWidgets modules={modules} />
-      {import.meta.env.DEV ? <AbDock tests={[sidebarHeaderTest(sidebarHeader, setSidebarHeader), tabHighlightTest(tabHighlight, setTabHighlight)]} /> : null}
+      {import.meta.env.DEV ? <AbDock tests={[topBarTest(topBar, setTopBar), tabHighlightTest(tabHighlight, setTabHighlight)]} /> : null}
     </>
   );
 }

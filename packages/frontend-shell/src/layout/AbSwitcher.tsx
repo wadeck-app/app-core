@@ -25,15 +25,16 @@ export interface AbTest {
 }
 
 // Beyond this many options a row wraps onto a second line instead of squeezing the labels.
-const MAX_COLUMNS = 9;
+const MAX_COLUMNS = 10;
 
 // Every row has the same width and the same label column, so the labels line up.
 function AbRow({ test, onHide }: { test: AbTest; onHide: () => void }): React.ReactElement {
   const cell = (id: string): string =>
-    `rounded-full py-1 text-center font-semibold transition-colors ${id === test.value ? 'bg-primary-solid text-white' : 'text-muted hover:bg-bg hover:text-content'}`;
+    `whitespace-nowrap rounded-full py-1 text-center font-semibold transition-colors ${id === test.value ? 'bg-primary-solid text-white' : 'text-muted hover:bg-bg hover:text-content'}`;
   const columns = Math.min(test.options.length, MAX_COLUMNS);
   return (
-    <div className="flex w-[46rem] items-stretch overflow-hidden rounded-[1.25rem] border border-border bg-surface text-xs">
+    // Wide enough for 10 labels on one line each; never wider than the window.
+    <div className="flex w-[56rem] max-w-[calc(100vw-2rem)] items-stretch overflow-hidden rounded-[1.25rem] border border-border bg-surface text-xs">
       <span className="flex w-40 shrink-0 items-center justify-between gap-1 border-r border-border bg-bg pl-4 pr-2 text-[10px] font-medium uppercase tracking-wider text-muted">
         <span className="truncate">{test.label}</span>
         <button

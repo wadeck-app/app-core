@@ -34,10 +34,8 @@ export const moduleColor = (id: string): string => PALETTE[paletteIndex(id)];
 export const moduleColor2 = (id: string): string => PALETTE[(paletteIndex(id) + 4) % PALETTE.length];
 
 // Letters fill the chip: large font, no vertical room, and a width that follows the text (min = square).
-const SIZES = {
-  sm: 'h-5 min-w-[20px] px-[3px] text-[11px]',
-  md: 'h-8 min-w-[32px] px-1 text-[15px]',
-} as const;
+// The one size of a logo everywhere in the app.
+const SIZE = 'h-5 min-w-[20px] px-[3px] text-[11px]';
 
 // solid = module color behind white letters. muted = greyed out.
 // inverted = white chip, module-colored letters (for use on a colored pill).
@@ -50,7 +48,6 @@ export type LogoTone = 'solid' | 'muted' | 'inverted' | 'swapped' | 'outline' | 
 interface LogoProps {
   title: string;
   moduleId: string;
-  size?: keyof typeof SIZES;
   tone?: LogoTone;
   ring?: boolean;
   glow?: boolean;
@@ -73,19 +70,19 @@ function toneStyle(tone: LogoTone, glow: boolean, color: string, color2: string)
   }
 }
 
-export function Logo({ title, moduleId, size = 'md', tone = 'solid', ring = false, glow = false }: LogoProps): React.ReactElement {
+export function Logo({ title, moduleId, tone = 'solid', ring = false, glow = false }: LogoProps): React.ReactElement {
   const text = logoOf(title);
   const inner = useRef<HTMLSpanElement>(null);
   // Optical centering: the text box is centered on its advance width, which leaves pairs like "BI" or "RE" visibly
   // off-center. The visible ink is measured and shifted instead (see opticalCenter.ts).
-  useOpticalCenter(inner, text, true, [size]);
+  useOpticalCenter(inner, text, true, []);
   return (
     <span
       aria-hidden="true"
       data-logo={text}
       data-tone={tone}
       style={toneStyle(tone, glow, moduleColor(moduleId), moduleColor2(moduleId))}
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-md font-bold leading-none tracking-tighter text-white transition-all ${SIZES[size]} ${
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-md font-bold leading-none tracking-tighter text-white transition-all ${SIZE} ${
         tone === 'muted' ? 'opacity-50 grayscale' : ''
       } ${ring ? 'ring-2 ring-primary-solid ring-offset-2 ring-offset-surface' : ''}`}
     >
