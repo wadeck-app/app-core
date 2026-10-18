@@ -29,48 +29,11 @@ function paletteIndex(id: string): number {
 
 export const moduleColor = (id: string): string => PALETTE[paletteIndex(id)];
 
-// Second hue for two-tone gradients: 4 steps further in the palette, far enough to read as another color, and
-// stable per module like the first one.
-export const moduleColor2 = (id: string): string => PALETTE[(paletteIndex(id) + 4) % PALETTE.length];
-
 // Letters fill the chip: large font, no vertical room, and a width that follows the text (min = square).
 // The one size of a logo everywhere in the app.
 const SIZE = 'h-5 min-w-[20px] px-[3px] text-[11px]';
 
-// solid = module color behind white letters. muted = greyed out.
-// inverted = white chip, module-colored letters (for use on a colored pill).
-// swapped = foreground and background exchanged: page-colored chip, module-colored letters and border.
-// outline = transparent chip, module-colored letters and border.
-// glass = translucent white chip, white letters (for use on a chip filled with the module color).
-// duotone = diagonal gradient from the module color to its second hue.
-export type LogoTone = 'solid' | 'muted' | 'inverted' | 'swapped' | 'outline' | 'glass' | 'duotone';
-
-interface LogoProps {
-  title: string;
-  moduleId: string;
-  tone?: LogoTone;
-  ring?: boolean;
-  glow?: boolean;
-}
-
-function toneStyle(tone: LogoTone, glow: boolean, color: string, color2: string): React.CSSProperties {
-  switch (tone) {
-    case 'duotone':
-      return { backgroundImage: `linear-gradient(135deg, ${color}, ${color2})` };
-    case 'inverted':
-      return { backgroundColor: '#ffffff', color };
-    case 'swapped':
-      return { backgroundColor: 'var(--color-surface)', color, boxShadow: `inset 0 0 0 2px ${color}` };
-    case 'outline':
-      return { backgroundColor: 'transparent', color, boxShadow: `inset 0 0 0 1.5px ${color}` };
-    case 'glass':
-      return { backgroundColor: 'rgba(255, 255, 255, 0.25)', color: '#ffffff' };
-    default:
-      return { backgroundColor: color, boxShadow: glow ? `0 0 0 4px ${color}40` : undefined };
-  }
-}
-
-export function Logo({ title, moduleId, tone = 'solid', ring = false, glow = false }: LogoProps): React.ReactElement {
+export function Logo({ title, moduleId }: { title: string; moduleId: string }): React.ReactElement {
   const text = logoOf(title);
   const inner = useRef<HTMLSpanElement>(null);
   // Optical centering: the text box is centered on its advance width, which leaves pairs like "BI" or "RE" visibly
@@ -80,11 +43,8 @@ export function Logo({ title, moduleId, tone = 'solid', ring = false, glow = fal
     <span
       aria-hidden="true"
       data-logo={text}
-      data-tone={tone}
-      style={toneStyle(tone, glow, moduleColor(moduleId), moduleColor2(moduleId))}
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-md font-bold leading-none tracking-tighter text-white transition-all ${SIZE} ${
-        tone === 'muted' ? 'opacity-50 grayscale' : ''
-      } ${ring ? 'ring-2 ring-primary-solid ring-offset-2 ring-offset-surface' : ''}`}
+      style={{ backgroundColor: moduleColor(moduleId) }}
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-md font-bold leading-none tracking-tighter text-white ${SIZE}`}
     >
       <span ref={inner} className="inline-block whitespace-nowrap">
         {text}

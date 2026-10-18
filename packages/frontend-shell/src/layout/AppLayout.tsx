@@ -11,7 +11,7 @@ import type { LayoutProps } from './types.js';
 // The app layout. Top bar = brand + one tab per module (colored 2-letter logo and name); left = the pages of the active
 // module in an always-visible dark sidebar, or the quick-launch list of modules on the dashboard.
 // The accent color (dsl-ui's --color-primary*) follows the module being viewed; the dashboard keeps the default.
-export function AppLayout({ modules, navModules, failed = [], tabHighlight, children }: LayoutProps): React.ReactElement {
+export function AppLayout({ modules, navModules, failed = [], children }: LayoutProps): React.ReactElement {
   const { pathname } = useLocation();
   const active = activeNavModule(pathname, navModules);
   useModuleAccent(active ? moduleColor(active.id) : undefined);
@@ -22,7 +22,7 @@ export function AppLayout({ modules, navModules, failed = [], tabHighlight, chil
           height, whatever the tab style: a tab can fill it from top to bottom. */}
       <header className="relative z-10 flex h-11 items-center gap-6 bg-surface px-4 shadow-sm">
         <span className="text-base font-semibold text-content">app-core</span>
-        <ModuleTabs navModules={navModules} highlight={tabHighlight} />
+        <ModuleTabs navModules={navModules} />
         <TopBarActions modules={modules} failed={failed} />
       </header>
       <div className="flex min-h-0 flex-1">

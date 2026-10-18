@@ -1,8 +1,6 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
-import { HIDDEN_TESTS_KEY } from './layout/AbSwitcher.js';
-import { TAB_HIGHLIGHT_KEY } from './layout/tabHighlight.js';
 
 vi.mock('./useModules.js', () => ({
   useModules: () => ({
@@ -42,6 +40,20 @@ describe('App: layout', () => {
     expect(within(screen.getByTestId('module-sidebar')).getByRole('link', { name: 'History' })).toBeInTheDocument();
   });
 
+  it('highlights the active module tab with the Up blend style, and no other tab', async () => {
+    render(<App />);
+    expect(await screen.findByText('overview-page')).toBeInTheDocument();
+    const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' });
+    expect(tab.style.backgroundImage).toContain('radial-gradient(60% 90% at 50% 100%');
+    expect(tab.style.backgroundImage).toContain('linear-gradient(0deg');
+    expect(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Dashboard' }).style.backgroundImage).toBe('');
+  });
+
+  it('shows no A/B test bar: every test is decided', () => {
+    render(<App />);
+    expect(screen.queryByTestId('ab-dock')).not.toBeInTheDocument();
+  });
+
   it('recolors the accent with the module being viewed, and not on the dashboard', async () => {
     const { unmount } = render(<App />);
     expect(await screen.findByText('overview-page')).toBeInTheDocument();
@@ -52,104 +64,5 @@ describe('App: layout', () => {
     window.history.pushState({}, '', '/');
     render(<App />);
     expect(accentStyles()).toHaveLength(0);
-  });
-});
-
-// Dev server only (vitest runs with import.meta.env.DEV): the active-tab style is the one choice still open.
-describe('App: A/B test bar', () => {
-  const dock = () => within(screen.getByTestId('ab-dock'));
-  const tabRow = () => within(screen.getByRole('group', { name: 'Active tab' }));
-
-  it('offers a single open test, Active tab, with its name on the left, muted and apart from the options', () => {
-    render(<App />);
-    expect(screen.getAllByRole('group').filter((g) => g.closest('[data-testid="ab-dock"]'))).toHaveLength(1);
-    const group = screen.getByRole('group', { name: 'Active tab' });
-    const name = group.parentElement!.firstElementChild!;
-    expect(name).toHaveTextContent('Active tab');
-    expect(name.className).toContain('text-muted');
-    expect(name.className).toContain('border-r');
-    expect(within(group).queryByText('Active tab')).not.toBeInTheDocument();
-  });
-
-  it('no longer offers the decided tests (top bar, sidebar header, layout, logo font, module accent)', () => {
-    render(<App />);
-    for (const label of ['Top bar', 'Sidebar header', 'Layout', 'Logo font', 'Module accent']) {
-      expect(screen.queryByRole('group', { name: label }), label).not.toBeInTheDocument();
-    }
-  });
-
-  it('lists the forty-one styles, each with a tooltip that says what it changes, with the steps from Up soft to Up glow in order', () => {
-    render(<App />);
-    const buttons = tabRow().getAllByRole('button');
-    expect(buttons).toHaveLength(41);
-    const labels = buttons.map((b) => b.textContent);
-    const from = labels.indexOf('Up soft');
-    expect(labels.slice(from, from + 7)).toEqual(['Up soft', 'Up blend', 'Glow soft', 'Glow line', 'Glow tall', 'Glow wide', 'Up glow']);
-    expect(screen.getByRole('group', { name: 'Active tab' }).style.gridTemplateColumns).toContain('repeat(10,');
-    for (const b of buttons) expect(b.getAttribute('title')!.length, b.textContent ?? '').toBeGreaterThan(30);
-    expect(buttons.map((b) => b.textContent)).toEqual(
-      expect.arrayContaining(['Current', 'Invert', 'Outline', 'Contrast', 'Chip', 'Ghost', 'Gradient', 'Topline', 'Dot']),
-    );
-  });
-
-  it('applies the chosen style to the tabs and remembers it after a reload', async () => {
-    const first = render(<App />);
-    expect(await screen.findByText('overview-page')).toBeInTheDocument();
-    expect(tabRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
-
-    fireEvent.click(tabRow().getByRole('button', { name: 'Contrast' }));
-    const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' });
-    expect(tab.className).toContain('bg-content');
-    first.unmount();
-
-    render(<App />);
-    expect(tabRow().getByRole('button', { name: 'Contrast' })).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('warns and falls back to Current when the stored style is unknown', () => {
-    localStorage.setItem(TAB_HIGHLIGHT_KEY, 'zzz');
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    render(<App />);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown tab highlight "zzz"'));
-    expect(tabRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
-    warn.mockRestore();
-  });
-
-  describe('hiding the row', () => {
-    it('hides it and leaves a reminder chip with the current choice, which stays applied', async () => {
-      localStorage.setItem(TAB_HIGHLIGHT_KEY, 'contrast');
-      render(<App />);
-      expect(await screen.findByText('overview-page')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole('button', { name: 'Hide Active tab' }));
-      expect(screen.queryByRole('group', { name: 'Active tab' })).not.toBeInTheDocument();
-      const chip = dock().getByRole('button', { name: 'Show Active tab' });
-      expect(chip).toHaveTextContent('Active tab: Contrast');
-      // Hidden is not reset: the Contrast style is still the one rendered.
-      expect(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' }).className).toContain('bg-content');
-
-      fireEvent.click(chip);
-      expect(screen.getByRole('group', { name: 'Active tab' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Show Active tab' })).not.toBeInTheDocument();
-    });
-
-    it('remembers a hidden row after a reload', () => {
-      const first = render(<App />);
-      fireEvent.click(screen.getByRole('button', { name: 'Hide Active tab' }));
-      first.unmount();
-
-      render(<App />);
-      expect(screen.queryByRole('group', { name: 'Active tab' })).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Show Active tab' })).toHaveTextContent('Active tab: Current');
-    });
-
-    it('reports an invalid stored value instead of silently ignoring it, and hides nothing', () => {
-      localStorage.setItem(HIDDEN_TESTS_KEY, '{not json');
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      render(<App />);
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining(HIDDEN_TESTS_KEY));
-      expect(screen.getByRole('group', { name: 'Active tab' })).toBeInTheDocument();
-      warn.mockRestore();
-    });
   });
 });

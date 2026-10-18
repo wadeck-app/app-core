@@ -7,25 +7,21 @@ import { OverlayWidgets } from './OverlayWidgets.js';
 import { modulePagePath } from './modulePaths.js';
 import { useModules } from './useModules.js';
 import { ModuleLibsProvider, useModuleLibs } from './useModuleLibs.js';
-import { AbDock } from './layout/AbSwitcher.js';
 import { AppLayout } from './layout/AppLayout.js';
 import { navModulesFor } from './layout/navModel.js';
-import { tabHighlightTest, useTabHighlight } from './layout/tabHighlight.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 
 const NO_MODULES: LoadedModuleSummary[] = [];
 
-// Navigation chrome around the page content. On the dev server a floating bar A/B tests the choice still open (how the
-// active tab is emphasized); in production the reference option applies.
+// Navigation chrome around the page content. No A/B test is open right now; to start one, render the dev-only `AbDock`
+// here with the test (see the A/B testing rule in the project CLAUDE.md).
 function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[]; children: React.ReactNode }): React.ReactElement {
-  const [tabHighlight, setTabHighlight] = useTabHighlight();
   return (
     <>
-      <AppLayout modules={modules} navModules={navModulesFor(modules)} failed={failed} tabHighlight={import.meta.env.DEV ? tabHighlight : 'current'}>
+      <AppLayout modules={modules} navModules={navModulesFor(modules)} failed={failed}>
         {children}
       </AppLayout>
       <OverlayWidgets modules={modules} />
-      {import.meta.env.DEV ? <AbDock tests={[tabHighlightTest(tabHighlight, setTabHighlight)]} /> : null}
     </>
   );
 }
