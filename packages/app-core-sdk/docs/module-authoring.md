@@ -172,8 +172,12 @@ Two more widget slots exist for things that live outside any page:
 - `navbar`: rendered inline on the right of the navbar, before the theme toggle, on every page. Keep it
   compact; entries are sorted by `order` (none last), then module order.
 - `overlay`: mounted once on every page, at the app root. The shell gives no position: your component
-  places itself (e.g. `position: fixed`, bottom-right). The shell does not manage z-index between
-  modules, so overlays of different modules may overlap; pick a modest `z-index` and keep a small footprint.
+  places itself (e.g. `position: fixed`, bottom-right). The shell does not manage position or z-index
+  between modules. Measured with two modules that both pin a box to the bottom-right: both are mounted
+  and they sit exactly on top of each other, the later module's box hiding the other, so nobody sees
+  that two overlays exist. Pick a corner or an offset unlikely to be shared, a modest `z-index`, and keep
+  a small footprint. Colors must come from theme tokens (`var(--color-surface)`, `var(--color-content)`,
+  `var(--color-border)`), not fixed values: a fixed dark text was unreadable in the dark theme.
 - Both are DSL views like dashboard widgets (`$sources` and `dsl-lib` components work), shown only once
   your components are loaded, and removed when the module is unloaded or swapped.
 - Each widget has its own error boundary: if a component throws, the shell shows `<moduleId>: widget error`
