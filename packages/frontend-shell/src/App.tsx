@@ -11,29 +11,21 @@ import { AbDock } from './layout/AbSwitcher.js';
 import { AppLayout } from './layout/AppLayout.js';
 import { navModulesFor } from './layout/navModel.js';
 import { tabHighlightTest, useTabHighlight } from './layout/tabHighlight.js';
-import { topBarTest, useTopBar } from './layout/topBar.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 
 const NO_MODULES: LoadedModuleSummary[] = [];
 
-// Navigation chrome around the page content. On the dev server a floating bar A/B tests the choices still open (the top
-// bar height and style, how the active tab is emphasized); in production the reference options apply.
+// Navigation chrome around the page content. On the dev server a floating bar A/B tests the choice still open (how the
+// active tab is emphasized); in production the reference option applies.
 function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[]; children: React.ReactNode }): React.ReactElement {
   const [tabHighlight, setTabHighlight] = useTabHighlight();
-  const [topBar, setTopBar] = useTopBar();
   return (
     <>
-      <AppLayout
-        modules={modules}
-        navModules={navModulesFor(modules)}
-        failed={failed}
-        tabHighlight={import.meta.env.DEV ? tabHighlight : 'current'}
-        topBar={import.meta.env.DEV ? topBar : 'current'}
-      >
+      <AppLayout modules={modules} navModules={navModulesFor(modules)} failed={failed} tabHighlight={import.meta.env.DEV ? tabHighlight : 'current'}>
         {children}
       </AppLayout>
       <OverlayWidgets modules={modules} />
-      {import.meta.env.DEV ? <AbDock tests={[topBarTest(topBar, setTopBar), tabHighlightTest(tabHighlight, setTabHighlight)]} /> : null}
+      {import.meta.env.DEV ? <AbDock tests={[tabHighlightTest(tabHighlight, setTabHighlight)]} /> : null}
     </>
   );
 }

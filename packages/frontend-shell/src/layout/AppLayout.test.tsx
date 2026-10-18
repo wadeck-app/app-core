@@ -39,6 +39,27 @@ describe('AppLayout: top tabs', () => {
   });
 });
 
+describe('AppLayout: top bar', () => {
+  it('is the Compact flat bar: 44px, no border, separated from the page by a soft shadow', () => {
+    renderAt(billing.basePath);
+    const classes = screen.getByRole('banner').className.split(/\s+/);
+    expect(classes).toContain('h-11');
+    expect(classes).toContain('shadow-sm');
+    expect(classes).toContain('bg-surface');
+    // No bottom border; z-10 keeps the shadow above the content below.
+    expect(classes).not.toContain('border-b');
+    expect(classes).toContain('z-10');
+  });
+
+  it('keeps the same app name size and puts the tabs and the actions in it', () => {
+    renderAt(billing.basePath);
+    const bar = within(screen.getByRole('banner'));
+    expect(bar.getByText('app-core').className).toContain('text-base');
+    expect(bar.getByRole('navigation', { name: 'Modules' })).toBeInTheDocument();
+    expect(bar.getByRole('button', { name: /Switch to (dark|light) mode/ })).toBeInTheDocument();
+  });
+});
+
 describe('AppLayout: sidebar, always visible', () => {
   it('lists the pages of the active module and marks the current one', () => {
     renderAt(`${billing.basePath}/p1`);

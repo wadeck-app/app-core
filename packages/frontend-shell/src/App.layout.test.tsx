@@ -60,63 +60,20 @@ describe('App: A/B test bar', () => {
   const dock = () => within(screen.getByTestId('ab-dock'));
   const tabRow = () => within(screen.getByRole('group', { name: 'Active tab' }));
 
-  it('offers the two open tests, each with its name on the left, muted and apart from the options', () => {
+  it('offers a single open test, Active tab, with its name on the left, muted and apart from the options', () => {
     render(<App />);
-    expect(screen.getAllByRole('group').filter((g) => g.closest('[data-testid="ab-dock"]'))).toHaveLength(2);
-    for (const label of ['Top bar', 'Active tab']) {
-      const group = screen.getByRole('group', { name: label });
-      const name = group.parentElement!.firstElementChild!;
-      expect(name).toHaveTextContent(label);
-      expect(name.className).toContain('text-muted');
-      expect(name.className).toContain('border-r');
-      expect(within(group).queryByText(label)).not.toBeInTheDocument();
-    }
+    expect(screen.getAllByRole('group').filter((g) => g.closest('[data-testid="ab-dock"]'))).toHaveLength(1);
+    const group = screen.getByRole('group', { name: 'Active tab' });
+    const name = group.parentElement!.firstElementChild!;
+    expect(name).toHaveTextContent('Active tab');
+    expect(name.className).toContain('text-muted');
+    expect(name.className).toContain('border-r');
+    expect(within(group).queryByText('Active tab')).not.toBeInTheDocument();
   });
 
-  it('stacks Top bar above Active tab', () => {
+  it('no longer offers the decided tests (top bar, sidebar header, layout, logo font, module accent)', () => {
     render(<App />);
-    const order = Array.from(document.querySelectorAll('[data-testid="ab-dock"] [role="group"]')).map((g) => g.getAttribute('aria-label'));
-    expect(order).toEqual(['Top bar', 'Active tab']);
-  });
-
-  describe('Top bar test', () => {
-    const barRow = () => within(screen.getByRole('group', { name: 'Top bar' }));
-    const header = () => screen.getByRole('banner');
-
-    it('offers seven heights and styles, the current one first, each with a tooltip', () => {
-      render(<App />);
-      const buttons = barRow().getAllByRole('button');
-      expect(buttons.map((b) => b.textContent)).toEqual(['Current', 'Cozy', 'Compact', 'Slim', 'Dense', 'Compact flat', 'Compact blend']);
-      expect(barRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
-      for (const b of buttons) expect(b.getAttribute('title')!.length, b.textContent ?? '').toBeGreaterThan(20);
-    });
-
-    it('applies the chosen height to the bar and remembers it after a reload', () => {
-      const first = render(<App />);
-      expect(header().className).toContain('h-[61px]');
-      fireEvent.click(barRow().getByRole('button', { name: 'Compact' }));
-      expect(header().className).toContain('h-[45px]');
-      expect(header().className).not.toContain('h-[61px]');
-      first.unmount();
-
-      render(<App />);
-      expect(barRow().getByRole('button', { name: 'Compact' })).toHaveAttribute('aria-pressed', 'true');
-      expect(header().className).toContain('h-[45px]');
-    });
-
-    it('warns and falls back to Current when the stored option is unknown', () => {
-      localStorage.setItem('shell.topBar', 'zzz');
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      render(<App />);
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown top bar "zzz"'));
-      expect(barRow().getByRole('button', { name: 'Current' })).toHaveAttribute('aria-pressed', 'true');
-      warn.mockRestore();
-    });
-  });
-
-  it('no longer offers the decided tests (sidebar header, layout, logo font, module accent)', () => {
-    render(<App />);
-    for (const label of ['Sidebar header', 'Layout', 'Logo font', 'Module accent']) {
+    for (const label of ['Top bar', 'Sidebar header', 'Layout', 'Logo font', 'Module accent']) {
       expect(screen.queryByRole('group', { name: label }), label).not.toBeInTheDocument();
     }
   });
