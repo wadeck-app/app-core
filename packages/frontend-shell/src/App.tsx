@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { AppNavBar } from './NavBar.js';
 import { Dashboard } from './Dashboard.js';
@@ -8,9 +8,46 @@ import { OverlayWidgets } from './OverlayWidgets.js';
 import { modulePagePath } from './modulePaths.js';
 import { useModules } from './useModules.js';
 import { ModuleLibsProvider, useModuleLibs } from './useModuleLibs.js';
-import type { LoadedModuleSummary } from './types.js';
+import { LayoutSwitcher, useLayoutVariant } from './layout/LayoutSwitcher.js';
+import { LayoutByVariant } from './layout/LayoutByVariant.js';
+import { moduleColor } from './layout/Logo.js';
+import { useModuleAccent } from './layout/moduleAccent.js';
+import { activeNavModule, navModulesFor } from './layout/navModel.js';
+import { usePersistentFlag } from './layout/usePersistentFlag.js';
+import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 
 const NO_MODULES: LoadedModuleSummary[] = [];
+const MODULE_ACCENT_KEY = 'shell.moduleAccent';
+
+// Navigation chrome around the page content. On the dev server a floating switcher A/B tests the navigation
+// layouts on the real pages; in production only the classic layout exists.
+function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[]; children: React.ReactNode }): React.ReactElement {
+  const [variant, setVariant] = useLayoutVariant();
+  const [accentOn, toggleAccent] = usePersistentFlag(MODULE_ACCENT_KEY, true);
+  const { pathname } = useLocation();
+  const active = import.meta.env.DEV ? variant : 'classic';
+  const navModules = navModulesFor(modules);
+  const layoutProps = { modules, navModules, failed };
+  // Dev-only experiment: the accent (dsl-ui's --color-primary*) follows the module being viewed; the dashboard keeps the default.
+  const activeModule = activeNavModule(pathname, navModules);
+  useModuleAccent(import.meta.env.DEV && accentOn && activeModule ? moduleColor(activeModule.id) : undefined);
+  return (
+    <>
+      {active === 'classic' ? (
+        <div className="min-h-screen bg-bg">
+          <AppNavBar modules={modules} failed={failed} />
+          {children}
+        </div>
+      ) : (
+        <LayoutByVariant variant={active} {...layoutProps}>
+          {children}
+        </LayoutByVariant>
+      )}
+      <OverlayWidgets modules={modules} />
+      {import.meta.env.DEV ? <LayoutSwitcher variant={variant} onChange={setVariant} accent={{ on: accentOn, onToggle: toggleAccent }} /> : null}
+    </>
+  );
+}
 
 export default function App(): React.ReactElement {
   const { data, error } = useModules();
@@ -31,8 +68,7 @@ export default function App(): React.ReactElement {
       <RouterProvider>
         <ToastProvider>
           <ModuleLibsProvider value={libStatuses}>
-            <div className="min-h-screen bg-bg">
-              <AppNavBar modules={modules} failed={failedModules} />
+            <AppFrame modules={modules} failed={failedModules}>
               {error ? (
                 <p role="alert" className="px-4 py-3 text-danger">
                   Failed to load modules: {String(error)}
@@ -73,8 +109,7 @@ export default function App(): React.ReactElement {
                 <Route path="/modules/:moduleId/:index" element={<ModulePage modules={modules} />} />
                 <Route path="*" element={<p className="p-4 text-muted">Page not found (the module may have been unloaded).</p>} />
               </Routes>
-              <OverlayWidgets modules={modules} />
-            </div>
+            </AppFrame>
           </ModuleLibsProvider>
         </ToastProvider>
       </RouterProvider>

@@ -1,11 +1,9 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Moon, Sun } from 'lucide-react';
-import { IconButton, NavBar as DslNavBar, useTheme } from '@wadeck-app/dsl-ui';
-import { ModuleWidget, widgetsFor } from './ModuleWidgets.js';
+import { NavBar as DslNavBar } from '@wadeck-app/dsl-ui';
+import { TopBarActions } from './layout/TopBarActions.js';
 import { modulePagePath } from './modulePaths.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
-import { VersionsMenu } from './VersionsMenu.js';
 
 export interface NavPage {
   moduleId: string;
@@ -35,7 +33,6 @@ const linkClass = ({ isActive }: { isActive: boolean }): string =>
 
 export function AppNavBar({ modules, failed = [] }: { modules: LoadedModuleSummary[]; failed?: FailedModuleSummary[] }): React.ReactElement {
   const pages = navPagesFor(modules);
-  const { theme, setTheme } = useTheme();
   return (
     <header className="border-b border-border bg-surface px-4 py-3">
       <DslNavBar>
@@ -48,21 +45,7 @@ export function AppNavBar({ modules, failed = [] }: { modules: LoadedModuleSumma
             {p.label}
           </NavLink>
         ))}
-        <span className="ml-auto flex items-center gap-3">
-          {widgetsFor(modules, 'navbar').map((w) => (
-            <span key={w.key} className="flex items-center" data-module-widget="navbar" data-module-id={w.moduleId}>
-              <ModuleWidget moduleId={w.moduleId} rawYaml={w.rawYaml} slot="navbar" />
-            </span>
-          ))}
-          <VersionsMenu modules={modules} failed={failed} />
-          <IconButton
-            icon={theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            variant="ghost"
-            size="icon-sm"
-          />
-        </span>
+        <TopBarActions modules={modules} failed={failed} />
       </DslNavBar>
     </header>
   );
