@@ -1,9 +1,11 @@
 import type { Rule, Violation } from '@wadeck-app/violations-rules';
 import * as path from 'node:path';
+import { OUTPUT_DIR, toPosix } from '../lib/appModuleLayout.js';
 
 // Any package directory shipping a manifest.json (the signal that it's an
 // app-module) must itself be named `app-module-<name>`, e.g. `app-module-queue`.
 // A bare `app-module` (no suffix) is also rejected, not just names missing the prefix.
+// The generated dist-module/manifest.json is not a module folder and is skipped.
 const NAME_PATTERN = /^app-module-.+$/;
 
 export const rule: Rule = {
@@ -16,6 +18,7 @@ export const rule: Rule = {
     const violations: Violation[] = [];
 
     for (const manifestPath of files) {
+      if (toPosix(manifestPath).includes(`/${OUTPUT_DIR}/`)) continue;
       const dirName = path.basename(path.dirname(manifestPath));
       if (!NAME_PATTERN.test(dirName)) {
         violations.push({

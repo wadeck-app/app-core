@@ -7,6 +7,7 @@ import { parseManifest } from '../src/manifest.js';
 import { ModuleRouteRegistry } from '../src/moduleRoutes.js';
 
 const baseManifest = {
+  id: 'm1',
   version: '1.0.0',
   backendEntryPath: './api-backend/backend.mjs',
   extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: { $type: 'Badge', label: 'x' } } }],

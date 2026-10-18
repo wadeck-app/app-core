@@ -1,8 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
+import { describe, it, expect, afterEach } from 'vitest';
 import { rule } from './app-module-no-raw-timers.js';
+import { createModule, type TempModule } from '../lib/appModuleTestUtil.js';
 
 describe('app-module/no-raw-timers', () => {
   it('has the correct rule id and severity', () => {
@@ -10,49 +8,37 @@ describe('app-module/no-raw-timers', () => {
     expect(rule.defaultSeverity).toBe('error');
   });
 
-  it('scopes itself to packages/app-module-*/** so it auto-applies with no config', () => {
-    expect(rule.defaultScope.some((p) => p.includes('packages/app-module-*'))).toBe(true);
+  it('scopes itself to src/backend of any app-module-* folder, wherever it sits in the repo', () => {
+    expect(rule.defaultScope.every((p) => p.startsWith('**/app-module-*/src/backend/'))).toBe(true);
   });
 
   describe('check()', () => {
-    let dir: string;
-    let fakeAppModuleFile: string;
+    let mod: TempModule;
+    afterEach(() => mod.cleanup());
 
-    beforeEach(() => {
-      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-app-module-'));
-      const appModuleDir = path.join(dir, 'packages', 'app-module-fake', 'src');
-      fs.mkdirSync(appModuleDir, { recursive: true });
-      fakeAppModuleFile = path.join(appModuleDir, 'backend.ts');
-    });
-
-    afterEach(() => {
-      fs.rmSync(dir, { recursive: true, force: true });
-    });
+    async function run(content: string, file = 'src/backend/index.ts') {
+      mod?.cleanup();
+      mod = createModule({ [file]: content });
+      return rule.check([mod.at(file)]);
+    }
 
     it('flags a raw setInterval call', async () => {
-      fs.writeFileSync(fakeAppModuleFile, "setInterval(() => {}, 1000);\n");
-      const violations = await rule.check([fakeAppModuleFile]);
+      const violations = await run('setInterval(() => {}, 1000);\n');
       expect(violations).toHaveLength(1);
       expect(violations[0]!.message).toContain('setInterval');
     });
 
-    it('flags raw addEventListener usage', async () => {
-      fs.writeFileSync(fakeAppModuleFile, "window.addEventListener('x', fn);\n");
-      const violations = await rule.check([fakeAppModuleFile]);
-      expect(violations).toHaveLength(1);
+    it('flags raw setTimeout and addEventListener usage', async () => {
+      expect(await run('setTimeout(fn, 1);\n')).toHaveLength(1);
+      expect(await run("window.addEventListener('x', fn);\n")).toHaveLength(1);
     });
 
     it('does not flag moduleContext.setInterval/.on usage', async () => {
-      fs.writeFileSync(fakeAppModuleFile, "ctx.setInterval(() => {}, 1000);\nctx.on('y', fn);\n");
-      const violations = await rule.check([fakeAppModuleFile]);
-      expect(violations).toHaveLength(0);
+      expect(await run("ctx.setInterval(() => {}, 1000);\nctx.on('y', fn);\n")).toHaveLength(0);
     });
 
     it('ignores test files', async () => {
-      const testFile = fakeAppModuleFile.replace('.ts', '.test.ts');
-      fs.writeFileSync(testFile, "setInterval(() => {}, 1000);\n");
-      const violations = await rule.check([testFile]);
-      expect(violations).toHaveLength(0);
+      expect(await run('setInterval(() => {}, 1000);\n', 'src/backend/index.test.ts')).toHaveLength(0);
     });
   });
 });

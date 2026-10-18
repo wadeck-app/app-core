@@ -6,5 +6,13 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     exclude: ['**/node_modules/**', 'app/**'],
+    server: {
+      deps: {
+        // The loader loads module backends with a native import(). Inlined through vite, the CJS bundle
+        // `app-core-cli package` writes (dist-module/api-backend/backend.cjs) gets its default export
+        // reshaped and would not mirror production.
+        external: [/[\/]dist-module[\/]/],
+      },
+    },
   },
 });

@@ -1,0 +1,9 @@
+{
+  "name": "@wadeck-app/app-module-slot-provider",
+  "version": "0.0.0",
+  "private": true,
+  "files": ["dist-module"],
+  "exports": {
+    "./types": { "types": "./dist-module/types/index.d.ts" }
+  }
+}

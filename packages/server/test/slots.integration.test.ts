@@ -2,11 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import * as url from 'node:url';
 import { buildServer } from '../src/server.js';
+import { fixtureManifest } from './fixtureManifests.js';
 
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const fixturesDir = path.join(__dirname, '..', '..', 'test-app-modules');
 
 describe('GET /api/slots/:slotId', () => {
   let configDir: string;
@@ -20,12 +18,19 @@ describe('GET /api/slots/:slotId', () => {
   });
 
   async function registerBothContributors(server: Awaited<ReturnType<typeof buildServer>>['server']) {
+    // The provider first: the contributors require it (decision 82).
+    const provider = await server.inject({
+      method: 'POST',
+      url: '/api/modules/register',
+      payload: { id: 'slot-provider', source: { type: 'file', path: fixtureManifest('app-module-slot-provider') } },
+    });
+    expect(provider.statusCode, provider.body).toBe(201);
     await server.inject({
       method: 'POST',
       url: '/api/modules/register',
       payload: {
         id: 'slot-contributor-a',
-        source: { type: 'file', path: path.join(fixturesDir, 'app-module-slot-contributor-a', 'manifest.json') },
+        source: { type: 'file', path: fixtureManifest('app-module-slot-contributor-a') },
       },
     });
     await server.inject({
@@ -33,7 +38,7 @@ describe('GET /api/slots/:slotId', () => {
       url: '/api/modules/register',
       payload: {
         id: 'slot-contributor-b',
-        source: { type: 'file', path: path.join(fixturesDir, 'app-module-slot-contributor-b', 'manifest.json') },
+        source: { type: 'file', path: fixtureManifest('app-module-slot-contributor-b') },
       },
     });
   }
@@ -42,7 +47,7 @@ describe('GET /api/slots/:slotId', () => {
     const { server } = await buildServer({ configDir });
     await registerBothContributors(server);
 
-    const res = await server.inject({ method: 'GET', url: '/api/slots/test:shared-slot' });
+    const res = await server.inject({ method: 'GET', url: '/api/slots/slot-provider:shared-slot' });
     expect(res.statusCode).toBe(200);
 
     const body = res.json();
@@ -68,7 +73,7 @@ describe('GET /api/slots/:slotId', () => {
     const { server } = await buildServer({ configDir });
     await registerBothContributors(server);
 
-    const res = await server.inject({ method: 'GET', url: '/api/slots/test:shared-slot' });
+    const res = await server.inject({ method: 'GET', url: '/api/slots/slot-provider:shared-slot' });
     const body = res.json() as Array<{ label: string }>;
     expect(body.map((v) => v.label)).not.toContain('contributor-a-own-widget');
     expect(body.map((v) => v.label)).not.toContain('contributor-b-unused-slot');
@@ -85,7 +90,7 @@ describe('GET /api/slots/:slotId', () => {
 
   it('returns an empty array when no modules are registered at all', async () => {
     const { server } = await buildServer({ configDir });
-    const res = await server.inject({ method: 'GET', url: '/api/slots/test:shared-slot' });
+    const res = await server.inject({ method: 'GET', url: '/api/slots/slot-provider:shared-slot' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
   });

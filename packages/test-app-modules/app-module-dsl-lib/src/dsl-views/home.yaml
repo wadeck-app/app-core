@@ -1,0 +1,3 @@
+# Registered as module id "dsl-lib" (the manifest id): its components are $type "dsl-lib:<Name>".
+$type: dsl-lib:Hello
+who: nav-page

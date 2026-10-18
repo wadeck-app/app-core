@@ -24,6 +24,10 @@ export function writeRegistryEntry(modulesDir: string, entry: RegistryEntry): vo
   fs.writeFileSync(file, JSON.stringify(entry, null, 2), 'utf8');
 }
 
+export function hasRegistryEntry(modulesDir: string, id: string): boolean {
+  return fs.existsSync(registryFile(modulesDir, id));
+}
+
 // Returns whether a registry file existed (and was deleted).
 export function removeRegistryEntry(modulesDir: string, id: string): boolean {
   const file = registryFile(modulesDir, id);

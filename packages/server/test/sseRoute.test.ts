@@ -17,6 +17,7 @@ describe('registerRoute handlers can stream Server-Sent Events', () => {
     fs.writeFileSync(
       path.join(dir, 'manifest.json'),
       JSON.stringify({
+        id: 'sse',
         version: '1.0.0',
         backendEntryPath: './api-backend/backend.mjs',
         extensionPoints: [

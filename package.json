@@ -8,9 +8,13 @@
   "scripts": {
     "build": "npm run build --workspace=packages/frontend-shell && npm run build --workspace=packages/server && npm run build --workspace=packages/app-core-sdk && npm run build --workspace=packages/app-core-cli",
     "typecheck:tests": "npm run typecheck:tests --workspace=packages/server",
+    "build:fixtures": "node scripts/build-fixtures.mjs",
+    "pretest": "node scripts/build-fixtures.mjs",
     "test": "npm run test --workspace=packages/server",
+    "pretest:app": "node scripts/build-fixtures.mjs",
     "test:app": "npm run test --workspace=packages/frontend-shell",
     "test:sdk": "npm run test --workspace=packages/app-core-sdk",
+    "pretest:cli": "node scripts/build-fixtures.mjs",
     "test:cli": "npm run test --workspace=packages/app-core-cli",
     "test:all": "npm run test && npm run test:app && npm run test:sdk && npm run test:cli",
     "test:violations-rules": "vitest run --config .violations/vitest.config.ts",

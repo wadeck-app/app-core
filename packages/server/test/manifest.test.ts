@@ -4,6 +4,7 @@ import { parseManifest, parseRegistrationPayload, UnsupportedSourceTypeError } f
 describe('parseManifest', () => {
   it('accepts a well-formed manifest with one extension point', () => {
     const manifest = parseManifest({
+      id: 'queue',
       version: '1.0.0',
       backendEntryPath: './backend.mjs',
       extensionPoints: [
@@ -16,13 +17,14 @@ describe('parseManifest', () => {
 
   it('rejects a manifest with zero extension points', () => {
     expect(() =>
-      parseManifest({ version: '1.0.0', backendEntryPath: './backend.mjs', extensionPoints: [] }),
+      parseManifest({ id: 'queue', version: '1.0.0', backendEntryPath: './backend.mjs', extensionPoints: [] }),
     ).toThrow();
   });
 
   it('rejects a manifest missing backendEntryPath', () => {
     expect(() =>
       parseManifest({
+        id: 'queue',
         version: '1.0.0',
         extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: {} } }],
       }),
@@ -32,6 +34,7 @@ describe('parseManifest', () => {
   it('rejects an extension point with an invalid view.type', () => {
     expect(() =>
       parseManifest({
+        id: 'queue',
         version: '1.0.0',
         backendEntryPath: './backend.mjs',
         extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'react', value: {} } }],
@@ -60,6 +63,7 @@ describe('parseRegistrationPayload', () => {
 describe('page path', () => {
   const page = (pagePath: string) =>
     parseManifest({
+      id: 'queue',
       version: '1.0.0',
       backendEntryPath: './api-backend/backend.mjs',
       extensionPoints: [{ kind: 'page', slot: 'nav', path: pagePath, view: { type: 'inline', value: {} } }],

@@ -99,6 +99,7 @@ describe('streams opened through registerRoute on the real server', () => {
     fs.writeFileSync(
       path.join(dir, 'manifest.json'),
       JSON.stringify({
+        id: 'streamy',
         version: '1.0.0',
         backendEntryPath: './api-backend/backend.mjs',
         extensionPoints: [

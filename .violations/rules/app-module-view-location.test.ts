@@ -1,52 +1,56 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
+import { describe, it, expect, afterEach } from 'vitest';
 import { rule } from './app-module-view-location.js';
+import { createModule, type TempModule } from '../lib/appModuleTestUtil.js';
+
+function manifestWithView(view: unknown): string {
+  return JSON.stringify({ id: 'fixture', extensionPoints: [{ kind: 'page', slot: 'nav', label: 'F', view }] });
+}
 
 describe('app-module/view-location', () => {
-  let dir: string;
-  let manifestPath: string;
+  let mod: TempModule;
+  afterEach(() => mod.cleanup());
 
-  beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-view-loc-'));
-    const appModuleDir = path.join(dir, 'packages', 'app-module-fake');
-    fs.mkdirSync(appModuleDir, { recursive: true });
-    manifestPath = path.join(appModuleDir, 'manifest.json');
+  it('passes a view inside src/dsl-views', async () => {
+    mod = createModule();
+    expect(await rule.check([mod.at('manifest.json')])).toHaveLength(0);
   });
 
-  afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  function writeManifest(viewPath: string): void {
-    fs.writeFileSync(manifestPath, JSON.stringify({
-      version: '1.0.0',
-      backendEntryPath: './api-backend/index.js',
-      extensionPoints: [{ kind: 'page', slot: 'nav', view: { type: 'path', value: viewPath } }],
-    }));
-  }
-
-  it('flags a view path outside dsl-frontend/', async () => {
-    writeManifest('./page.yaml');
-    const violations = await rule.check([manifestPath]);
+  it('flags a view outside src/dsl-views (legacy dsl-frontend/)', async () => {
+    mod = createModule({
+      'manifest.json': manifestWithView({ type: 'path', value: './dsl-frontend/page.yaml' }),
+      'dsl-frontend/page.yaml': '$type: Badge\n',
+    });
+    const violations = await rule.check([mod.at('manifest.json')]);
     expect(violations).toHaveLength(1);
-    expect(violations[0]!.message).toContain('dsl-frontend/');
+    expect(violations[0]!.message).toContain('src/dsl-views/');
   });
 
-  it('does not flag a view path inside dsl-frontend/', async () => {
-    writeManifest('./dsl-frontend/page.yaml');
-    const violations = await rule.check([manifestPath]);
-    expect(violations).toHaveLength(0);
+  it('flags a referenced view that does not exist', async () => {
+    mod = createModule({ 'manifest.json': manifestWithView({ type: 'path', value: './src/dsl-views/missing.yaml' }) });
+    const violations = await rule.check([mod.at('manifest.json')]);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]!.message).toContain('does not exist');
+  });
+
+  it('flags a view that is not valid YAML', async () => {
+    mod = createModule({ 'src/dsl-views/page.yaml': 'a: [unclosed\n' });
+    const violations = await rule.check([mod.at('manifest.json')]);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]!.message).toContain('not valid YAML');
+  });
+
+  it('flags a view that is not an object', async () => {
+    mod = createModule({ 'src/dsl-views/page.yaml': '- a\n- b\n' });
+    expect(await rule.check([mod.at('manifest.json')])).toHaveLength(1);
   });
 
   it('ignores inline views (no path to check)', async () => {
-    fs.writeFileSync(manifestPath, JSON.stringify({
-      version: '1.0.0',
-      backendEntryPath: './api-backend/index.js',
-      extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: { $type: 'Badge', label: 'ok' } } }],
-    }));
-    const violations = await rule.check([manifestPath]);
-    expect(violations).toHaveLength(0);
+    mod = createModule({ 'manifest.json': manifestWithView({ type: 'inline', value: { $type: 'Badge', label: 'ok' } }) });
+    expect(await rule.check([mod.at('manifest.json')])).toHaveLength(0);
+  });
+
+  it('leaves an invalid manifest to manifest-exists-and-valid', async () => {
+    mod = createModule({ 'manifest.json': '{}' });
+    expect(await rule.check([mod.at('manifest.json')])).toHaveLength(0);
   });
 });

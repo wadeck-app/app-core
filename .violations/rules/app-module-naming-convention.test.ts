@@ -1,50 +1,36 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
+import { describe, it, expect, afterEach } from 'vitest';
 import { rule } from './app-module-naming-convention.js';
+import { createModule, type TempModule } from '../lib/appModuleTestUtil.js';
 
 describe('app-module/naming-convention', () => {
-  let dir: string;
+  let mod: TempModule;
+  afterEach(() => mod.cleanup());
 
-  beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-naming-'));
-  });
-
-  afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  function manifestAt(packageDirName: string): string {
-    const packageDir = path.join(dir, 'packages', packageDirName);
-    fs.mkdirSync(packageDir, { recursive: true });
-    const manifestPath = path.join(packageDir, 'manifest.json');
-    fs.writeFileSync(manifestPath, '{}\n');
-    return manifestPath;
+  async function checkFolder(name: string) {
+    mod = createModule({}, name);
+    return rule.check([mod.at('manifest.json')]);
   }
 
   it('passes a correctly prefixed name', async () => {
-    const manifestPath = manifestAt('app-module-queue');
-    const violations = await rule.check([manifestPath]);
-    expect(violations).toHaveLength(0);
+    expect(await checkFolder('app-module-queue')).toHaveLength(0);
   });
 
   it('rejects a bare "app-module" with no suffix', async () => {
-    const manifestPath = manifestAt('app-module');
-    const violations = await rule.check([manifestPath]);
+    const violations = await checkFolder('app-module');
     expect(violations).toHaveLength(1);
     expect(violations[0]!.message).toContain('must be named "app-module-<name>"');
   });
 
   it('rejects an unrelated name entirely', async () => {
-    const manifestPath = manifestAt('queue-module');
-    const violations = await rule.check([manifestPath]);
-    expect(violations).toHaveLength(1);
+    expect(await checkFolder('queue-module')).toHaveLength(1);
   });
 
   it('rejects suffix-style naming (queue-app-module)', async () => {
-    const manifestPath = manifestAt('queue-app-module');
-    const violations = await rule.check([manifestPath]);
-    expect(violations).toHaveLength(1);
+    expect(await checkFolder('queue-app-module')).toHaveLength(1);
+  });
+
+  it('skips the generated dist-module/manifest.json', async () => {
+    mod = createModule({ 'dist-module/manifest.json': '{}' });
+    expect(await rule.check([mod.at('dist-module/manifest.json')])).toHaveLength(0);
   });
 });

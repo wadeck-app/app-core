@@ -86,6 +86,7 @@ describe('parameterised routes on the real server', () => {
     fs.writeFileSync(
       path.join(dir, 'manifest.json'),
       JSON.stringify({
+        id: 'queueish',
         version: '1.0.0',
         backendEntryPath: './api-backend/backend.mjs',
         extensionPoints: [

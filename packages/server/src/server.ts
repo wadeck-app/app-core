@@ -7,9 +7,10 @@ import { modulesRoutes } from './routes/modules.js';
 import { slotsRoutes } from './routes/slots.js';
 import { libContentType, resolveLibRequest, sharedVersionsFromBuildInfo, type SharedVersions } from './dslLib.js';
 import { ModuleManager } from './loader.js';
-import { resolveModulesDir } from './configDir.js';
+import { resolveConfigDir, resolveModulesDir } from './configDir.js';
 import { readRegistryEntries } from './registry.js';
 import { getErrorMessage } from './errors.js';
+import { orderByRequires, readRequiredIds } from './loadOrder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,9 +53,17 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   // packages/server/dist at runtime, so public/ at the repo root is 3 levels up.
   const publicDir = opts.publicDir ?? path.resolve(__dirname, '../../../public');
   const hasPublic = fs.existsSync(publicDir);
-  const manager = new ModuleManager({ sharedVersions: hasPublic ? readSharedVersions(publicDir) : undefined });
+  // Throws here, at startup, when APP_CORE_HOOK_TIMEOUT_MS is not a positive integer.
+  const manager = new ModuleManager({
+    configDir: opts.configDir ?? resolveConfigDir(),
+    sharedVersions: hasPublic ? readSharedVersions(publicDir) : undefined,
+  });
 
   const server = Fastify({ logger: false });
+  // Any way of closing the server (stop(), dev, tests) runs the modules' teardown first; idempotent.
+  server.addHook('onClose', async () => {
+    await manager.shutdown();
+  });
   await server.register(modulesRoutes, { modulesDir, manager });
   await server.register(slotsRoutes, { manager });
 
@@ -103,7 +112,18 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
     return reply.code(404).send({ error: 'shell-not-built' });
   });
 
+  // Required modules load first (decision 82); members of a require cycle cannot load at all.
+  const { ordered, cycles } = orderByRequires(readRegistryEntries(modulesDir), (entry) => readRequiredIds(entry.source.path));
   for (const entry of readRegistryEntries(modulesDir)) {
+    const cycle = cycles.get(entry.id);
+    if (cycle === undefined) {
+      continue;
+    }
+    const error = `module "${entry.id}" is part of a require cycle (${cycle}), so none of its members can load. Fix: remove one of the "requires" in the cycle (extract what they share into a third module), then re-register the modules.`;
+    manager.recordFailure(entry, error, 'requirement');
+    process.stderr.write(`[app-core] ${error}\n`);
+  }
+  for (const entry of ordered) {
     try {
       await manager.loadFromEntry(entry);
     } catch (err) {
@@ -116,6 +136,9 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
       );
     }
   }
+
+  // Anything that failed on a requirement and can load now (the order above makes it rare, but it is cheap and cannot loop).
+  await manager.recoverFailed();
 
   return { server, manager, modulesDir };
 }

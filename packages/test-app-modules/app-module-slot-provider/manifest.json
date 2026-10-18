@@ -1,0 +1,18 @@
+{
+  "id": "slot-provider",
+  "expose": {
+    "types": "./src/commons/types.ts",
+    "slots": {
+      "shared-slot": { "accepts": ["Badge"] },
+      "unused-slot": { "accepts": ["Badge"] }
+    }
+  },
+  "extensionPoints": [
+    {
+      "kind": "widget",
+      "slot": "dashboard",
+      "label": "Slot provider dashboard widget (the slots it exposes are filled by other modules)",
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "slot-provider-own-widget" } }
+    }
+  ]
+}

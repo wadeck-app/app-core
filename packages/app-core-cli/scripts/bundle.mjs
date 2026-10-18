@@ -32,7 +32,7 @@ function copyFrontendAssets() {
 
 copyFrontendAssets();
 
-const external = ['zod', 'fastify', '@fastify/static', 'js-yaml', 'semver', '@wadeck-app/shared-cli', '@wadeck-app/shared-updater'];
+const external = ['esbuild', 'zod', 'fastify', '@fastify/static', 'js-yaml', 'semver', '@wadeck-app/shared-cli', '@wadeck-app/shared-updater'];
 const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8')).version;
 const define = { __APP_CORE_CLI_VERSION__: JSON.stringify(version) };
 

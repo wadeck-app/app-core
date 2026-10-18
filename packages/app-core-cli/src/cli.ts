@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { validateManifestFile } from './validate.js';
-import { parseIdFlag, runDev } from './dev.js';
+import { DEV_USAGE, parseDevArgs, runDev } from './dev.js';
 import { runServe } from './serve.js';
+import { checkModule, formatCheckIssues } from './check.js';
+import { DEFAULT_OUT_DIR, packageModule, parsePackageArgs, resolveVersion } from './package.js';
+import { parseLinkArgs } from './providers.js';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
 import { UpdateManager } from '@wadeck-app/shared-cli/UpdateManager';
@@ -59,17 +62,104 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (command === 'dev') {
+  if (command === 'check') {
     if (!target) {
-      console.error('Usage: app-core-cli dev <path-to-app-module-dir> [--id <module-id>]');
+      console.error('Usage: app-core-cli check <module-dir> [--link <package>=<folder>]...');
       process.exitCode = 1;
       return;
     }
     try {
-      const { port, moduleId, close } = await runDev(target, { moduleId: parseIdFlag(rest) });
-      console.log(`app-core-cli dev: serving ${target} as module "${moduleId}" at http://127.0.0.1:${port}`);
-      process.on('SIGINT', () => void close().then(() => process.exit(0)));
-      process.on('SIGTERM', () => void close().then(() => process.exit(0)));
+      const { issues } = await checkModule(target, { links: parseLinkArgs(rest) });
+      if (issues.length > 0) {
+        console.error(formatCheckIssues(target, issues));
+        process.exitCode = 1;
+        return;
+      }
+      console.log(`OK: ${target} follows the module layout and its manifest is valid.`);
+    } catch (err) {
+      console.error(`app-core-cli check failed: ${getErrorMessage(err)}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (command === 'package') {
+    if (!target) {
+      console.error('Usage: app-core-cli package <module-dir> [--out <dir>] [--version <v>] [--link <package>=<folder>]...');
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      const args = parsePackageArgs(rest);
+      const version = resolveVersion(args.version, process.env);
+      const outDir = args.out ?? join(target, DEFAULT_OUT_DIR);
+      const result = await packageModule({ moduleDir: target, outDir, version, links: args.links });
+      for (const warning of result.warnings) {
+        console.error(`warning: ${warning}`);
+      }
+      console.log(`OK: packaged ${target} (version ${version}) into ${result.outDir}`);
+    } catch (err) {
+      console.error(`app-core-cli package failed: ${getErrorMessage(err)}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (command === 'dev') {
+    if (!target) {
+      console.error(`Usage: ${DEV_USAGE}`);
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      const args = parseDevArgs(rest);
+      const handle = await runDev(target, {
+        moduleId: args.moduleId,
+        port: args.port,
+        watch: args.watch,
+        poll: args.poll,
+        links: args.links,
+        reset: args.reset,
+        previousVersion: args.previousVersion,
+        onRebuild: (result) => {
+          if (result.ok) {
+            console.log(`rebuild ok in ${Math.round(result.durationMs)} ms (${result.version})`);
+            for (const warning of result.warnings) {
+              console.error(`warning: ${warning}`);
+            }
+          } else {
+            console.error(`rebuild failed after ${Math.round(result.durationMs)} ms, the previous version keeps serving unless noted below:\n${result.error}`);
+          }
+        },
+        onWatchError: (message) => console.error(`watch error: ${message}`),
+      });
+      console.log(`app-core-cli dev: ${handle.url} (config dir ${handle.configDir}, kept between runs; --reset wipes it)`);
+      if (handle.resetPerformed) {
+        console.log(`  --reset: wiped ${handle.configDir} before starting`);
+      }
+      for (const mod of handle.modules) {
+        console.log(`  ${mod.id} ${mod.version} [${mod.role}] ${mod.origin}`);
+      }
+      for (const warning of handle.warnings) {
+        console.error(`warning: ${warning}`);
+      }
+      if (handle.startupFailure !== undefined) {
+        console.error(`${handle.startupFailure}\nThe next successful rebuild replaces it.`);
+      }
+      if (handle.watch !== undefined) {
+        console.log(`  ${handle.watch.description}; dependencies are not watched. Ctrl+C to stop.`);
+      }
+      const shutdown = (): void => {
+        handle.close().then(
+          () => process.exit(0),
+          (err: unknown) => {
+            console.error(`app-core-cli dev: shutdown failed: ${getErrorMessage(err)}`);
+            process.exit(1);
+          },
+        );
+      };
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
     } catch (err) {
       console.error(`app-core-cli dev failed: ${getErrorMessage(err)}`);
       process.exitCode = 1;
@@ -116,7 +206,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.error('Usage: app-core-cli <validate|dev|serve|version|update|self-check> [path]');
+  console.error('Usage: app-core-cli <validate|check|package|dev|serve|version|update|self-check> [path]');
   process.exitCode = 1;
 }
 

@@ -1,48 +1,45 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
 import { rule } from './app-module-backend-entry-location.js';
+import { createModule, type TempModule } from '../lib/appModuleTestUtil.js';
 
 describe('app-module/backend-entry-location', () => {
-  let dir: string;
-  let manifestPath: string;
+  let mod: TempModule;
+  afterEach(() => mod.cleanup());
 
-  beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-backend-loc-'));
-    const appModuleDir = path.join(dir, 'packages', 'app-module-fake');
-    fs.mkdirSync(appModuleDir, { recursive: true });
-    manifestPath = path.join(appModuleDir, 'manifest.json');
+  it('passes src/backend/index.ts with a default export', async () => {
+    mod = createModule();
+    expect(await rule.check([mod.at('manifest.json')])).toHaveLength(0);
   });
 
-  afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true });
+  it('passes `export { x as default }`', async () => {
+    mod = createModule({ 'src/backend/index.ts': 'function run() {}\nexport { run as default };\n' });
+    expect(await rule.check([mod.at('manifest.json')])).toHaveLength(0);
   });
 
-  function writeManifest(backendEntryPath: string): void {
-    fs.writeFileSync(manifestPath, JSON.stringify({
-      version: '1.0.0',
-      backendEntryPath,
-      extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: { $type: 'Badge', label: 'ok' } } }],
-    }));
-  }
-
-  it('flags a backendEntryPath outside api-backend/', async () => {
-    writeManifest('./backend.js');
-    const violations = await rule.check([manifestPath]);
+  it('flags a missing src/backend/index.ts', async () => {
+    mod = createModule({ 'src/backend/index.ts': null, 'src/backend/other.ts': 'export {};\n' });
+    const violations = await rule.check([mod.at('manifest.json')]);
     expect(violations).toHaveLength(1);
-    expect(violations[0]!.message).toContain('api-backend/');
+    expect(violations[0]!.message).toContain('src/backend/index.ts');
   });
 
-  it('does not flag a backendEntryPath inside api-backend/', async () => {
-    writeManifest('./api-backend/index.js');
-    const violations = await rule.check([manifestPath]);
-    expect(violations).toHaveLength(0);
-  });
-
-  it('rejects a sneaky look-alike folder (api-backend-fake/) via proper path containment', async () => {
-    writeManifest('./api-backend-fake/index.js');
-    const violations = await rule.check([manifestPath]);
+  it('flags an entry with no default export (a commented-out one does not count)', async () => {
+    mod = createModule({ 'src/backend/index.ts': '// export default function () {}\nexport const x = 1;\n' });
+    const violations = await rule.check([mod.at('manifest.json')]);
     expect(violations).toHaveLength(1);
+    expect(violations[0]!.message).toContain('no default export');
+  });
+
+  it('ignores the generated dist-module manifest', async () => {
+    mod = createModule({ 'dist-module/manifest.json': '{}' });
+    expect(await rule.check([mod.at('dist-module/manifest.json')])).toHaveLength(0);
+  });
+
+  it('flags the legacy layout (entry only under api-backend/)', async () => {
+    mod = createModule({ 'src/backend/index.ts': null });
+    fs.mkdirSync(mod.at('api-backend'), { recursive: true });
+    fs.writeFileSync(mod.at('api-backend/index.js'), 'export default () => {};\n');
+    expect(await rule.check([mod.at('manifest.json')])).toHaveLength(1);
   });
 });

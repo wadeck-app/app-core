@@ -33,6 +33,8 @@ export interface FailedModuleSummary {
   source: string;
   error: string;
   failedAt: string;
+  // "requirement" is retried automatically by the server, "error" is not.
+  cause?: string;
 }
 
 export interface ModulesResponse {

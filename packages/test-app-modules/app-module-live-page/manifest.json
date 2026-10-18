@@ -1,12 +1,11 @@
 {
-  "version": "1.0.0",
-  "backendEntryPath": "./api-backend/backend.mjs",
+  "id": "module-c",
   "extensionPoints": [
     {
       "kind": "page",
       "slot": "nav",
       "label": "Module C Page",
-      "view": { "type": "path", "value": "./dsl-frontend/page.yaml" }
+      "view": { "type": "path", "value": "./src/dsl-views/page.yaml" }
     }
   ]
 }

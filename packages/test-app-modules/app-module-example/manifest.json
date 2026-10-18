@@ -1,0 +1,48 @@
+{
+  "id": "example",
+  "requires": { "slot-provider": "^1.0.0" },
+  "expose": {
+    "types": "./src/commons/types.ts",
+    "slots": {
+      "row-actions": { "accepts": ["Badge", "ButtonLink"] }
+    }
+  },
+  "lifecycle": {
+    "teardown": "./src/backend/teardown.ts",
+    "migrate": "./src/backend/migrate.ts"
+  },
+  "extensionPoints": [
+    {
+      "kind": "page",
+      "slot": "nav",
+      "label": "Example",
+      "view": { "type": "path", "value": "./src/dsl-views/items.yaml" }
+    },
+    {
+      "kind": "page",
+      "slot": "route",
+      "path": "/items/:id",
+      "view": { "type": "path", "value": "./src/dsl-views/item.yaml" }
+    },
+    {
+      "kind": "widget",
+      "slot": "dashboard",
+      "label": "Example inline widget",
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "example", "variant": "info" } }
+    },
+    {
+      "kind": "widget",
+      "slot": "navbar",
+      "view": { "type": "path", "value": "./src/dsl-views/navbar.yaml" }
+    },
+    {
+      "kind": "widget",
+      "slot": "slot-provider:shared-slot",
+      "label": "Example's contribution to a slot of the module it requires",
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "example-contribution" } }
+    }
+  ],
+  "dslLib": {
+    "shared": { "react": "^19", "react-router-dom": "^7", "@wadeck-app/dsl-ui": ">=2026.10.14-0" }
+  }
+}

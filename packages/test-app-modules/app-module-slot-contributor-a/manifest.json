@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "backendEntryPath": "./api-backend/backend.mjs",
+  "id": "slot-contributor-a",
+  "requires": { "slot-provider": "^1.0.0" },
   "extensionPoints": [
     {
       "kind": "widget",
@@ -10,7 +10,7 @@
     },
     {
       "kind": "widget",
-      "slot": "test:shared-slot",
+      "slot": "slot-provider:shared-slot",
       "label": "Contributor A, order 20",
       "order": 20,
       "view": { "type": "inline", "value": { "$type": "Badge", "label": "contributor-a" } }

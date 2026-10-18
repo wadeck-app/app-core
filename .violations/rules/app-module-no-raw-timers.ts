@@ -21,7 +21,8 @@ const FORBIDDEN_PATTERNS: Array<{ regex: RegExp; name: string }> = [
 export const rule: Rule = {
   id: 'app-module/no-raw-timers',
   tags: 'ts',
-  defaultScope: ['**/packages/app-module-*/**/*.ts', '**/packages/app-module-*/**/*.js', '**/packages/app-module-*/**/*.mjs'],
+  // Only src/backend runs in the daemon under a ModuleContext; dsl-components run in the browser.
+  defaultScope: ['**/app-module-*/src/backend/**/*.ts', '**/app-module-*/src/backend/**/*.js', '**/app-module-*/src/backend/**/*.mjs'],
   defaultSeverity: 'error',
 
   async check(files: string[]): Promise<Violation[]> {

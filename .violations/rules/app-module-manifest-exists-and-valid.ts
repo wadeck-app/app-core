@@ -2,36 +2,34 @@ import type { Rule, Violation } from '@wadeck-app/violations-rules';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { ZodError } from 'zod';
-import { parseManifest } from '@wadeck-app/app-core-sdk';
+import { parseSourceManifest } from '@wadeck-app/app-core-sdk';
+import { isDir, listFiles, moduleRootOf, toPosix } from '../lib/appModuleLayout.js';
 
 /**
- * Every app-module package must ship a valid manifest.json -- a package with
- * backend code but no manifest cannot be registered with app-core at all.
+ * Every app-module must ship a valid source manifest.json (id, extensionPoints, dslLib.shared only;
+ * `package` writes version, backendEntryPath and dslLib.entry/css into dist-module/manifest.json), and
+ * dslLib must agree with src/dsl-components.
  *
- * The violations rule API only hands check() a list of EXISTING files that
- * matched defaultScope -- there is no way to represent "a file is missing"
- * from that list alone. So this rule scopes itself to package.json (always
- * present for a real npm package) as an anchor, and checks for the sibling
- * manifest.json from there, rather than scoping to manifest.json itself
- * (which would never appear in `files` if it's the thing that's missing).
+ * The rule API only hands check() existing files, so "a file is missing" cannot be represented from
+ * manifest.json itself. The rule scopes itself to package.json (present in every real package) as an
+ * anchor and looks for the sibling manifest.json from there.
  */
-const FORBIDDEN_MESSAGE = 'app-module package is missing manifest.json -- an app-module without a manifest cannot be registered with app-core at all.';
-
 export const rule: Rule = {
   id: 'app-module/manifest-exists-and-valid',
   tags: 'ts',
-  defaultScope: ['**/packages/app-module-*/package.json'],
+  defaultScope: ['**/app-module-*/package.json'],
   defaultSeverity: 'error',
 
   async check(files: string[]): Promise<Violation[]> {
     const violations: Violation[] = [];
 
     for (const packageJsonPath of files) {
-      const dir = path.dirname(packageJsonPath);
-      const manifestPath = path.join(dir, 'manifest.json');
+      const root = moduleRootOf(packageJsonPath);
+      if (root === undefined || toPosix(path.dirname(packageJsonPath)) !== root) continue;
+      const manifestPath = path.join(root, 'manifest.json');
 
       if (!fs.existsSync(manifestPath)) {
-        violations.push({ file: manifestPath, line: 1, message: FORBIDDEN_MESSAGE });
+        violations.push({ file: manifestPath, line: 1, message: 'app-module package is missing manifest.json -- an app-module without a manifest cannot be registered with app-core at all.' });
         continue;
       }
 
@@ -43,15 +41,27 @@ export const rule: Rule = {
         continue;
       }
 
+      let manifest;
       try {
-        parseManifest(raw);
+        manifest = parseSourceManifest(raw);
       } catch (err) {
-        if (err instanceof ZodError) {
-          const details = err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ');
-          violations.push({ file: manifestPath, line: 1, message: `manifest.json failed validation: ${details}` });
-        } else {
-          violations.push({ file: manifestPath, line: 1, message: `manifest.json failed validation: ${(err as Error).message}` });
-        }
+        const details = err instanceof ZodError ? err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ') : (err as Error).message;
+        violations.push({
+          file: manifestPath,
+          line: 1,
+          message: `manifest.json failed validation: ${details}. The source manifest holds only id, extensionPoints and dslLib.shared; \`package\` writes the rest.`,
+        });
+        continue;
+      }
+
+      const componentsDir = path.join(root, 'src', 'dsl-components');
+      const entryExists = fs.existsSync(path.join(componentsDir, 'index.ts'));
+      const hasComponents = isDir(componentsDir) && listFiles(componentsDir).length > 0;
+      if (manifest.dslLib !== undefined && !entryExists) {
+        violations.push({ file: path.join(componentsDir, 'index.ts'), line: 1, message: 'manifest.json declares dslLib but src/dsl-components/index.ts is missing. Create it (default-exporting the ComponentRegistryEntry[]), or remove dslLib.' });
+      }
+      if (manifest.dslLib === undefined && hasComponents) {
+        violations.push({ file: manifestPath, line: 1, message: 'src/dsl-components has files but manifest.json has no dslLib, so they would not be packaged. Add `"dslLib": { "shared": { ... } }`, or delete src/dsl-components.' });
       }
     }
 

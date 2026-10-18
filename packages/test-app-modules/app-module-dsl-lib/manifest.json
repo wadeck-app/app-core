@@ -1,34 +1,31 @@
 {
-  "version": "1.0.0",
-  "backendEntryPath": "./api-backend/backend.mjs",
+  "id": "dsl-lib",
   "extensionPoints": [
     {
       "kind": "page",
       "slot": "nav",
       "label": "DslLib Home",
-      "view": { "type": "path", "value": "./dsl-frontend/home.yaml" }
+      "view": { "type": "path", "value": "./src/dsl-views/home.yaml" }
     },
     {
       "kind": "page",
       "slot": "route",
       "path": "/items/:id",
-      "view": { "type": "path", "value": "./dsl-frontend/item.yaml" }
+      "view": { "type": "path", "value": "./src/dsl-views/item.yaml" }
     },
     {
       "kind": "widget",
       "slot": "navbar",
       "order": 1,
-      "view": { "type": "path", "value": "./dsl-frontend/navbar.yaml" }
+      "view": { "type": "path", "value": "./src/dsl-views/navbar.yaml" }
     },
     {
       "kind": "widget",
       "slot": "overlay",
-      "view": { "type": "path", "value": "./dsl-frontend/overlay.yaml" }
+      "view": { "type": "path", "value": "./src/dsl-views/overlay.yaml" }
     }
   ],
   "dslLib": {
-    "entry": "./dsl-lib/entries.mjs",
-    "css": "./dsl-lib/style.css",
     "shared": { "react": "^19", "react-router-dom": "^7", "@wadeck-app/dsl-ui": ">=2026.10.14-0" }
   }
 }

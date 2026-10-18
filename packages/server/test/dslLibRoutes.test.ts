@@ -7,6 +7,7 @@ import { buildServer, type AppCoreServer } from '../src/server.js';
 const BUILD_INFO = { builtAt: 'x', dslUi: '2026.10.17-095-7b2c28f1', dslRenderer: '2026.10.17-095-7b2c28f1', react: '19.3.0', reactDom: '19.3.0', reactRouterDom: '7.18.4' };
 
 interface ModuleSpec {
+  id?: string;
   version?: string;
   shared?: Record<string, string>;
   entryBody?: string;
@@ -19,6 +20,7 @@ function writeModule(dir: string, spec: ModuleSpec = {}): string {
   fs.writeFileSync(
     path.join(dir, 'manifest.json'),
     JSON.stringify({
+      id: spec.id ?? 'm1',
       version: spec.version ?? '1.0.0',
       backendEntryPath: './api-backend/backend.mjs',
       extensionPoints: [
@@ -113,15 +115,18 @@ describe('dsl-lib: serving, validation and lifecycle', () => {
     expect(res.body).not.toContain('backendEntryPath');
   });
 
-  it('refuses a module whose shared range the shell does not satisfy, and lists it as failed', async () => {
+  it('refuses a module whose shared range the shell does not satisfy, and reports it without registering it', async () => {
     await start();
-    const bad = writeModule(path.join(root, 'bad'), { shared: { react: '^18' } });
+    const bad = writeModule(path.join(root, 'bad'), { id: 'm2', shared: { react: '^18' } });
     const res = await register('m2', bad);
     expect(res.statusCode).toBe(500);
     expect(res.json().error).toMatch(/react "\^18".*provides 19\.3\.0/);
     const state = await modules();
     expect(state.modules.find((m) => m.id === 'm2')).toBeUndefined();
-    expect(state.failed.find((f) => f.id === 'm2')?.error).toMatch(/Rebuild the module's dsl-lib/);
+    // Refused before anything changed and never registered: no registry entry, no recorded failure (decision 94).
+    expect(res.json().error).toMatch(/Rebuild the module's dsl-lib/);
+    expect(res.json().retained).toBe(false);
+    expect(state.failed.find((f) => f.id === 'm2')).toBeUndefined();
     expect((await app.server.inject({ method: 'GET', url: '/api/modules/m2/_lib/entries.mjs' })).statusCode).toBe(404);
   });
 
@@ -167,6 +172,7 @@ describe('dsl-lib: serving, validation and lifecycle', () => {
   it('refuses a backend that registers a route under the reserved _lib segment', async () => {
     await start();
     const reserved = writeModule(path.join(root, 'reserved'), {
+      id: 'm3',
       backendBody: "export default function (ctx) { ctx.registerRoute('GET', '/_lib/x', () => 'no'); }\n",
     });
     const res = await register('m3', reserved);

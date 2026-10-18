@@ -1,0 +1,23 @@
+# Nav page. $sources fetches from this module's own route (a fixed literal module id, as the doc requires).
+$sources:
+  items:
+    url: GET /api/modules/example/items
+
+$type: VerticalStack
+children:
+  - $type: PageHeader
+    title: Example items
+    subtitle: Served by the backend route /items
+  - $type: DataTable
+    rows: $sources.items.items
+    # Row click goes to the route page; {id} comes from the clicked row.
+    navigateTo: /modules/example/items/{id}
+    emptyMessage: No items
+    columns:
+      - key: id
+        label: Id
+        mono: true
+      - key: name
+        label: Name
+      - key: status
+        label: Status

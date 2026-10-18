@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { ModuleManager } from '../src/loader.js';
+import { scratchConfigDir } from './fixtureManifests.js';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -19,6 +20,7 @@ describe('ModuleManager.loadFromEntry when the backend is rewritten without a ve
     fs.writeFileSync(
       path.join(dir, 'manifest.json'),
       JSON.stringify({
+        id: 'rewrite',
         version: '1.0.0',
         backendEntryPath: './api-backend/backend.mjs',
         extensionPoints: [
@@ -41,7 +43,7 @@ describe('ModuleManager.loadFromEntry when the backend is rewritten without a ve
   }
 
   it('runs the new backend code on the second load, with the same manifest version', async () => {
-    const manager = new ModuleManager();
+    const manager = new ModuleManager({ configDir: scratchConfigDir() });
     const entry = { id: 'rewrite', source: { type: 'file' as const, path: path.join(dir, 'manifest.json') } };
 
     writeBackend('first');

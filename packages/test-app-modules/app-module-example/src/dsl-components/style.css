@@ -1,0 +1,5 @@
+/* Theme tokens from dsl-ui's theme.css only, so the widget follows the light and dark themes. */
+.example-ticks {
+  color: var(--color-content);
+  font-size: 0.75rem;
+}

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "backendEntryPath": "./api-backend/backend.mjs",
+  "id": "module-b",
+  "lifecycle": { "teardown": "./src/backend/teardown.ts", "migrate": "./src/backend/migrate.ts" },
   "extensionPoints": [
     {
       "kind": "widget",
@@ -12,7 +12,7 @@
       "kind": "page",
       "slot": "nav",
       "label": "Fixture B Page",
-      "view": { "type": "path", "value": "./dsl-frontend/page.yaml" }
+      "view": { "type": "path", "value": "./src/dsl-views/page.yaml" }
     }
   ]
 }

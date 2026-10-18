@@ -8,3 +8,6 @@ public/
 .e2e-scratch-config/
 *.stackdump
 
+
+# Persistent state of "app-core-cli dev" inside a module folder
+.app-core-dev/

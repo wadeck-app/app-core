@@ -14,9 +14,12 @@
     "./configDir": { "import": "./dist/configDir.js", "types": "./dist/configDir.d.ts" },
     "./port": { "import": "./dist/port.js", "types": "./dist/port.d.ts" },
     "./portFile": { "import": "./dist/portFile.js", "types": "./dist/portFile.d.ts" },
+    "./contributions": { "import": "./dist/contributions.js", "types": "./dist/contributions.d.ts" },
+    "./slotIds": { "import": "./dist/slotIds.js", "types": "./dist/slotIds.d.ts" },
     "./moduleId": { "import": "./dist/moduleId.js", "types": "./dist/moduleId.d.ts" },
     "./server": { "import": "./dist/server.js", "types": "./dist/server.d.ts" },
     "./start": { "import": "./dist/start.js", "types": "./dist/start.d.ts" },
+    "./moduleState": { "import": "./dist/moduleState.js", "types": "./dist/moduleState.d.ts" },
     "./errors": { "import": "./dist/errors.js", "types": "./dist/errors.d.ts" }
   },
   "scripts": {

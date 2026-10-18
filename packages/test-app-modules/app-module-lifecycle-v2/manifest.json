@@ -1,0 +1,12 @@
+{
+  "id": "module-b",
+  "lifecycle": { "teardown": "./src/backend/teardown.ts", "migrate": "./src/backend/migrate.ts" },
+  "extensionPoints": [
+    {
+      "kind": "widget",
+      "slot": "dashboard",
+      "label": "Fixture B Widget v2",
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "fixture-b-widget-v2" } }
+    }
+  ]
+}

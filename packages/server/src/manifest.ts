@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MODULE_ID_PATTERN, MODULE_ID_RULE } from './moduleId.js';
+import { SLOT_LOCAL_PATTERN, SLOT_LOCAL_RULE, slotIdProblem } from './slotIds.js';
 
 // Manifest shape: a module declares any number of UI contributions
 // (widgets, pages) in a single manifest/version.
@@ -33,7 +34,38 @@ const ExtensionPointSchema = z
   .refine((ep) => ep.path === undefined || ep.kind === 'page', {
     message: 'path is only valid on extension points of kind "page"',
     path: ['path'],
-  });
+  })
+  // A custom slot is always `<providerId>:<local>` (decision 82).
+  .refine((ep) => slotIdProblem(ep.slot) === undefined, (ep) => ({ message: slotIdProblem(ep.slot) ?? '', path: ['slot'] }));
+
+export const ModuleIdSchema = z.string().regex(MODULE_ID_PATTERN, `module id must ${MODULE_ID_RULE}`);
+
+// Modules this one needs loaded first: module id -> semver range of the version it accepts. The range
+// is validated where semver is available (contributions.ts), not here, to keep the SDK free of it.
+const RequiresSchema = z.record(ModuleIdSchema, z.string().min(1));
+
+// What a module offers to others (decision 82). `types` is a path to its types-only file (a source path in
+// the source manifest, `./types/index.d.ts` in the packaged one); each slot lists the `$type`s it accepts.
+const ExposeSchema = z
+  .object({
+    types: z.string().min(1).optional(),
+    slots: z
+      .record(
+        z.string().regex(SLOT_LOCAL_PATTERN, `slot name must ${SLOT_LOCAL_RULE} (no ":", the module id is added as the prefix)`),
+        z.object({ accepts: z.array(z.string().min(1)).min(1, 'accepts must list at least one $type') }).strict(),
+      )
+      .optional(),
+  })
+  .strict();
+
+// Optional hooks, each a path to a file whose default export is the function: a source path
+// under src/backend in the source manifest, `./api-backend/<hook>.cjs` in the packaged one (decision 84).
+const LifecycleSchema = z
+  .object({
+    teardown: z.string().min(1).optional(),
+    migrate: z.string().min(1).optional(),
+  })
+  .strict();
 
 export const DSL_LIB_DIR = 'dsl-lib';
 
@@ -53,15 +85,40 @@ const DslLibSchema = z.object({
   shared: z.record(z.string().min(1)).default({}),
 });
 
+// The manifest a running app-core loads (what `package` writes into dist-module/).
 export const ManifestSchema = z.object({
+  // Must equal the id the module is registered under (decision 83); the loader refuses a mismatch.
+  id: ModuleIdSchema,
   version: z.string().min(1),
   backendEntryPath: z.string().min(1),
   extensionPoints: z.array(ExtensionPointSchema).min(1),
   dslLib: DslLibSchema.optional(),
+  requires: RequiresSchema.optional(),
+  expose: ExposeSchema.optional(),
+  lifecycle: LifecycleSchema.optional(),
 });
 
+// The manifest an author writes at the module root (decision 81). It never names what `package`
+// produces: no version (stamped at package time), no backendEntryPath (src/backend/index.ts by
+// convention), no dslLib entry/css (built from src/dsl-components). Unknown keys are rejected so an
+// output-only key is reported instead of silently ignored.
+export const SourceManifestSchema = z
+  .object({
+    id: ModuleIdSchema,
+    extensionPoints: z.array(ExtensionPointSchema).min(1),
+    dslLib: z.object({ shared: z.record(z.string().min(1)).default({}) }).strict().optional(),
+    requires: RequiresSchema.optional(),
+    expose: ExposeSchema.optional(),
+    lifecycle: LifecycleSchema.optional(),
+  })
+  .strict();
+
 export type Manifest = z.infer<typeof ManifestSchema>;
+export type SourceManifest = z.infer<typeof SourceManifestSchema>;
 export type ExtensionPoint = z.infer<typeof ExtensionPointSchema>;
+export type ModuleExpose = z.infer<typeof ExposeSchema>;
+export type ModuleRequires = z.infer<typeof RequiresSchema>;
+export type ModuleLifecycle = z.infer<typeof LifecycleSchema>;
 
 // v1 only supports a `file` source. `npm` is deferred to v2 and must be
 // rejected with a clear error, not silently ignored.
@@ -71,8 +128,6 @@ const FileSourceSchema = z.object({
 });
 
 export { MODULE_ID_PATTERN };
-
-export const ModuleIdSchema = z.string().regex(MODULE_ID_PATTERN, `module id must ${MODULE_ID_RULE}`);
 
 export const UnregisterPayloadSchema = z.object({ id: ModuleIdSchema });
 
@@ -107,4 +162,18 @@ export function parseRegistrationPayload(input: unknown): RegistrationPayload & 
 
 export function parseManifest(input: unknown): Manifest {
   return ManifestSchema.parse(input);
+}
+
+export function parseSourceManifest(input: unknown): SourceManifest {
+  return SourceManifestSchema.parse(input);
+}
+
+// Thrown when a module is registered under an id other than the one its manifest declares.
+export class ManifestIdMismatchError extends Error {
+  constructor(registeredId: string, manifestId: string, manifestPath: string) {
+    super(
+      `Module registered as "${registeredId}" but its manifest ${manifestPath} declares "id": "${manifestId}". Register it as "${manifestId}", or change the manifest "id".`,
+    );
+    this.name = 'ManifestIdMismatchError';
+  }
 }

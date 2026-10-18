@@ -1,0 +1,20 @@
+# Route page (/modules/example/items/:id): reachable by link only. ":id" of the manifest path is $route.id.
+$sources:
+  item:
+    # A placeholder is filled from params; the module id stays literal.
+    url: GET /api/modules/example/items/{id}
+    params:
+      id: $route.id
+  actions:
+    # The slot this module exposes (manifest "expose"): other modules add buttons or badges here.
+    url: GET /api/slots/example:row-actions
+
+$type: VerticalStack
+children:
+  - $type: PageHeader
+    title: $sources.item.name
+    subtitle: $route.id
+  - $type: Badge
+    label: $sources.item.status
+  - $type: ExtensionSlot
+    items: $sources.actions

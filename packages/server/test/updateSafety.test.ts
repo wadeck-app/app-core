@@ -29,6 +29,7 @@ describe('a broken update does not take down a working module', () => {
     fs.writeFileSync(
       path.join(dir, 'manifest.json'),
       JSON.stringify({
+        id: 'steady',
         version: '1.0.0',
         backendEntryPath: './api-backend/backend.mjs',
         extensionPoints: [{ kind: 'page', slot: 'nav', label: 'P', view: { type: 'path', value: './dsl-frontend/page.yaml' } }],

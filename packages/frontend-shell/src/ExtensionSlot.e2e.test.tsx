@@ -4,6 +4,7 @@ import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { GenericPageRunner } from '@wadeck-app/dsl-renderer';
 import { MemoryRouter } from 'react-router-dom';
 import { spawn, type ChildProcess } from 'node:child_process';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { appRegistry } from './registry.js';
 import { fetcher } from './fetcher.js';
@@ -44,7 +45,11 @@ async function waitForReady(proc: ChildProcess): Promise<void> {
   });
 }
 
+// manifestDir is the fixture's packaged output (dist-module), built by scripts/build-fixtures.mjs before the tests.
 async function registerFixture(id: string, manifestDir: string): Promise<void> {
+  if (!fs.existsSync(path.join(manifestDir, 'manifest.json'))) {
+    throw new Error(`${manifestDir}/manifest.json is missing: the fixtures are not built. Run "npm run build" then "node scripts/build-fixtures.mjs" from the repository root (npm run test:app does it for you).`);
+  }
   const res = await fetch(`${BASE_URL}/api/modules/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -66,8 +71,9 @@ describe('ExtensionSlot real end-to-end', () => {
       stdio: ['ignore', 'pipe', 'inherit'],
     });
     await waitForReady(serverProcess);
-    await registerFixture('slot-contributor-a', path.join(fixturesDir, 'app-module-slot-contributor-a'));
-    await registerFixture('slot-contributor-b', path.join(fixturesDir, 'app-module-slot-contributor-b'));
+    await registerFixture('slot-provider', path.join(fixturesDir, 'app-module-slot-provider', 'dist-module'));
+    await registerFixture('slot-contributor-a', path.join(fixturesDir, 'app-module-slot-contributor-a', 'dist-module'));
+    await registerFixture('slot-contributor-b', path.join(fixturesDir, 'app-module-slot-contributor-b', 'dist-module'));
   }, 20_000);
 
   afterAll(() => {
@@ -78,7 +84,7 @@ describe('ExtensionSlot real end-to-end', () => {
     const yamlText = [
       '$sources:',
       '  contributions:',
-      `    url: "GET ${BASE_URL}/api/slots/test:shared-slot"`,
+      `    url: "GET ${BASE_URL}/api/slots/slot-provider:shared-slot"`,
       '',
       '$type: ExtensionSlot',
       'items: $sources.contributions',

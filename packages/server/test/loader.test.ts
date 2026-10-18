@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as path from 'node:path';
-import * as url from 'node:url';
 import { ModuleManager } from '../src/loader.js';
 import { readFixtureBTicks, resetFixtureBTicks } from './fixtureTicks.js';
-
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const fixturesDir = path.join(__dirname, '..', '..', 'test-app-modules');
+import { fixtureManifest, scratchConfigDir } from './fixtureManifests.js';
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -17,10 +13,10 @@ describe('ModuleManager.loadFromEntry (dynamic import with cache-busting)', () =
   });
 
   it('loads module-a and resolves its inline widget view', async () => {
-    const manager = new ModuleManager();
+    const manager = new ModuleManager({ configDir: scratchConfigDir() });
     const loaded = await manager.loadFromEntry({
       id: 'module-a',
-      source: { type: 'file', path: path.join(fixturesDir, 'app-module-minimal', 'manifest.json') },
+      source: { type: 'file', path: fixtureManifest('app-module-minimal') },
     });
     expect(loaded.manifest.version).toBe('1.0.0');
     expect(loaded.resolvedViews).toMatchObject([
@@ -29,20 +25,20 @@ describe('ModuleManager.loadFromEntry (dynamic import with cache-busting)', () =
   });
 
   it('resolves a path-type view by reading and YAML-parsing it', async () => {
-    const manager = new ModuleManager();
+    const manager = new ModuleManager({ configDir: scratchConfigDir() });
     const loaded = await manager.loadFromEntry({
       id: 'module-b',
-      source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json') },
+      source: { type: 'file', path: fixtureManifest('app-module-lifecycle') },
     });
     const page = loaded.resolvedViews.find((v) => v.kind === 'page');
     expect(page?.view).toEqual({ $type: 'Badge', label: 'fixture-b-page' });
   });
 
   it('gives two loads of bumped versions distinct module instances, not the cached one', async () => {
-    const manager = new ModuleManager();
+    const manager = new ModuleManager({ configDir: scratchConfigDir() });
     await manager.loadFromEntry({
       id: 'module-b',
-      source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json') },
+      source: { type: 'file', path: fixtureManifest('app-module-lifecycle') },
     });
     await wait(30);
     const ticksAfterV1 = readFixtureBTicks().v1;
@@ -51,7 +47,7 @@ describe('ModuleManager.loadFromEntry (dynamic import with cache-busting)', () =
     // Simulate an update push: same module id, new manifest/version (module-b-v2 fixture).
     await manager.loadFromEntry({
       id: 'module-b',
-      source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'v2-fixture', 'manifest.json') },
+      source: { type: 'file', path: fixtureManifest('app-module-lifecycle-v2') },
     });
     const ticksRightAfterSwap = readFixtureBTicks().v1;
     await wait(30);
@@ -65,13 +61,13 @@ describe('ModuleManager.loadFromEntry (dynamic import with cache-busting)', () =
   });
 
   it('unload() disposes the moduleContext and stops its interval', async () => {
-    const manager = new ModuleManager();
+    const manager = new ModuleManager({ configDir: scratchConfigDir() });
     await manager.loadFromEntry({
       id: 'module-b',
-      source: { type: 'file', path: path.join(fixturesDir, 'app-module-lifecycle', 'manifest.json') },
+      source: { type: 'file', path: fixtureManifest('app-module-lifecycle') },
     });
     await wait(30);
-    manager.unload('module-b');
+    await manager.unload('module-b');
     const ticksRightAfterUnload = readFixtureBTicks().v1;
     await wait(30);
     expect(readFixtureBTicks().v1).toBe(ticksRightAfterUnload);

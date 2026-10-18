@@ -2,11 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import * as url from 'node:url';
 import { buildServer } from '../src/server.js';
+import { fixtureManifest } from './fixtureManifests.js';
 
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const fixturesDir = path.join(__dirname, '..', '..', 'test-app-modules');
 
 type Built = Awaited<ReturnType<typeof buildServer>>;
 
@@ -27,7 +25,7 @@ describe('POST /api/modules/unregister', () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/modules/register',
-      payload: { id, source: { type: 'file', path: path.join(fixturesDir, fixture, 'manifest.json') } },
+      payload: { id, source: { type: 'file', path: fixtureManifest(fixture) } },
     });
     expect(res.statusCode).toBe(201);
   }
@@ -39,17 +37,19 @@ describe('POST /api/modules/unregister', () => {
   it('removes the module: routes 404, slot contribution gone, registry file deleted, not back after a restart', async () => {
     const first = await buildServer({ configDir });
     await register(first.server, 'module-c', 'app-module-live-page');
+    await register(first.server, 'slot-provider', 'app-module-slot-provider');
     await register(first.server, 'slot-contributor-a', 'app-module-slot-contributor-a');
     expect((await first.server.inject({ method: 'GET', url: '/api/modules/module-c/greeting' })).statusCode).toBe(200);
-    const slotBefore = (await first.server.inject({ method: 'GET', url: '/api/slots/test:shared-slot' })).json() as unknown[];
+    const slotBefore = (await first.server.inject({ method: 'GET', url: '/api/slots/slot-provider:shared-slot' })).json() as unknown[];
     expect(slotBefore.length).toBeGreaterThan(0);
     expect(fs.existsSync(path.join(modulesDir, 'module-c.json'))).toBe(true);
 
-    expect((await unregister(first.server, { id: 'module-c' })).json()).toEqual({ id: 'module-c', removed: true });
+    expect((await unregister(first.server, { id: 'module-c' })).json()).toEqual({ id: 'module-c', removed: true, cascaded: [], recovered: [] });
     expect((await unregister(first.server, { id: 'slot-contributor-a' })).statusCode).toBe(200);
+    expect((await unregister(first.server, { id: 'slot-provider' })).statusCode).toBe(200);
 
     expect((await first.server.inject({ method: 'GET', url: '/api/modules/module-c/greeting' })).statusCode).toBe(404);
-    expect((await first.server.inject({ method: 'GET', url: '/api/slots/test:shared-slot' })).json()).toEqual([]);
+    expect((await first.server.inject({ method: 'GET', url: '/api/slots/slot-provider:shared-slot' })).json()).toEqual([]);
     expect(((await first.server.inject({ method: 'GET', url: '/api/modules' })).json() as { modules: unknown[] }).modules).toEqual([]);
     expect(fs.existsSync(path.join(modulesDir, 'module-c.json'))).toBe(false);
     await first.server.close();
@@ -61,17 +61,19 @@ describe('POST /api/modules/unregister', () => {
 
   it('forgets a module that failed to load, including its registry file', async () => {
     const first = await buildServer({ configDir });
+    // A contributor registered without its provider stays registered and failed (retained).
     const bad = await first.server.inject({
       method: 'POST',
       url: '/api/modules/register',
-      payload: { id: 'broken', source: { type: 'file', path: path.join(configDir, 'nope', 'manifest.json') } },
+      payload: { id: 'slot-contributor-a', source: { type: 'file', path: fixtureManifest('app-module-slot-contributor-a') } },
     });
-    expect(bad.statusCode).toBe(500);
-    expect(first.manager.hasFailed('broken')).toBe(true);
+    expect(bad.statusCode).toBe(422);
+    expect(first.manager.hasFailed('slot-contributor-a')).toBe(true);
+    expect(fs.existsSync(path.join(modulesDir, 'slot-contributor-a.json'))).toBe(true);
 
-    expect((await unregister(first.server, { id: 'broken' })).statusCode).toBe(200);
-    expect(first.manager.hasFailed('broken')).toBe(false);
-    expect(fs.existsSync(path.join(modulesDir, 'broken.json'))).toBe(false);
+    expect((await unregister(first.server, { id: 'slot-contributor-a' })).statusCode).toBe(200);
+    expect(first.manager.hasFailed('slot-contributor-a')).toBe(false);
+    expect(fs.existsSync(path.join(modulesDir, 'slot-contributor-a.json'))).toBe(false);
     await first.server.close();
   });
 
@@ -98,7 +100,7 @@ describe('POST /api/modules/unregister', () => {
 
   it('register and update reject a path-traversal id too, writing no file', async () => {
     const { server } = await buildServer({ configDir });
-    const manifest = path.join(fixturesDir, 'app-module-minimal', 'manifest.json');
+    const manifest = fixtureManifest('app-module-minimal');
     for (const url of ['/api/modules/register', '/api/modules/update']) {
       const res = await server.inject({
         method: 'POST',

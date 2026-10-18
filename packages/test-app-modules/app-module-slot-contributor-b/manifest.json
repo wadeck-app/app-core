@@ -1,23 +1,23 @@
 {
-  "version": "1.0.0",
-  "backendEntryPath": "./api-backend/backend.mjs",
+  "id": "slot-contributor-b",
+  "requires": { "slot-provider": "^1.0.0" },
   "extensionPoints": [
     {
       "kind": "widget",
-      "slot": "test:shared-slot",
+      "slot": "slot-provider:shared-slot",
       "label": "Contributor B, order 5 -- should sort first despite being registered second",
       "order": 5,
       "view": { "type": "inline", "value": { "$type": "Badge", "label": "contributor-b-ordered" } }
     },
     {
       "kind": "widget",
-      "slot": "test:shared-slot",
+      "slot": "slot-provider:shared-slot",
       "label": "Contributor B, no order -- should sort last",
       "view": { "type": "inline", "value": { "$type": "Badge", "label": "contributor-b-unordered" } }
     },
     {
       "kind": "widget",
-      "slot": "test:unused-slot",
+      "slot": "slot-provider:unused-slot",
       "label": "Never requested by any test",
       "view": { "type": "inline", "value": { "$type": "Badge", "label": "contributor-b-unused-slot" } }
     }

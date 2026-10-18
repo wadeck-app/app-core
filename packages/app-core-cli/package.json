@@ -26,6 +26,7 @@
     "@wadeck-app/app-core-sdk": "*",
     "@wadeck-app/shared-cli": "latest",
     "@wadeck-app/shared-updater": "latest",
+    "esbuild": "^0.28.2",
     "fastify": "^5.0.0",
     "js-yaml": "^4.1.1",
     "semver": "^7.8.5",
@@ -34,7 +35,6 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@wadeck-app/app-core-server": "*",
-    "esbuild": "^0.28.2",
     "typescript": "^5.3.3",
     "vitest": "^4.0.14"
   },
