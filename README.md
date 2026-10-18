@@ -26,7 +26,7 @@ npx violations check
 
 | Goal | Command |
 |---|---|
-| Server + shell with hot reload (ports 4850 and 5173) | `npm run dev:all` |
+| Server + shell with hot reload (ports 4850 and 5173); output without colors, ends with a `[dev-all] ready:` line holding both URLs | `npm run dev:all` |
 | Built shell copied to `public/` for the server | `npm run build:full` |
 | The packaged app, foreground | `app-core-cli serve` ([docs](packages/app-core-cli/docs/serve.md)) |
 | Rebuild the fixtures only | `npm run build:fixtures` (needs `npm run build` first) |

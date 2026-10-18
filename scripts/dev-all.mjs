@@ -79,8 +79,15 @@ function shutdown() {
   for (const { child } of running) killTree(child);
 }
 
+// The output goes to a log file and a web log page that do not interpret ANSI codes. Vite colors it
+// anyway on Windows even when piped (picocolors only checks the platform there), and the codes cut its
+// URL in pieces ("http://localhost:" + bold port), so the link is unusable. NO_COLOR is honored by Vite
+// and tsx; FORCE_COLOR is removed because some libraries give it priority over NO_COLOR.
+const { FORCE_COLOR: _forceColor, ...inheritedEnv } = process.env;
+const childEnv = { ...inheritedEnv, NO_COLOR: '1' };
+
 const running = services.map((s) => {
-  const child = spawn(process.execPath, [s.bin, ...s.args], { cwd: s.cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, [s.bin, ...s.args], { cwd: s.cwd, env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
   const prefix = `[${s.name}] `;
   pipeWithPrefix(child.stdout, process.stdout, prefix);
   pipeWithPrefix(child.stderr, process.stderr, prefix);
@@ -95,3 +102,23 @@ const running = services.map((s) => {
 
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+// One plain line with both URLs once the services answer: the server only logs {"type":"ready"} (no URL)
+// and Vite needs a while (--force re-optimizes dependencies, ~25 s was measured).
+const READY_TIMEOUT_MS = 120_000;
+const deadline = Date.now() + READY_TIMEOUT_MS;
+const pending = new Set(services.map((s) => s.name));
+while (pending.size > 0 && !shuttingDown && Date.now() < deadline) {
+  for (const s of services) {
+    if (pending.has(s.name) && (await isPortInUse(s.port))) pending.delete(s.name);
+  }
+  if (pending.size > 0) await new Promise((done) => setTimeout(done, 500));
+}
+if (!shuttingDown) {
+  if (pending.size > 0) {
+    console.error(`[dev-all] WARNING: ${[...pending].join(', ')} not listening after ${READY_TIMEOUT_MS / 1000} s; check the [${[...pending][0]}] lines above.`);
+  } else {
+    const portOf = (name) => services.find((s) => s.name === name).port;
+    console.log(`[dev-all] ready: app http://localhost:${portOf('frontend')}/  api http://127.0.0.1:${portOf('server')}/`);
+  }
+}
