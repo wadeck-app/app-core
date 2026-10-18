@@ -155,6 +155,36 @@ describe('packageModule: output manifest and views', () => {
     expect(result.warnings[0]).toMatch(/not referenced/);
   });
 
+  it('warns, naming file and node, when a built-in container uses "children:" instead of "items:" (it would render blank)', async () => {
+    const view = '$type: VerticalStack\nitems:\n  - $type: Card\n    children:\n      - $type: Badge\n        label: x\n';
+    const result = await packageModule({ moduleDir: module_({ 'src/dsl-views/home.yaml': view }), outDir: outDir(), version: '1.0.0' });
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toContain('src/dsl-views/home.yaml');
+    expect(result.warnings[0]).toContain('$.items[0] (Card)');
+    expect(result.warnings[0]).toContain('"items:"');
+  });
+
+  it('warns for an inline view too, and not for "items:", FieldWrapper or a dsl-lib component', async () => {
+    const inline = (value: unknown): string =>
+      JSON.stringify({ ...BASE_MANIFEST, extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value } }] });
+    const bad = await packageModule({
+      moduleDir: module_({ 'manifest.json': inline({ $type: 'Section', children: [] }), 'src/dsl-views/home.yaml': null }),
+      outDir: outDir(),
+      version: '1.0.0',
+    });
+    expect(bad.warnings).toHaveLength(1);
+    expect(bad.warnings[0]).toContain('extensionPoints[0] (inline view)');
+    const fine = await packageModule({
+      moduleDir: module_({
+        'manifest.json': inline({ $type: 'VerticalStack', items: [{ $type: 'FieldWrapper', children: 'x' }, { $type: 'tiny:Custom', children: [] }] }),
+        'src/dsl-views/home.yaml': null,
+      }),
+      outDir: outDir(),
+      version: '1.0.0',
+    });
+    expect(fine.warnings).toEqual([]);
+  });
+
   it('keeps nested view folders and emits a view referenced twice once', async () => {
     const manifest = JSON.stringify({
       ...BASE_MANIFEST,

@@ -6,6 +6,7 @@ import type { Manifest, SourceManifest } from '@wadeck-app/app-core-sdk';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { appCoreShared } from './appCoreShared.js';
 import { BACKEND_ENTRY, checkModule, DSL_COMPONENTS_ENTRY, formatCheckIssues, OUTPUT_DIR, TYPES_OUTPUT } from './check.js';
+import { ignoredChildrenWarnings } from './childKeys.js';
 import { LINK_USAGE, parseLinkValue, type Links } from './providers.js';
 import { validateManifestFile } from './validate.js';
 
@@ -190,8 +191,9 @@ function emitViews(moduleDir: string, outDir: string, manifest: SourceManifest, 
   const emittedFrom = new Map<string, string>();
   const referenced = new Set<string>();
 
-  const extensionPoints = manifest.extensionPoints.map((ep) => {
+  const extensionPoints = manifest.extensionPoints.map((ep, index) => {
     if (ep.view.type !== 'path') {
+      warnings.push(...ignoredChildrenWarnings(ep.view.value, `manifest.json extensionPoints[${index}] (inline view)`));
       return ep;
     }
     const source = path.resolve(moduleDir, String(ep.view.value));
@@ -207,7 +209,9 @@ function emitViews(moduleDir: string, outDir: string, manifest: SourceManifest, 
       referenced.add(source);
       const target = path.join(outDir, emittedRel);
       fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.writeFileSync(target, JSON.stringify(parseYaml(fs.readFileSync(source, 'utf8'))));
+      const parsedView = parseYaml(fs.readFileSync(source, 'utf8'));
+      warnings.push(...ignoredChildrenWarnings(parsedView, sourceRel));
+      fs.writeFileSync(target, JSON.stringify(parsedView));
     }
     return { ...ep, view: { type: 'path' as const, value: `./${emittedRel}` } };
   });

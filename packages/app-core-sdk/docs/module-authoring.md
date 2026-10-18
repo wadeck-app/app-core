@@ -517,6 +517,7 @@ Texts are abridged to their stable part; `<...>` is filled in by the tool. `chec
 | `<step> failed:` then `file:line:col: <text>` lines | esbuild error in your source; a missing package usually needs `npm install` in the module folder. |
 | `The packaged manifest's <field> "<x>" does not exist` | A path in the manifest points to something `package` did not write; fix the source path. |
 | `--link "<x>" is not of the form <package>=<folder>` | Use `--link @acme/provider=../provider`. |
+| `warning: <view>: <node> has a "children" key, which built-in components ignore ...` (`package`, `dev`), or a page or widget that renders blank with no error anywhere | Built-in containers read their child nodes from `items:`, not `children:` (checked in the dsl-ui catalogue: VerticalStack, HorizontalStack, Card, Section, PageSection, Collapsible, ActionBar, CardActions, DialogFooter, NavBar, ScrollArea, TableRowActions, ThemeScope, Dialog, Drawer, Popover, Tooltip, ToastProvider, RouterProvider, BulkActionsToolbar, ChipButton, DeleteButton). The renderer ignores unknown keys, so a wrong key renders an empty container silently. Rename `children:` to `items:`. |
 
 ### `dev`
 

@@ -10,7 +10,7 @@ $sources:
     url: GET /api/slots/example:row-actions
 
 $type: VerticalStack
-children:
+items:
   - $type: PageHeader
     title: $sources.item.name
     subtitle: $route.id

@@ -4,7 +4,7 @@ $sources:
     url: GET /api/modules/example/items
 
 $type: VerticalStack
-children:
+items:
   - $type: PageHeader
     title: Example items
     subtitle: Served by the backend route /items
