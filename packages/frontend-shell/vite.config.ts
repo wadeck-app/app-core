@@ -27,6 +27,8 @@ export default defineConfig(async () => {
     server: {
       proxy: {
         '/api': 'http://127.0.0.1:4850',
+        // Written by the build next to the served frontend (versions shown in the shell's versions menu).
+        '/build-info.json': 'http://127.0.0.1:4850',
       },
     },
     optimizeDeps: {

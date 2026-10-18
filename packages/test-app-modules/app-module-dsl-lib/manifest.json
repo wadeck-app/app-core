@@ -13,6 +13,17 @@
       "slot": "route",
       "path": "/items/:id",
       "view": { "type": "path", "value": "./dsl-frontend/item.yaml" }
+    },
+    {
+      "kind": "widget",
+      "slot": "navbar",
+      "order": 1,
+      "view": { "type": "path", "value": "./dsl-frontend/navbar.yaml" }
+    },
+    {
+      "kind": "widget",
+      "slot": "overlay",
+      "view": { "type": "path", "value": "./dsl-frontend/overlay.yaml" }
     }
   ],
   "dslLib": {

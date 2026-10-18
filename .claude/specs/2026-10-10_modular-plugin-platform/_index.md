@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-10
 **Version:** v0.1
-**Status:** In Progress -- v0.1 -- 75 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
+**Status:** In Progress -- v0.1 -- 78 decisions logged, 0 open questions -- MILESTONE: first real module (queue) working end-to-end
 **Iteration:** 1
 
 ## Summary
@@ -349,6 +349,14 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 75 | CSS contract for `dsl-lib`: the module's stylesheet is built with the dsl-ui Tailwind preset AND `dslUiContent`, plus the module's own sources, so it carries every utility dsl-ui uses in the same canonical order as the shell's sheet. The shell keeps injecting the module link AFTER its own stylesheet; no shell change. Rejected: injecting the module link before the shell's (measured: fixes dsl-ui elements but breaks the module's own shorthand/longhand combinations) and a delta-only sheet (fragile against shell-only longhands). Documented in module-authoring.md. | Decided | 2026-10-17 | orch-owner found the dsl-ui SearchBar icon overlapping its placeholder inside the orchestrator module: its sheet repeated `.px-2` without `.pl-7`. A browser experiment with minimal sheets (8px today, 28px with a superset sheet) showed ordering across two Tailwind sheets cannot be fixed by link order alone. |
+
+## Decision Log (cont. 50)
+
+| # | Decision | Status | Date | Rationale |
+|---|---|---|---|---|
+| 76 | Daemons register their module through the SDK: `@wadeck-app/app-core-sdk/register` (node-only subpath; the main entry stays free of `node:` imports, asserted at build) exports `registerModule({ id, manifestPath, env?, timeoutMs? })`, `unregisterModule({ id, env?, timeoutMs? })`, `describeRegistration` and typed outcomes (`registered \| refused{httpStatus,reason} \| deferred{file} \| skipped{reason}`; unregister adds `unregistered \| not-registered \| cleared`). Port = APP_CORE_PORT, else the `server.port.json` app-core wrote, else 4850; a malformed APP_CORE_PORT throws; a timeout counts as "not running"; the pickup file `<configDir>/modules/<id>.json` is written only when app-core's config dir already exists; it rejects only for what the caller must fix (invalid id, bad port, missing manifest). Config dir, port file, id rule and default port come from the server package (single source). The SDK gets an `exports` map (`.` and `./register`) plus `typesVersions` for node10 resolution (orchestrator-cli is CommonJS). | Decided | 2026-10-18 | orch-owner and queue each had their own registration code; orch-owner's version had the behaviours both needed. Queue and orchestrator are expected to switch to it. |
+| 77 | Two more shell slots for DSL widgets: `kind: 'widget', slot: 'navbar'` (inline in the navbar, right side, before the theme toggle, every page) and `slot: 'overlay'` (mounted once per widget at the app root, every page; the component positions itself). Rendered like dashboard widgets, behind the dsl-lib ready gate (quiet), each in an error boundary: a throwing component shows "<module>: widget error" and logs the module id instead of blanking the shell. Ordered by `order`, then module order; added and removed with the module. Not handled: z-index conflicts between modules' overlays. | Decided | 2026-10-18 | orch-owner needs a status area in the navbar and a global failure toast stack to match the standalone dashboard. |
+| 78 | The navbar has a "Versions" menu (info icon) listing app-core's version and commit, every loaded module's version, modules that failed to load, and the libraries the frontend was built with (dsl-ui, dsl-renderer, react, build time). `build-info.json` gains `appCore` (the version injected into app-core-cli by the CI; `0.0.1` in a local build) and `commit` (short git sha, omitted without git); the dev server proxies `/build-info.json`. Uses Radix Popover directly, because dsl-ui's `Popover` anchors at the page's top-left (its trigger is wrapped in a `display: contents` span); reported to dsl-owner. A placeholder to be moved later. | Decided | 2026-10-18 | User asked for a simple version display now, to be relocated later. Found by a real-browser check; the first version used dsl-ui's Popover and opened in the wrong place. |
 
 ## Open Questions
 

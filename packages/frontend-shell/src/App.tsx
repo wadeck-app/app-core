@@ -4,6 +4,7 @@ import { RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { AppNavBar } from './NavBar.js';
 import { Dashboard } from './Dashboard.js';
 import { ModulePage } from './ModulePage.js';
+import { OverlayWidgets } from './OverlayWidgets.js';
 import { modulePagePath } from './modulePaths.js';
 import { useModules } from './useModules.js';
 import { ModuleLibsProvider, useModuleLibs } from './useModuleLibs.js';
@@ -31,7 +32,7 @@ export default function App(): React.ReactElement {
         <ToastProvider>
           <ModuleLibsProvider value={libStatuses}>
             <div className="min-h-screen bg-bg">
-              <AppNavBar modules={modules} />
+              <AppNavBar modules={modules} failed={failedModules} />
               {error ? (
                 <p role="alert" className="px-4 py-3 text-danger">
                   Failed to load modules: {String(error)}
@@ -72,6 +73,7 @@ export default function App(): React.ReactElement {
                 <Route path="/modules/:moduleId/:index" element={<ModulePage modules={modules} />} />
                 <Route path="*" element={<p className="p-4 text-muted">Page not found (the module may have been unloaded).</p>} />
               </Routes>
+              <OverlayWidgets modules={modules} />
             </div>
           </ModuleLibsProvider>
         </ToastProvider>

@@ -6,3 +6,5 @@ public/
 *.tgz
 .idea
 .e2e-scratch-config/
+*.stackdump
+

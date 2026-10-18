@@ -23,6 +23,19 @@ function RouteParam({ id }) {
   return createElement('p', { id: 'dsllib-route-param' }, `${LABEL} item=${id} hook=${params.id}`);
 }
 
+function NavbarStat({ text }) {
+  return createElement('span', { id: 'dsllib-navbar', className: 'dsllib-fixture-navbar' }, `${LABEL} navbar ${text}`);
+}
+
+function OverlayBox({ text }) {
+  return createElement('div', { id: 'dsllib-overlay', className: 'dsllib-fixture-overlay' }, `${LABEL} overlay ${text}`);
+}
+
+// Used by views that exercise the shell's per-widget error boundary.
+function Boom() {
+  throw new Error(`${LABEL} fixture boom`);
+}
+
 export default [
   {
     name: 'Hello',
@@ -35,5 +48,23 @@ export default [
     category: 'atomic',
     tags: [],
     render: ({ node, ctx }) => createElement(RouteParam, { id: String(resolveExpressionValue(node['id'], ctx) ?? '') }),
+  },
+  {
+    name: 'NavbarStat',
+    category: 'atomic',
+    tags: [],
+    render: ({ node, ctx }) => createElement(NavbarStat, { text: String(resolveExpressionValue(node['text'], ctx) ?? '') }),
+  },
+  {
+    name: 'OverlayBox',
+    category: 'atomic',
+    tags: [],
+    render: ({ node, ctx }) => createElement(OverlayBox, { text: String(resolveExpressionValue(node['text'], ctx) ?? '') }),
+  },
+  {
+    name: 'Boom',
+    category: 'atomic',
+    tags: [],
+    render: () => createElement(Boom),
   },
 ];

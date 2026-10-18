@@ -74,6 +74,15 @@ function RouteParam({ id }) {
   const params = (0, import_react_router_dom.useParams)();
   return (0, import_react.createElement)("p", { id: "dsllib-route-param" }, `${LABEL} item=${id} hook=${params.id}`);
 }
+function NavbarStat({ text }) {
+  return (0, import_react.createElement)("span", { id: "dsllib-navbar", className: "dsllib-fixture-navbar" }, `${LABEL} navbar ${text}`);
+}
+function OverlayBox({ text }) {
+  return (0, import_react.createElement)("div", { id: "dsllib-overlay", className: "dsllib-fixture-overlay" }, `${LABEL} overlay ${text}`);
+}
+function Boom() {
+  throw new Error(`${LABEL} fixture boom`);
+}
 var entries_src_default = [
   {
     name: "Hello",
@@ -86,6 +95,24 @@ var entries_src_default = [
     category: "atomic",
     tags: [],
     render: ({ node, ctx }) => (0, import_react.createElement)(RouteParam, { id: String((0, import_dsl_renderer.resolveExpressionValue)(node["id"], ctx) ?? "") })
+  },
+  {
+    name: "NavbarStat",
+    category: "atomic",
+    tags: [],
+    render: ({ node, ctx }) => (0, import_react.createElement)(NavbarStat, { text: String((0, import_dsl_renderer.resolveExpressionValue)(node["text"], ctx) ?? "") })
+  },
+  {
+    name: "OverlayBox",
+    category: "atomic",
+    tags: [],
+    render: ({ node, ctx }) => (0, import_react.createElement)(OverlayBox, { text: String((0, import_dsl_renderer.resolveExpressionValue)(node["text"], ctx) ?? "") })
+  },
+  {
+    name: "Boom",
+    category: "atomic",
+    tags: [],
+    render: () => (0, import_react.createElement)(Boom)
   }
 ];
 export {

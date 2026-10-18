@@ -10,6 +10,8 @@ export interface ResolvedExtensionPoint {
   rawYaml: string;
   // Route of a page, mounted at /modules/<moduleId><path>; `:name` segments reach the view as $route.<name>.
   path?: string;
+  // Sort key within a shell slot (navbar and overlay widgets); entries without it come last.
+  order?: number;
 }
 
 // Runtime-loaded components of a module (its dsl-lib folder), cache-busted URLs served by app-core.

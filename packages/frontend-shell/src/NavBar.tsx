@@ -2,8 +2,10 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Moon, Sun } from 'lucide-react';
 import { IconButton, NavBar as DslNavBar, useTheme } from '@wadeck-app/dsl-ui';
+import { ModuleWidget, widgetsFor } from './ModuleWidgets.js';
 import { modulePagePath } from './modulePaths.js';
-import type { LoadedModuleSummary } from './types.js';
+import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
+import { VersionsMenu } from './VersionsMenu.js';
 
 export interface NavPage {
   moduleId: string;
@@ -31,7 +33,7 @@ export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
 const linkClass = ({ isActive }: { isActive: boolean }): string =>
   `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-muted hover:text-content'}`;
 
-export function AppNavBar({ modules }: { modules: LoadedModuleSummary[] }): React.ReactElement {
+export function AppNavBar({ modules, failed = [] }: { modules: LoadedModuleSummary[]; failed?: FailedModuleSummary[] }): React.ReactElement {
   const pages = navPagesFor(modules);
   const { theme, setTheme } = useTheme();
   return (
@@ -46,7 +48,13 @@ export function AppNavBar({ modules }: { modules: LoadedModuleSummary[] }): Reac
             {p.label}
           </NavLink>
         ))}
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-3">
+          {widgetsFor(modules, 'navbar').map((w) => (
+            <span key={w.key} className="flex items-center" data-module-widget="navbar" data-module-id={w.moduleId}>
+              <ModuleWidget moduleId={w.moduleId} rawYaml={w.rawYaml} slot="navbar" />
+            </span>
+          ))}
+          <VersionsMenu modules={modules} failed={failed} />
           <IconButton
             icon={theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}

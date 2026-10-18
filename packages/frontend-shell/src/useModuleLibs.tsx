@@ -142,17 +142,29 @@ const ModuleLibsContext = createContext<ModuleLibStatuses>({});
 export const ModuleLibsProvider = ModuleLibsContext.Provider;
 
 // Renders `children` only once the module's components are registered; modules without a
-// dsl-lib have no status and render immediately.
-export function ModuleLibGate({ moduleId, children }: { moduleId: string; children: React.ReactNode }): React.ReactElement {
+// dsl-lib have no status and render immediately. `quiet` (for widgets in the navbar or overlay, where a
+// paragraph would break the layout) renders nothing while loading or failed: a failure is still shown by
+// the shell's "Components that failed to load" banner.
+export function ModuleLibGate({
+  moduleId,
+  quiet = false,
+  children,
+}: {
+  moduleId: string;
+  quiet?: boolean;
+  children: React.ReactNode;
+}): React.ReactElement {
   const status = useContext(ModuleLibsContext)[moduleId];
   if (status === undefined) {
     return <>{children}</>;
   }
   if (status.state === 'loading') {
-    return <p className="p-4 text-muted">Loading the components of "{moduleId}"...</p>;
+    return quiet ? <></> : <p className="p-4 text-muted">Loading the components of "{moduleId}"...</p>;
   }
   if (status.state === 'error') {
-    return (
+    return quiet ? (
+      <></>
+    ) : (
       <p role="alert" className="p-4 text-danger">
         {status.message}
       </p>

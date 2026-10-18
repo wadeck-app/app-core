@@ -25,8 +25,13 @@ app-core's own frontend: a base shell (top navbar, dashboard grid, nav page rout
 ### Base slots
 - `widget` / `dashboard` -- rendered into a grid on the main dashboard page.
 - `page` / `nav` -- appears as a top-navbar entry; selecting it routes to a full-page render of that extension point's view.
+- `page` / `route` -- reachable only by link, mounted at its `path` (not listed in the navbar).
+- `widget` / `navbar` -- rendered inline on the right of the navbar, before the theme toggle, on every page; sorted by `order` (none last), then module list order.
+- `widget` / `overlay` -- mounted once at the app root on every page; the view positions itself (e.g. fixed bottom-right), the shell only provides the mount point (`display: contents`) and does not manage z-index between modules.
 
-(Only these two slot values exist in the manifest shape validated so far -- Decision #15's `extensionPoints[].slot` is a free-form string today; the frontend shell only knows how to place `dashboard` and `nav`. Any other slot value a module declares is undefined behavior until a new slot is added here.)
+Navbar and overlay widgets render like dashboard widgets (GenericPageRunner, shared fetcher, shared registry) once their module's components are ready, each inside its own error boundary: a throwing widget is replaced by a "<moduleId>: widget error" notice (inline in the navbar, bottom-left corner for the overlay), is logged with `console.error` naming the module, and does not affect other widgets or the page. They appear, change and disappear with the polled module list, like pages.
+
+(`extensionPoints[].slot` is a free-form string in the manifest; the shell only places `dashboard`, `navbar`, `overlay` for widgets and `nav`, `route` for pages. Any other slot value a module declares is not rendered.)
 
 ### Stack
 - Vite + React (required: `@wadeck-app/dsl-renderer`/`dsl-ui` only export React components, confirmed during Phase 1 -- app-core's frontend is the first and only place in this system that actually invokes `DslRenderer`/`GenericPageRunner`).
@@ -37,6 +42,9 @@ app-core's own frontend: a base shell (top navbar, dashboard grid, nav page rout
 - Uses `dsl-ui`'s `useTheme`; initial value: stored `localStorage.theme`, else `prefers-color-scheme`, applied by an inline script in `index.html` before first paint (Decision #64).
 - The shell is wrapped in dsl-ui's `RouterProvider` so module views can use URL-param-backed components (`urlParam`).
 - Modules inherit the theme with no code; the author rules live in `packages/app-core-sdk/README.md` ("Dark theme").
+
+### Versions menu (Decision #78)
+- An info icon in the navbar opens a read-only panel: app-core version and commit, each loaded module's version, modules that failed to load, and the libraries the frontend was built with. Data: `GET /api/modules` and `/build-info.json`; if the latter is unreadable the panel says "unknown" with the reason. A placeholder, to be relocated.
 
 ### Module components and routes (Decisions #69-#71)
 - `sharedGlobals.ts` sets `globalThis.__APP_CORE_SHARED__` before anything imports a module bundle.
