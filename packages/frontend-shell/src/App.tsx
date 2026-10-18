@@ -13,6 +13,8 @@ import { LayoutByVariant } from './layout/LayoutByVariant.js';
 import { moduleColor } from './layout/Logo.js';
 import { useModuleAccent } from './layout/moduleAccent.js';
 import { activeNavModule, navModulesFor } from './layout/navModel.js';
+import { LogoFontContext, useLogoFont } from './layout/logoFont.js';
+import { useTabHighlight } from './layout/tabHighlight.js';
 import { usePersistentFlag } from './layout/usePersistentFlag.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 
@@ -24,15 +26,17 @@ const MODULE_ACCENT_KEY = 'shell.moduleAccent';
 function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[]; children: React.ReactNode }): React.ReactElement {
   const [variant, setVariant] = useLayoutVariant();
   const [accentOn, toggleAccent] = usePersistentFlag(MODULE_ACCENT_KEY, true);
+  const [tabHighlight, setTabHighlight] = useTabHighlight();
+  const [logoFont, setLogoFont] = useLogoFont();
   const { pathname } = useLocation();
   const active = import.meta.env.DEV ? variant : 'classic';
   const navModules = navModulesFor(modules);
-  const layoutProps = { modules, navModules, failed };
+  const layoutProps = { modules, navModules, failed, tabHighlight };
   // Dev-only experiment: the accent (dsl-ui's --color-primary*) follows the module being viewed; the dashboard keeps the default.
   const activeModule = activeNavModule(pathname, navModules);
   useModuleAccent(import.meta.env.DEV && accentOn && activeModule ? moduleColor(activeModule.id) : undefined);
   return (
-    <>
+    <LogoFontContext.Provider value={import.meta.env.DEV ? logoFont : 'inter'}>
       {active === 'classic' ? (
         <div className="min-h-screen bg-bg">
           <AppNavBar modules={modules} failed={failed} />
@@ -44,8 +48,16 @@ function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[
         </LayoutByVariant>
       )}
       <OverlayWidgets modules={modules} />
-      {import.meta.env.DEV ? <LayoutSwitcher variant={variant} onChange={setVariant} accent={{ on: accentOn, onToggle: toggleAccent }} /> : null}
-    </>
+      {import.meta.env.DEV ? (
+        <LayoutSwitcher
+          variant={variant}
+          onChange={setVariant}
+          accent={{ on: accentOn, onToggle: toggleAccent }}
+          tabStyle={{ value: tabHighlight, onChange: setTabHighlight }}
+          logoFont={{ value: logoFont, onChange: setLogoFont }}
+        />
+      ) : null}
+    </LogoFontContext.Provider>
   );
 }
 

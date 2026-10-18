@@ -123,11 +123,11 @@ describe('LayoutByVariant: D variants (sidebar always visible)', () => {
     expect(within(screen.getByRole('navigation', { name: 'Billing pages' })).getAllByRole('link')).toHaveLength(billing.pages.length);
   });
 
-  it('each variant has its own look, and only the avatar looks show the module initial', () => {
+  it('each variant has its own look, and only the avatar looks show the module logo in the sidebar header', () => {
     const looks = (['d', 'd1', 'd2', 'd3'] as const).map((variant) => {
       const { unmount } = renderAt(billing.basePath, ui(variant));
       const aside = screen.getByTestId('module-sidebar');
-      const result = [aside.getAttribute('data-look'), within(aside).queryByText('B', { selector: '[aria-hidden="true"]' }) !== null];
+      const result = [aside.getAttribute('data-look'), aside.querySelector('[data-logo]') !== null];
       unmount();
       return result;
     });
@@ -185,12 +185,12 @@ describe('LayoutLab', () => {
   it('renders the requested variant with a switcher listing every variant', () => {
     renderAt('/__layout-lab/b', <LayoutLab />);
     expect(screen.getByRole('button', { name: 'Billing' })).toBeInTheDocument();
-    expect(within(screen.getByRole('navigation', { name: 'Layout variants' })).getAllByRole('link')).toHaveLength(11);
+    expect(within(screen.getByRole('navigation', { name: 'Layout' })).getAllByRole('link')).toHaveLength(11);
   });
 
   it('switches variant while staying on the same module page', () => {
     renderAt('/__layout-lab/a/billing/1', <LayoutLab />);
-    const switcher = within(screen.getByRole('navigation', { name: 'Layout variants' }));
+    const switcher = within(screen.getByRole('navigation', { name: 'Layout' }));
     expect(switcher.getByRole('link', { name: 'A' })).toHaveAttribute('aria-current', 'true');
     expect(switcher.getByRole('link', { name: 'B' })).toHaveAttribute('href', '/__layout-lab/b/billing/1');
     expect(switcher.getByRole('link', { name: 'C' })).toHaveAttribute('href', '/__layout-lab/c/billing/1');

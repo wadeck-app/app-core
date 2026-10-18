@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { LOGO_FONT_STYLE, useLogoFontValue } from './logoFont.js';
+import { useOpticalCenter } from './opticalCenter.js';
 
 // 'initial' = 1 letter (D2, D3); 'duo' = 2 letters; 'duo-colored' = 2 letters on the module's own color.
 export type LogoMode = 'initial' | 'duo' | 'duo-colored';
@@ -29,7 +31,18 @@ export function moduleColor(id: string): string {
   return PALETTE[(hash >>> 0) % PALETTE.length];
 }
 
-const SIZES = { sm: 'h-5 w-5 text-[9px]', md: 'h-8 w-8 text-[11px]' } as const;
+// Letters fill the chip: large font, no vertical room, and a width that follows the text (min = square).
+const SIZES = {
+  sm: 'h-5 min-w-[20px] px-[3px] text-[11px]',
+  lg: 'h-6 min-w-[24px] px-[3px] text-[13px]',
+  md: 'h-8 min-w-[32px] px-1 text-[15px]',
+} as const;
+
+// solid = module color behind white letters. muted = greyed out.
+// inverted = white chip, module-colored letters (for use on a colored pill).
+// swapped = foreground and background exchanged: page-colored chip, module-colored letters and border.
+// outline = transparent chip, module-colored letters and border.
+export type LogoTone = 'solid' | 'muted' | 'inverted' | 'swapped' | 'outline';
 
 interface LogoProps {
   title: string;
@@ -38,18 +51,50 @@ interface LogoProps {
   // Tailwind background class used when the mode is not 'duo-colored'.
   baseColor: string;
   size?: keyof typeof SIZES;
+  tone?: LogoTone;
+  ring?: boolean;
+  glow?: boolean;
 }
 
-export function Logo({ title, moduleId, mode, baseColor, size = 'md' }: LogoProps): React.ReactElement {
+function toneStyle(tone: LogoTone, glow: boolean, color: string): React.CSSProperties {
+  switch (tone) {
+    case 'inverted':
+      return { backgroundColor: '#ffffff', color };
+    case 'swapped':
+      return { backgroundColor: 'var(--color-surface)', color, boxShadow: `inset 0 0 0 2px ${color}` };
+    case 'outline':
+      return { backgroundColor: 'transparent', color, boxShadow: `inset 0 0 0 1.5px ${color}` };
+    default:
+      return { backgroundColor: color, boxShadow: glow ? `0 0 0 4px ${color}40` : undefined };
+  }
+}
+
+export function Logo({ title, moduleId, mode, baseColor, size = 'md', tone = 'solid', ring = false, glow = false }: LogoProps): React.ReactElement {
   const colored = mode === 'duo-colored';
+  const text = logoOf(title, mode);
+  const font = LOGO_FONT_STYLE[useLogoFontValue()];
+  const inner = useRef<HTMLSpanElement>(null);
+  useOpticalCenter(inner, text, font.optical, [size, font.className]);
   return (
     <span
       aria-hidden="true"
-      data-logo={logoOf(title, mode)}
-      style={colored ? { backgroundColor: moduleColor(moduleId) } : undefined}
-      className={`grid shrink-0 place-items-center rounded-md font-bold tracking-tight text-white ${SIZES[size]} ${colored ? '' : baseColor}`}
+      data-logo={text}
+      data-tone={tone}
+      style={colored ? toneStyle(tone, glow, moduleColor(moduleId)) : undefined}
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-md font-bold leading-none text-white transition-all ${font.className} ${SIZES[size]} ${
+        colored ? '' : baseColor
+      } ${tone === 'muted' ? 'opacity-50 grayscale' : ''} ${ring ? 'ring-2 ring-primary-solid ring-offset-2 ring-offset-surface' : ''}`}
     >
-      {logoOf(title, mode)}
+      <span ref={inner} className="inline-block whitespace-nowrap">
+        {font.cells
+          ? Array.from(text).map((ch, i) => (
+              // Equal-width cell per letter: each letter is centered in its own cell, whatever its width.
+              <span key={i} className="inline-block w-[0.72em] text-center">
+                {ch}
+              </span>
+            ))
+          : text}
+      </span>
     </span>
   );
 }

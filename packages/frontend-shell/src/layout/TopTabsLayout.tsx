@@ -22,7 +22,7 @@ interface TopTabsLayoutProps extends LayoutProps {
 }
 
 // Variants A, C and D*. Top bar = brand + one tab per module; left = the pages of the active module.
-export function TopTabsLayout({ modules, navModules, failed = [], collapsible = false, sidebar = 'auto', look, logo, children }: TopTabsLayoutProps): React.ReactElement {
+export function TopTabsLayout({ modules, navModules, failed = [], tabHighlight, collapsible = false, sidebar = 'auto', look, logo, children }: TopTabsLayoutProps): React.ReactElement {
   const { pathname } = useLocation();
   const [collapsed, toggleCollapsed] = usePersistentFlag(SIDEBAR_COLLAPSED_KEY);
   const active = activeNavModule(pathname, navModules);
@@ -31,7 +31,7 @@ export function TopTabsLayout({ modules, navModules, failed = [], collapsible = 
     <div className="flex min-h-screen flex-col bg-bg">
       <header className="flex items-center gap-6 border-b border-border bg-surface px-4 py-3">
         <span className="text-base font-semibold text-content">app-core</span>
-        <ModuleTabs navModules={navModules} logos={logo === 'duo-colored'} />
+        <ModuleTabs navModules={navModules} logos={logo === 'duo-colored'} highlight={tabHighlight} />
         <TopBarActions modules={modules} failed={failed} />
       </header>
       <div className="flex min-h-0 flex-1">

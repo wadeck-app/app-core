@@ -15,6 +15,10 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// jsdom has no 2D canvas and logs "Not implemented" on every getContext(). Declared here: the optical logo centering
+// (opticalCenter.ts) measures glyphs with a canvas and, without one, leaves the text at its default centering.
+HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
+
 // jsdom has no ResizeObserver; Radix popovers (dsl-ui Popover) observe their content size.
 class ResizeObserverStub {
   observe(): void {}
