@@ -29,6 +29,7 @@ A module's UI is always expressed as DSL view data (consumed by `dsl-renderer`/`
 ### P-6: A module lives in its own daemon's repo, in an `app-module` package
 A daemon's app-core module (frontend + backend code per P-2) is published from a dedicated package named `app-module` inside that daemon's own repo (e.g. `queue/packages/app-module`), never inside app-core's own repo. A flat (non-workspaces) repo must first be refactored into a `packages/` layout before this package can be added.
 **Why:** keeps module code co-located with and versioned alongside the daemon that owns it, and mirrors the `packages/` convention Orchestrator already uses. (Decision #21)
+**Amended by Decisions #53, #81 and #92:** the package folder is named `app-module-<name>` (e.g. `queue/packages/app-module-queue`), not `app-module`; its layout is in module-authoring.md.
 
 ### P-7: Module-to-module slot contracts are provider-owned, never centralized
 When one module contributes UI into another module's `ExtensionSlot`, the typed/versioned contract for that slot is published by the PROVIDING module from its own package -- never defined or centralized in app-core or app-core-sdk. app-core only brokers slot-name matching generically.

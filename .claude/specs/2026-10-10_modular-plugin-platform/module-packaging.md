@@ -20,6 +20,8 @@ A module (backend + DSL frontend) packaged as a zip/link that app-core can insta
 
 <!-- Architecture, data flow, contracts, schema, etc. Fill in as decisions are made. -->
 
+*(Update, Decisions #80/#81: the BUILD side is implemented: `app-core-cli package` produces a publishable `dist-module/` folder (published through npm, no zip). What stays deferred is the runtime zip/link install source; only `{ type: 'file', path }` registrations exist.)*
+
 ## Open questions
 
 <!-- Questions specific to this module that are also in _index.md > Open Questions. -->

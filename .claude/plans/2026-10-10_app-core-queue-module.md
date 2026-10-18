@@ -1,5 +1,7 @@
 **Spec:** .claude/specs/2026-10-10_modular-plugin-platform/
 
+> **Status note (2026-10-18):** historical plan. Its paths (`packages/app-module`, `api-backend/`, `dsl-frontend/`, `*-app-module` naming, `backendEntryPath` in the author-written manifest) are superseded by the layout in `module-authoring.md` (Decisions #53, #81, #92). The module platform itself is built.
+
 # Plan: app-core skeleton + queue as first module
 
 Goal: validate the whole modular-plugin approach end-to-end before porting Orchestrator/Flow/Queue.

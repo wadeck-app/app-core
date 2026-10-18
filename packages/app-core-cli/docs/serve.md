@@ -1,11 +1,12 @@
 # `app-core-cli serve`
 
-Runs the same server as `packages/server`, with the frontend built into this package (`dist/public`), in the foreground. Stop it with Ctrl+C or SIGTERM.
+Runs the same server as `packages/server`, with the frontend built into this package (`dist/public`), in the foreground. Stop it with Ctrl+C or SIGTERM: each module's `teardown` runs first (errors are logged, never block the stop).
 
 | Setting | Default | Note |
 |---|---|---|
 | `APP_CORE_PORT` | `4850` | Listens on `127.0.0.1` only. |
-| `APP_CORE_CONFIG_DIR` | `~/.config/app-core` | Module registry (`modules/<id>.json`) and `server.port.json`. |
+| `APP_CORE_CONFIG_DIR` | `~/.config/app-core` | Module registry (`modules/<id>.json`), `server.port.json`, and per module `data/<id>/` and `state/<id>.json`. |
+| `APP_CORE_HOOK_TIMEOUT_MS` | `30000` | Timeout of a module's import, setup and each lifecycle hook. A value that is not a positive integer stops the server at startup. |
 
 `server.port.json` (`{"pid": ..., "port": ...}`) is written after the server listens and removed on a clean stop. After a forced kill it stays on disk; consumers must check that `pid` is alive.
 

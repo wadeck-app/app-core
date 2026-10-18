@@ -19,6 +19,8 @@ Lets one module contribute UI into another module's view (e.g. `queue`'s subscri
 
 <!-- Architecture, data flow, contracts, schema, etc. Fill in as decisions are made. -->
 
+*(As built, see Decisions #82, #86 and #92: slots are declared in the provider's `expose.slots` with the root `$type`s they accept, a contribution uses `slot: "<providerId>:<slot>"` and `requires` the provider, the view embeds `{ "$type": "ExtensionSlot", "items": "$sources.<key>" }` with `<key>` fetching `GET /api/slots/<providerId>:<slot>`. `assertSlotContract` below was never built; the sketches below that use `slot:` on the node or a `/contributions` suffix are the original design.)*
+
 ### Example: queue's subscriber-row slot
 1. `queue`'s `app-module` package exports a zod schema + inferred TS type for what a `subscriber-row` contribution looks like (e.g. `{ subscriberId: string }` as the context passed to contributors) from its own published package (not app-core-sdk).
 2. `queue`'s subscriber-list page DSL includes `{ $type: "ExtensionSlot", slot: "queue:subscriber-row", context: { subscriberId: "$row.id" } }` per row.
