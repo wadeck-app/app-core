@@ -335,6 +335,16 @@ no base-path logic to worry about. Keep the module id a fixed literal in the URL
 a `$route`/dynamic placeholder -- an empty-placeholder path silently skips the fetch in the
 underlying DSL renderer, so a fixed literal is the safe pattern.
 
+### Pages below pages (the breadcrumb)
+
+The shell shows the trail of nested pages above every module page: the module, then every page of the module whose `path` is the start of the current address, each linking to its page. For `/tasks/7/history` with pages `/tasks`, `/tasks/:id` and `/tasks/:id/history`: Task > Tasks > Task 7 > Task history. A page needs no "back" button: the crumb before it is the way back.
+
+- Give every page a `label`. A page without one is named after its address ("Execution" for `/executions/:id`), which is rarely what you would write.
+- A page whose address ends with a parameter shows its value after the label ("Task 7"; a long value is shortened).
+- The module home (`"path": "/"`) is the parent of the pages no other menu page claims (a route like `/jobs/:id` under the home page "Jobs"); it does not appear before `/schedule`, which is a menu page of its own.
+- A page declared without a `path` (addressed by its index) has no pages below it in the trail.
+- A menu page is named in the trail like in the menu: the module name in front of its label is dropped ("Flow Executions" under Flow reads "Executions").
+
 ### Sizing a dashboard widget (`width`, `height`)
 
 A `widget` on slot `dashboard` may say how many cells of the dashboard grid it takes. The grid has 4 columns on a wide screen, 2 on a medium one and 1 on a narrow one; a widget wider than the columns available takes them all.

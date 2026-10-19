@@ -13,7 +13,9 @@ export interface DashboardProps {
 }
 
 // Options of the A/B tests below, as numbers the grid computes with.
-const SHARE: Record<'fill' | 'p90' | 'p80' | 'p70', string> = { fill: '100%', p90: '90%', p80: '80%', p70: '70%' };
+// The page layout (PageContent) caps its content at 1152px unless told otherwise; the dashboard takes the full width it is
+// given and caps itself, so these options are the only limit.
+const MAX_WIDTH: Record<'today' | 'w1440' | 'w1920' | 'p85' | 'fill', string | undefined> = { today: '1152px', w1440: '1440px', w1920: '1920px', p85: '85%', fill: undefined };
 const MIN_COLUMN: Record<'c220' | 'c260' | 'c320' | 'c400', number> = { c220: 220, c260: 260, c320: 320, c400: 400 };
 const GAP_PX: Record<'tight' | 'normal' | 'roomy', number> = { tight: 8, normal: 16, roomy: 24 };
 const ROW_REM: Record<'short' | 'normal' | 'tall', number> = { short: 7, normal: 9, tall: 12 };
@@ -42,15 +44,16 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
   const [overKey, setOverKey] = useState<string | undefined>(undefined);
 
   // A/B tests open on the dashboard (see the A/B testing rule in the project CLAUDE.md).
-  const share = useAbTest<keyof typeof SHARE>({
+  const share = useAbTest<keyof typeof MAX_WIDTH>({
     id: 'dashboard-width',
     label: 'Dashboard width',
-    initial: 'fill',
+    initial: 'today',
     options: {
-      fill: { label: 'Fill', hint: 'Today: the grid takes the whole width of the page.' },
-      p90: { label: '90%', hint: 'The grid takes 90% of the page, centered: whatever the screen, a margin appears on both sides.' },
-      p80: { label: '80%', hint: 'The grid takes 80% of the page, centered.' },
-      p70: { label: '70%', hint: 'The grid takes 70% of the page, centered: fewer, larger columns on a wide screen.' },
+      today: { label: '1152px', hint: 'Today: the page layout caps the dashboard at 1152px, whatever the screen.' },
+      w1440: { label: '1440px', hint: 'Up to 1440px, centered: the same on a laptop, more room on a big screen.' },
+      w1920: { label: '1920px', hint: 'Up to 1920px, centered: five or six columns on a 1440p screen.' },
+      p85: { label: '85%', hint: 'Takes 85% of the space beside the menu, centered, whatever the screen.' },
+      fill: { label: 'Fill', hint: 'The whole space beside the menu, edge to edge.' },
     },
   });
   const columns = useAbTest<keyof typeof MIN_COLUMN>({
@@ -158,9 +161,11 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
   return (
     <>
       <PageContent
+        maxWidth="full"
         sections={
           <PageSection title="Dashboard">
-            <div ref={gridRef} className="mx-auto" style={{ width: SHARE[share.value] }}>
+            {/* The section around it is a flex column: without w-full, mx-auto would shrink this to its content. */}
+            <div ref={gridRef} className="mx-auto w-full" style={{ maxWidth: MAX_WIDTH[share.value] }}>
               {widgets.length === 0 ? (
                 <p className="text-muted">No widgets registered yet.</p>
               ) : (

@@ -37,8 +37,10 @@ describe('AppLayout: top tabs', () => {
 
   it('marks the tab of the active module on every one of its pages', () => {
     renderAt(`${billing.basePath}/p1`);
-    expect(screen.getByRole('link', { name: 'Billing' })).toHaveAttribute('aria-current', 'true');
-    expect(screen.getByRole('link', { name: 'Inventory' })).not.toHaveAttribute('aria-current');
+    // In the tabs: the breadcrumb below also has a link named after the module.
+    const tabs = within(screen.getByRole('navigation', { name: 'Modules' }));
+    expect(tabs.getByRole('link', { name: 'Billing' })).toHaveAttribute('aria-current', 'true');
+    expect(tabs.getByRole('link', { name: 'Inventory' })).not.toHaveAttribute('aria-current');
   });
 });
 
