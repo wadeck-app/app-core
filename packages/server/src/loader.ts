@@ -70,7 +70,7 @@ export interface LoadedModule {
   // The manifest file this instance was loaded from.
   source: string;
   moduleContext: ModuleContext;
-  resolvedViews: Array<{ kind: string; slot: string; label?: string; view: unknown; rawYaml: string; order?: number; path?: string }>;
+  resolvedViews: Array<{ kind: string; slot: string; label?: string; view: unknown; rawYaml: string; order?: number; path?: string; width?: number; height?: number }>;
   // Cache-busted URLs of the module's runtime-loaded components (served from /api/modules/<id>/_lib/).
   dslLib?: DslLibUrls;
   // <configDir>/data/<id>/, the module's own persistent data (never deleted by app-core).
@@ -289,6 +289,8 @@ export class ModuleManager {
       rawYaml: resolveRawYaml(ep, manifestDir),
       order: ep.order,
       path: ep.path,
+      width: ep.width,
+      height: ep.height,
     }));
 
     const problems = this.findProblems(entry.id, manifest, resolvedViews);

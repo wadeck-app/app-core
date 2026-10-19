@@ -155,6 +155,20 @@ describe('packageModule: output manifest and views', () => {
     });
   });
 
+  describe('widget size', () => {
+    it('keeps width and height of a dashboard widget in the packaged manifest', async () => {
+      const manifest = { id: 'tiny', extensionPoints: [{ kind: 'widget', slot: 'dashboard', width: 3, height: 2, view: { type: 'path', value: './src/dsl-views/home.yaml' } }] };
+      const out = outDir();
+      await packageModule({ moduleDir: module_({ 'manifest.json': JSON.stringify(manifest) }), outDir: out, version: '1.0.0' });
+      expect(JSON.parse(read(out, 'manifest.json')).extensionPoints[0]).toMatchObject({ width: 3, height: 2 });
+    });
+
+    it('refuses a size outside the range, naming the field', async () => {
+      const manifest = { id: 'tiny', extensionPoints: [{ kind: 'widget', slot: 'dashboard', width: 9, view: { type: 'path', value: './src/dsl-views/home.yaml' } }] };
+      await expect(packageModule({ moduleDir: module_({ 'manifest.json': JSON.stringify(manifest) }), outDir: outDir(), version: '1.0.0' })).rejects.toThrow(/width/);
+    });
+  });
+
   describe('version that is not semver', () => {
     it('warns, because a module requiring this one could never match it, and still packages', async () => {
       const result = await packageModule({ moduleDir: module_(), outDir: outDir(), version: '2026.10.18-001' });

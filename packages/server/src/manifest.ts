@@ -14,6 +14,11 @@ const ViewSchema = z.object({
 // parameter that reaches the view as `$route.<name>`. "/" alone is the module home page (/modules/<moduleId>).
 const PAGE_PATH_PATTERN = /^(?:\/|(?:\/(?:[A-Za-z0-9_-]+|:[A-Za-z_][A-Za-z0-9_]*))+)$/;
 
+// How many cells of the dashboard grid a widget takes, in width and in height (the grid has this many columns on a wide
+// screen). Absent means 1 wide and as tall as its content.
+export const WIDGET_MAX_SPAN = 4;
+const SpanSchema = z.number().int().min(1, 'must be between 1 and ' + WIDGET_MAX_SPAN).max(WIDGET_MAX_SPAN, 'must be between 1 and ' + WIDGET_MAX_SPAN).optional();
+
 const ExtensionPointSchema = z
   .object({
     kind: z.string().min(1),
@@ -26,6 +31,9 @@ const ExtensionPointSchema = z
     // it never interprets what it means. Entries without `order` sort last, in
     // registration order.
     order: z.number().optional(),
+    // Size of a dashboard widget, in grid cells (see WIDGET_MAX_SPAN).
+    width: SpanSchema,
+    height: SpanSchema,
     path: z
       .string()
       .regex(PAGE_PATH_PATTERN, 'path must look like "/jobs/:id": segments of letters, digits, "_" or "-", or ":param"')
@@ -37,6 +45,14 @@ const ExtensionPointSchema = z
   })
   // A custom slot is always `<providerId>:<local>` (decision 82).
   .refine((ep) => slotIdProblem(ep.slot) === undefined, (ep) => ({ message: slotIdProblem(ep.slot) ?? '', path: ['slot'] }))
+  // `width` and `height` size a widget on the dashboard grid; anywhere else they would be silently ignored.
+  .superRefine((ep, ctx) => {
+    for (const field of ['width', 'height'] as const) {
+      if (ep[field] !== undefined && (ep.kind !== 'widget' || ep.slot !== 'dashboard')) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `"${field}" only sizes a widget on the dashboard (kind "widget", slot "dashboard"); this is kind "${ep.kind}" on slot "${ep.slot}". Remove it, or move the widget to the dashboard slot.` });
+      }
+    }
+  })
   // A contribution to `<providerId>:nav` is an entry in that module's side menu: it needs what a menu entry needs.
   .superRefine((ep, ctx) => {
     const provider = menuSlotProvider(ep.slot);

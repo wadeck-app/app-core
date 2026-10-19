@@ -335,6 +335,17 @@ no base-path logic to worry about. Keep the module id a fixed literal in the URL
 a `$route`/dynamic placeholder -- an empty-placeholder path silently skips the fetch in the
 underlying DSL renderer, so a fixed literal is the safe pattern.
 
+### Sizing a dashboard widget (`width`, `height`)
+
+A `widget` on slot `dashboard` may say how many cells of the dashboard grid it takes. The grid has 4 columns on a wide screen, 2 on a medium one and 1 on a narrow one; a widget wider than the columns available takes them all.
+
+```json
+{ "kind": "widget", "slot": "dashboard", "label": "Runs per day", "width": 2, "height": 2, "view": { "type": "path", "value": "./src/dsl-views/runs.yaml" } }
+```
+
+- `width`: 1 to 4 columns, default 1. `height`: 1 to 4 cells of 9rem, default as tall as the content. A height is a minimum: a widget whose content needs more room grows.
+- Anything else (0, 5, 1.5, a string) fails `check` and `package`, and so does a size on a widget that is not on the dashboard slot, where it would have no effect.
+
 ### Feedback of user actions (`$actions`)
 
 The shell shows the outcome of every action of a view (row and batch actions, forms, brains) as a toast; you write no code for it.

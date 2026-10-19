@@ -12,6 +12,9 @@ export interface ResolvedExtensionPoint {
   path?: string;
   // Sort key within a shell slot (navbar and overlay widgets); entries without it come last.
   order?: number;
+  // Size of a dashboard widget in grid cells, 1 to 4. Absent: 1 wide, as tall as its content.
+  width?: number;
+  height?: number;
 }
 
 // Runtime-loaded components of a module (its dsl-lib folder), cache-busted URLs served by app-core.
