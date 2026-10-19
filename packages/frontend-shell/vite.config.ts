@@ -9,6 +9,9 @@ import react from '@vitejs/plugin-react';
 // custom component package of its own (unlike orch-app's "@orch": "orch-ui").
 export default defineConfig(async () => {
   const { entriesGenerator } = await import('@wadeck-app/dsl-renderer/build/entriesGenerator');
+  // Where the dev server proxies the API: the app-core started on 4850 by default; APP_CORE_API points it at another one
+  // (for example an isolated server with sample modules).
+  const api = process.env['APP_CORE_API'] ?? 'http://127.0.0.1:4850';
   return {
     plugins: [react(), entriesGenerator()],
     build: {
@@ -26,9 +29,9 @@ export default defineConfig(async () => {
     base: '/',
     server: {
       proxy: {
-        '/api': 'http://127.0.0.1:4850',
+        '/api': api,
         // Written by the build next to the served frontend (versions shown in the shell's versions menu).
-        '/build-info.json': 'http://127.0.0.1:4850',
+        '/build-info.json': api,
       },
     },
     optimizeDeps: {

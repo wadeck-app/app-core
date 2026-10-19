@@ -7,4 +7,4 @@
 - Declare a test in one call: `const tab = useAbTest({ id, label, initial, options: { key: { label, hint } } })`, apply `tab.value`, render `<AbDock tests={[tab]} />`. The hint of each option is its tooltip: say what it changes.
 - The dock hides itself outside development; the choice is stored under `ab.<id>`, can be forced by a link (`?ab.<id>=<option>`) and follows other tabs. A row can be hidden; its choice stays applied.
 - Before reporting it ready, click through every variant on the real page with agent-browser and check the console.
-- Once a test is decided, bake the winner in and delete the losing variants and the `AbDock`. No test is open right now: `AppFrame` in `App.tsx` renders none.
+- Once a test is decided, bake the winner in and delete the losing variants and the `AbDock`. Open now: `widget-frame`, `widget-inner` and `widget-grid` on the dashboard (`Dashboard.tsx`, frames in `WidgetFrame.tsx`). To see the dock you need the Vite dev server (`npm run dev` in `packages/frontend-shell`; `APP_CORE_API=<url>` points its proxy at another app-core than the one on 4850).
