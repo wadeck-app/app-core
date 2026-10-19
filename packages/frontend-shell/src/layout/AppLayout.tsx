@@ -60,6 +60,8 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       actions={<TopBarActions modules={modules} failed={failed} />}
       renderLink={routerLink}
       skipLabel="Skip to content"
+      // Lists the tabs that do not fit, so a module is never unreachable when there are many.
+      moreLabel="More modules"
     >
       {children}
     </AppShell>

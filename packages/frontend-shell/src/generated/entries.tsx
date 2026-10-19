@@ -399,9 +399,14 @@ export const ChartEntry: ComponentRegistryEntry = {
 		const data = (resolveExpressionValue(node['data'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['data']
 		const xAxisKey = (resolveExpressionValue(node['xAxisKey'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['xAxisKey']
 		const xAxisType = (resolveExpressionValue(node['xAxisType'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['xAxisType']
+		const xFormat = (resolveExpressionValue(node['xFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['xFormat']
+		const yFormat = (resolveExpressionValue(node['yFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['yFormat']
+		const yUnit = (resolveExpressionValue(node['yUnit'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['yUnit']
+		const variant = (resolveExpressionValue(node['variant'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['variant']
+		const showLegend = (resolveExpressionValue(node['showLegend'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['showLegend']
 		const height = (resolveExpressionValue(node['height'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['height']
 		const series = (resolveExpressionValue(node['series'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['series']
-		return <Chart data={data} xAxisKey={xAxisKey} xAxisType={xAxisType} height={height} series={series} />
+		return <Chart data={data} xAxisKey={xAxisKey} xAxisType={xAxisType} xFormat={xFormat} yFormat={yFormat} yUnit={yUnit} variant={variant} showLegend={showLegend} height={height} series={series} />
 	},
 }
 
@@ -1710,7 +1715,7 @@ AbTestEntry.knownKeys = ["id","initial","label","variants"];
 AbTestEntry.requiresContext = ["AbExperimentsContext"];
 AvatarEntry.knownKeys = ["alt","fallback","size","src"];
 BadgeEntry.knownKeys = ["label","size","tone","variant"];
-ChartEntry.knownKeys = ["data","height","series","xAxisKey","xAxisType"];
+ChartEntry.knownKeys = ["data","height","series","showLegend","variant","xAxisKey","xAxisType","xFormat","yFormat","yUnit"];
 FetchSpinnerEntry.knownKeys = ["loading"];
 HttpMethodBadgeEntry.knownKeys = ["method"];
 HttpStatusBadgeEntry.knownKeys = ["status"];
