@@ -1,10 +1,23 @@
 import * as fs from 'node:fs';
+import * as net from 'node:net';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runServe } from './serve.js';
 
-const PORT = 48731;
+// A free port chosen by the OS: a fixed one collides with any app-core another process (or another test run) already serves.
+async function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address() as net.AddressInfo;
+      probe.close(() => resolve(port));
+    });
+  });
+}
+
+const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 
 describe('runServe', () => {

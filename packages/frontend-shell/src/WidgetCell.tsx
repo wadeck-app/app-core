@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, GripVertical } from 'lucide-react';
 import { Dialog, RelativeDate } from '@wadeck-app/dsl-ui';
 import { ModuleView } from './ModuleView.js';
 import { ModuleLibGate } from './useModuleLibs.js';
@@ -33,6 +33,17 @@ const CELL = '9rem';
 const heightStyle = (height: number | undefined): React.CSSProperties | undefined =>
   height === undefined ? undefined : { minHeight: `calc(${height} * ${CELL} + ${height - 1} * 1rem)` };
 
+// What the dashboard gives each cell to let the user drag it to another place (native HTML drag and drop).
+export interface CellDrag {
+  // This cell is the one being dragged / the one the dragged cell is over.
+  dragging: boolean;
+  over: boolean;
+  onStart: () => void;
+  onEnd: () => void;
+  onOver: () => void;
+  onDrop: () => void;
+}
+
 export interface WidgetCellProps {
   widget: DashboardWidget;
   variant: WidgetFrameVariant;
@@ -41,10 +52,14 @@ export interface WidgetCellProps {
   // Where the module's pages start; undefined when it has none.
   moduleHref: string | undefined;
   onHide: () => void;
+  onMoveEarlier: (() => void) | undefined;
+  onMoveLater: (() => void) | undefined;
+  drag: CellDrag;
 }
 
-export function WidgetCell({ widget, variant, tick, moduleHref, onHide }: WidgetCellProps): React.ReactElement {
+export function WidgetCell({ widget, variant, tick, moduleHref, onHide, onMoveEarlier, onMoveLater, drag }: WidgetCellProps): React.ReactElement {
   const navigate = useNavigate();
+  const cellRef = useRef<HTMLDivElement>(null);
   const [nonce, setNonce] = useState(0);
   const [expanded, setExpanded] = useState(false);
   // When this widget last ran: it starts over on its own refresh and on the dashboard's.
@@ -52,6 +67,27 @@ export function WidgetCell({ widget, variant, tick, moduleHref, onHide }: Widget
   useEffect(() => setRefreshedAt(Date.now()), [nonce, tick]);
   const title = widget.label ?? widget.moduleTitle;
 
+  const handle = (
+    <span
+      draggable
+      role="img"
+      aria-label={`Drag ${title} to reorder`}
+      title="Drag to reorder (or use the menu)"
+      className="flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-muted hover:text-content active:cursor-grabbing"
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        // Firefox starts a drag only when data is set; the whole widget, not just the grip, is the drag image.
+        e.dataTransfer.setData('text/plain', widget.key);
+        if (cellRef.current !== null) {
+          e.dataTransfer.setDragImage(cellRef.current, 16, 16);
+        }
+        drag.onStart();
+      }}
+      onDragEnd={drag.onEnd}
+    >
+      <GripVertical className="h-4 w-4" aria-hidden="true" />
+    </span>
+  );
   const toolbar = (
     <WidgetToolbar
       widgetTitle={title}
@@ -60,14 +96,20 @@ export function WidgetCell({ widget, variant, tick, moduleHref, onHide }: Widget
       onExpand={() => setExpanded(true)}
       onHide={onHide}
       onOpenModule={moduleHref === undefined ? undefined : () => navigate(moduleHref)}
+      onMoveEarlier={onMoveEarlier}
+      onMoveLater={onMoveLater}
     />
   );
   const footer = (
     <>
-      {moduleHref === undefined ? <span>{widget.moduleTitle}</span> : <Link to={moduleHref} className="inline-flex items-center gap-1 hover:text-content hover:underline">
+      {moduleHref === undefined ? (
+        <span>{widget.moduleTitle}</span>
+      ) : (
+        <Link to={moduleHref} className="inline-flex items-center gap-1 hover:text-content hover:underline">
           {`Open ${widget.moduleTitle}`}
           <ArrowRight className="h-3 w-3" aria-hidden="true" />
-        </Link>}
+        </Link>
+      )}
       <span>
         Updated <RelativeDate date={refreshedAt} live tooltip />
       </span>
@@ -80,8 +122,21 @@ export function WidgetCell({ widget, variant, tick, moduleHref, onHide }: Widget
   );
 
   return (
-    <div className={widthClass(widget.width)} style={heightStyle(widget.height)}>
-      <WidgetFrame variant={variant} moduleId={widget.moduleId} moduleTitle={widget.moduleTitle} label={widget.label} bare toolbar={toolbar} footer={footer}>
+    <div
+      ref={cellRef}
+      className={`${widthClass(widget.width)} rounded-md transition-opacity ${drag.dragging ? 'opacity-40' : ''} ${drag.over ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+      style={heightStyle(widget.height)}
+      onDragOver={(e) => {
+        // Only a dashboard widget being dragged may be dropped here.
+        e.preventDefault();
+        drag.onOver();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        drag.onDrop();
+      }}
+    >
+      <WidgetFrame variant={variant} moduleId={widget.moduleId} moduleTitle={widget.moduleTitle} label={widget.label} bare handle={handle} toolbar={toolbar} footer={footer}>
         {view}
       </WidgetFrame>
       <Dialog title={title} open={expanded} onOpenChange={setExpanded} size="xl">

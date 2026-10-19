@@ -2,13 +2,12 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { WidgetFrame, type WidgetFrameVariant } from './WidgetFrame.js';
 
-const VARIANTS: WidgetFrameVariant[] = ['jira', 'jira-tools', 'jira-footer', 'datadog-tools', 'atlas'];
-const WITH_TOOLS: WidgetFrameVariant[] = ['jira-tools', 'jira-footer', 'datadog-tools', 'atlas'];
-const WITH_FOOTER: WidgetFrameVariant[] = ['jira-footer', 'atlas'];
+const VARIANTS: WidgetFrameVariant[] = ['datadog', 'datadog-compact', 'datadog-accent', 'datadog-footer', 'datadog-logo'];
+const WITH_FOOTER: WidgetFrameVariant[] = ['datadog-footer'];
 
 const renderFrame = (variant: WidgetFrameVariant, label: string | undefined, bare = false) =>
   render(
-    <WidgetFrame variant={variant} moduleId="orchestrator" moduleTitle="Orchestrator" label={label} bare={bare} toolbar={<button>tools</button>} footer={<span>footer text</span>}>
+    <WidgetFrame variant={variant} moduleId="orchestrator" moduleTitle="Orchestrator" label={label} bare={bare} handle={<span>grip</span>} toolbar={<button>tools</button>} footer={<span>footer text</span>}>
       <p>body</p>
     </WidgetFrame>,
   );
@@ -26,9 +25,10 @@ describe('WidgetFrame', () => {
     expect(screen.getByRole('heading', { name: 'Orchestrator' })).toBeInTheDocument();
   });
 
-  it.each(VARIANTS)('%s names the module under the title when the widget has a label', (variant) => {
+  it.each(VARIANTS)('%s names the module when the widget has a label', (variant) => {
     renderFrame(variant, 'Runs today');
-    expect(screen.getAllByText('Orchestrator').length).toBeGreaterThan(0);
+    // Written next to the title, or in the tooltip of the tile.
+    expect(screen.queryAllByText('Orchestrator').length + screen.queryAllByTitle('Orchestrator').length).toBeGreaterThan(0);
   });
 
   it.each(VARIANTS)('%s leaves the widget its own box unless bare is asked', (variant) => {
@@ -41,9 +41,11 @@ describe('WidgetFrame', () => {
     expect(screen.getByRole('article').className).toContain('[&>.border]:border-0');
   });
 
-  it.each(VARIANTS)('%s shows the tools only if it has a place for them', (variant) => {
+  it.each(VARIANTS)('%s always shows the grip and the tools, not only on hover', (variant) => {
     renderFrame(variant, 'Runs today');
-    expect(screen.queryByRole('button', { name: 'tools' }) !== null).toBe(WITH_TOOLS.includes(variant));
+    expect(screen.getByText('grip')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'tools' })).toBeInTheDocument();
+    expect(screen.getByRole('banner').className).not.toContain('opacity-0');
   });
 
   it.each(VARIANTS)('%s shows the footer only if it has one', (variant) => {

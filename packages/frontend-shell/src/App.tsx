@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
+import { AbExperiments, RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { Dashboard } from './Dashboard.js';
 import { ModulePage } from './ModulePage.js';
 import { OverlayWidgets } from './OverlayWidgets.js';
@@ -43,6 +43,8 @@ export default function App(): React.ReactElement {
   return (
     <BrowserRouter>
       {/* Provides UrlParamContext/RouterContext: module views bind components to URL params (e.g. Pagination `urlParam`). */}
+      {/* The one A/B dock (development builds): the shell's own tests and the AbTest nodes of module views share it. */}
+      <AbExperiments>
       <RouterProvider>
         <ToastProvider>
           {/* The outcome of every module action (row/batch actions, forms, brains) is shown as a toast. */}
@@ -94,6 +96,7 @@ export default function App(): React.ReactElement {
           </ShellNotifier>
         </ToastProvider>
       </RouterProvider>
+      </AbExperiments>
     </BrowserRouter>
   );
 }

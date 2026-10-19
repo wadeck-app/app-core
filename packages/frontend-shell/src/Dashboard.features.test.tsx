@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@wadeck-app/dsl-ui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,8 +35,6 @@ const cellOf = (label: string): HTMLElement => screen.getByRole('heading', { nam
 
 beforeEach(() => {
   window.localStorage.clear();
-  // The frame variant that has the tools (the A/B test choice is kept under ab.<id>).
-  window.localStorage.setItem('ab.widget-frame', 'jira-tools');
 });
 
 afterEach(() => {
@@ -94,7 +92,7 @@ describe('Dashboard: hiding a widget', () => {
     window.localStorage.setItem('app-core.dashboard.hidden', '{not json');
     renderDashboard();
     expect(screen.getAllByRole('article')).toHaveLength(3);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('cannot read the hidden widgets'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('cannot read "app-core.dashboard.hidden"'));
   });
 });
 
@@ -109,5 +107,80 @@ describe('Dashboard: widget actions', () => {
     renderDashboard();
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Queue depth' }));
     expect(screen.getByRole('menuitem', { name: 'Open Message queue' })).toBeDisabled();
+  });
+});
+
+// The grip of a widget and the cell that takes the drop (native HTML drag and drop).
+const gripOf = (label: string): HTMLElement => screen.getByRole('img', { name: `Drag ${label} to reorder` });
+const titles = (): Array<string | null> => screen.getAllByRole('article').map((a) => a.getAttribute('aria-label'));
+
+function drag(from: string, onto: string): void {
+  const dataTransfer = { effectAllowed: '', setData: () => {}, setDragImage: () => {} };
+  const target = screen.getByRole('article', { name: onto }).closest('section')!.parentElement!;
+  fireEvent(gripOf(from), Object.assign(createEvent.dragStart(gripOf(from)), { dataTransfer }));
+  fireEvent.dragOver(target);
+  fireEvent.drop(target);
+  fireEvent.dragEnd(gripOf(from));
+}
+
+describe('Dashboard: order of the widgets', () => {
+  it('starts in the natural order', () => {
+    renderDashboard();
+    expect(titles()).toEqual(['Flow health', 'Active flows', 'Queue depth']);
+  });
+
+  it('moves a widget onto another with drag and drop, and remembers it in this browser', () => {
+    const first = renderDashboard();
+    drag('Queue depth', 'Flow health');
+    expect(titles()).toEqual(['Queue depth', 'Flow health', 'Active flows']);
+    expect(JSON.parse(window.localStorage.getItem('app-core.dashboard.order') ?? '[]')).toEqual(['queue-0', 'flow-0', 'flow-1']);
+
+    first.unmount();
+    renderDashboard();
+    expect(titles()).toEqual(['Queue depth', 'Flow health', 'Active flows']);
+  });
+
+  it('moves a widget later, then earlier, from its menu (the way without a mouse)', () => {
+    renderDashboard();
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Flow health' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move later' }));
+    expect(titles()).toEqual(['Active flows', 'Flow health', 'Queue depth']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Flow health' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move earlier' }));
+    expect(titles()).toEqual(['Flow health', 'Active flows', 'Queue depth']);
+  });
+
+  it('cannot move the first widget earlier', () => {
+    renderDashboard();
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Flow health' }));
+    expect(screen.getByRole('menuitem', { name: 'Move earlier' })).toBeDisabled();
+  });
+
+  it('cannot move the last widget later', () => {
+    renderDashboard();
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Queue depth' }));
+    expect(screen.getByRole('menuitem', { name: 'Move later' })).toBeDisabled();
+  });
+
+  it('offers the way back to the default order only once it was changed', () => {
+    renderDashboard();
+    expect(screen.queryByRole('button', { name: 'Reset order' })).not.toBeInTheDocument();
+    drag('Queue depth', 'Flow health');
+    fireEvent.click(screen.getByRole('button', { name: 'Reset order' }));
+    expect(titles()).toEqual(['Flow health', 'Active flows', 'Queue depth']);
+    expect(window.localStorage.getItem('app-core.dashboard.order')).toBe('[]');
+  });
+
+  it('puts a widget that appeared after the order was saved at the end', () => {
+    window.localStorage.setItem('app-core.dashboard.order', JSON.stringify(['queue-0', 'flow-0']));
+    renderDashboard();
+    expect(titles()).toEqual(['Queue depth', 'Flow health', 'Active flows']);
+  });
+
+  it('ignores a drop on the widget itself', () => {
+    renderDashboard();
+    drag('Flow health', 'Flow health');
+    expect(window.localStorage.getItem('app-core.dashboard.order')).toBeNull();
   });
 });

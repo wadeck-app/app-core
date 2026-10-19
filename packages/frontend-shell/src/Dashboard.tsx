@@ -1,19 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 import { AbDock, PageContent, PageSection, useAbTest } from '@wadeck-app/dsl-ui';
-import { DashboardBar, type DashboardBarVariant } from './DashboardBar.js';
+import { DashboardBar } from './DashboardBar.js';
 import { WidgetCell, type DashboardWidget } from './WidgetCell.js';
 import type { WidgetFrameVariant } from './WidgetFrame.js';
-import { Logo } from './layout/Logo.js';
 import { navModulesFor, titleFromId } from './layout/navModel.js';
-import { useHiddenWidgets, useRefreshTick, type RefreshInterval } from './useDashboardState.js';
+import { useDockTests } from './useDockTests.js';
+import { useHiddenWidgets, useRefreshTick, useWidgetOrder, type RefreshInterval } from './useDashboardState.js';
 import type { LoadedModuleSummary } from './types.js';
 
 export interface DashboardProps {
   modules: LoadedModuleSummary[];
 }
 
-const GRID = 'grid grid-flow-dense grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4';
+type GridWidth = 'fill' | 'wide' | 'medium' | 'narrow';
+// How much of the page the dashboard takes. The class names are written out in full so that Tailwind finds them.
+const WIDTH_CLASS: Record<GridWidth, string> = {
+  fill: '',
+  wide: 'mx-auto max-w-[1600px]',
+  medium: 'mx-auto max-w-[1280px]',
+  narrow: 'mx-auto max-w-[1024px]',
+};
 
 // Base slot: widget/dashboard -> rendered into a grid (frontend-shell.md "Base slots").
 // Widgets use the same GenericPageRunner + fetcher path as pages (ModulePage.tsx)
@@ -28,107 +34,118 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
   const moduleHref = useMemo(() => new Map(navModulesFor(modules).map((m) => [m.id, m.pages[0]?.routePath])), [modules]);
 
   const { hidden, hide, restoreAll } = useHiddenWidgets();
+  const order = useWidgetOrder(widgets);
   const [interval, setIntervalChoice] = useState<RefreshInterval>('off');
   const { tick, refresh } = useRefreshTick(interval);
   const [refreshedAt, setRefreshedAt] = useState(() => Date.now());
   useEffect(() => setRefreshedAt(Date.now()), [tick]);
   const [filter, setFilter] = useState<string | undefined>(undefined);
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  // The widget being dragged and the one it is over.
+  const [dragKey, setDragKey] = useState<string | undefined>(undefined);
+  const [overKey, setOverKey] = useState<string | undefined>(undefined);
 
   // A/B tests open on the dashboard (see the A/B testing rule in the project CLAUDE.md).
   const frame = useAbTest<WidgetFrameVariant>({
     id: 'widget-frame',
     label: 'Widget frame',
-    initial: 'jira',
+    initial: 'datadog',
     options: {
-      jira: { label: 'Jira', hint: 'The chosen gadget, as is: module logo, title with the module as subtitle, 3px bar of the module color on top.' },
-      'jira-tools': { label: 'Jira + tools', hint: 'Jira, plus refresh / expand / menu (open the module, hide) that appear when the pointer or the keyboard is on the widget, and a lift on hover.' },
-      'jira-footer': { label: 'Jira + footer', hint: 'Jira + tools, plus a footer: link to the module and when the widget was last refreshed.' },
-      'datadog-tools': { label: 'Datadog', hint: 'Slim header row (color dot, title); the module name gives way to the tools on hover. Radius 6px.' },
-      atlas: { label: 'Atlas', hint: 'Atlassian proportions: 8px radius, 12/16px spacing, a faint wash of the module color in the header, tools and footer.' },
+      datadog: { label: 'Datadog', hint: 'Slim header: grip to drag, color dot, title, module name, and the tools (refresh, expand, menu) always visible.' },
+      'datadog-compact': { label: 'Compact', hint: 'Denser: 32px header, tighter body; the module name only shows as a tooltip.' },
+      'datadog-accent': { label: 'Accent', hint: 'A bar of the module color down the left edge and a faint wash of it in the header.' },
+      'datadog-footer': { label: 'Footer', hint: 'Datadog + a footer: link to the module and when the widget was last refreshed.' },
+      'datadog-logo': { label: 'Logo', hint: 'The module logo instead of the dot (says which module it is without the name).' },
     },
   });
-  const bar = useAbTest<DashboardBarVariant>({
-    id: 'dashboard-bar',
-    label: 'Dashboard bar',
-    initial: 'full',
+  const width = useAbTest<GridWidth>({
+    id: 'dashboard-width',
+    label: 'Dashboard width',
+    initial: 'fill',
     options: {
-      off: { label: 'None', hint: 'Today: nothing above the widgets.' },
-      lite: { label: 'Lite', hint: 'When the data is from, a Refresh button, and a way back for hidden widgets.' },
-      full: { label: 'Full', hint: 'Lite + one filter chip per module and an automatic refresh (30 s, 1 min, 5 min).' },
-    },
-  });
-  const groups = useAbTest({
-    id: 'dashboard-groups',
-    label: 'Grouping',
-    initial: 'flat',
-    options: {
-      flat: { label: 'Flat', hint: 'One grid with every widget.' },
-      'by-module': { label: 'By module', hint: 'One collapsible section per module (Datadog groups), with its logo and widget count.' },
+      fill: { label: 'Fill', hint: 'Today: the grid takes the whole width of the page.' },
+      wide: { label: 'Wide', hint: 'At most 1600px, centered: keeps widgets from stretching on very wide screens.' },
+      medium: { label: 'Medium', hint: 'At most 1280px, centered: three or four widgets per row on a laptop.' },
+      narrow: { label: 'Narrow', hint: 'At most 1024px, centered: a reading column, two widgets per row.' },
     },
   });
 
-  const visible = widgets.filter((w) => !hidden.has(w.key) && (filter === undefined || w.moduleId === filter));
+  // In the one dock of the app-wide host when there is one, else in a dock of its own.
+  const hosted = useDockTests([frame, width]);
+
+  const visible = order.ordered.filter((w) => !hidden.has(w.key) && (filter === undefined || w.moduleId === filter));
+  const visibleKeys = visible.map((w) => w.key);
   const filterOptions = [...new Set(widgets.map((w) => w.moduleId))].map((id) => ({
     id,
     title: widgets.find((w) => w.moduleId === id)?.moduleTitle ?? id,
     count: widgets.filter((w) => w.moduleId === id && !hidden.has(w.key)).length,
   }));
+  const stopDrag = (): void => {
+    setDragKey(undefined);
+    setOverKey(undefined);
+  };
 
   const cell = (w: DashboardWidget): React.ReactElement => (
-    <WidgetCell key={w.key} widget={w} variant={frame.value} tick={tick} moduleHref={moduleHref.get(w.moduleId)} onHide={() => hide(w.key)} />
+    <WidgetCell
+      key={w.key}
+      widget={w}
+      variant={frame.value}
+      tick={tick}
+      moduleHref={moduleHref.get(w.moduleId)}
+      onHide={() => hide(w.key)}
+      onMoveEarlier={visibleKeys.indexOf(w.key) > 0 ? () => order.step(w.key, -1, visibleKeys) : undefined}
+      onMoveLater={visibleKeys.indexOf(w.key) < visibleKeys.length - 1 ? () => order.step(w.key, 1, visibleKeys) : undefined}
+      drag={{
+        dragging: dragKey === w.key,
+        over: dragKey !== undefined && dragKey !== w.key && overKey === w.key,
+        onStart: () => setDragKey(w.key),
+        onEnd: stopDrag,
+        // Only a widget of this dashboard being dragged counts (not a file or a link dragged over the page).
+        onOver: () => dragKey !== undefined && setOverKey(w.key),
+        onDrop: () => {
+          if (dragKey !== undefined) {
+            order.moveTo(dragKey, w.key);
+          }
+          stopDrag();
+        },
+      }}
+    />
   );
-
-  const sections = [...new Set(visible.map((w) => w.moduleId))].map((id) => {
-    const items = visible.filter((w) => w.moduleId === id);
-    const title = items[0]?.moduleTitle ?? id;
-    const open = !collapsed.has(id);
-    return (
-      <section key={id} aria-label={title} className="mb-6">
-        <button
-          type="button"
-          aria-expanded={open}
-          className="mb-3 flex w-full items-center gap-2 border-b border-border pb-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          onClick={() => setCollapsed((prev) => (open ? new Set([...prev, id]) : new Set([...prev].filter((c) => c !== id))))}
-        >
-          {open ? <ChevronDown className="h-4 w-4 text-muted" aria-hidden="true" /> : <ChevronRight className="h-4 w-4 text-muted" aria-hidden="true" />}
-          <Logo title={title} moduleId={id} />
-          <span className="text-sm font-semibold text-content">{title}</span>
-          <span className="text-xs text-muted">{`${items.length} widget${items.length === 1 ? '' : 's'}`}</span>
-        </button>
-        {open ? <div className={GRID}>{items.map(cell)}</div> : null}
-      </section>
-    );
-  });
 
   return (
     <>
       <PageContent
         sections={
           <PageSection title="Dashboard">
-            {widgets.length === 0 ? (
-              <p className="text-muted">No widgets registered yet.</p>
-            ) : (
-              <>
-                <DashboardBar
-                  variant={bar.value}
-                  refreshedAt={refreshedAt}
-                  onRefresh={refresh}
-                  hiddenCount={widgets.filter((w) => hidden.has(w.key)).length}
-                  onRestore={restoreAll}
-                  modules={filterOptions}
-                  filter={filter}
-                  onFilter={setFilter}
-                  interval={interval}
-                  onInterval={setIntervalChoice}
-                />
-                {visible.length === 0 ? <p className="text-muted">Every widget is hidden or filtered out.</p> : groups.value === 'flat' ? <div className={GRID}>{visible.map(cell)}</div> : sections}
-              </>
-            )}
+            <div className={WIDTH_CLASS[width.value]}>
+              {widgets.length === 0 ? (
+                <p className="text-muted">No widgets registered yet.</p>
+              ) : (
+                <>
+                  <DashboardBar
+                    refreshedAt={refreshedAt}
+                    onRefresh={refresh}
+                    hiddenCount={widgets.filter((w) => hidden.has(w.key)).length}
+                    onRestore={restoreAll}
+                    orderCustomized={order.customized}
+                    onResetOrder={order.reset}
+                    modules={filterOptions}
+                    filter={filter}
+                    onFilter={setFilter}
+                    interval={interval}
+                    onInterval={setIntervalChoice}
+                  />
+                  {visible.length === 0 ? (
+                    <p className="text-muted">Every widget is hidden or filtered out.</p>
+                  ) : (
+                    <div className="grid grid-flow-dense grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">{visible.map(cell)}</div>
+                  )}
+                </>
+              )}
+            </div>
           </PageSection>
         }
       />
-      <AbDock tests={[frame, bar, groups]} />
+      {hosted ? null : <AbDock tests={[frame, width]} />}
     </>
   );
 }
