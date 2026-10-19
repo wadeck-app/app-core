@@ -1,10 +1,21 @@
 import * as fs from 'node:fs';
-import { ZodError } from 'zod';
 import { parseManifest, parseSourceManifest, type Manifest, type SourceManifest } from '@wadeck-app/app-core-sdk';
 
 // `message` is the full text for a terminal (it names the file); `reason` is the same text without the
 // file path, for callers that already print the path themselves (check).
 export type ManifestValidation<T> = { ok: true; manifest: T } | { ok: false; message: string; reason: string };
+
+interface IssueLike {
+  path: Array<string | number>;
+  message: string;
+}
+
+// The error comes from the SDK bundle, which can hold its own copy of zod: `instanceof ZodError` is then false and the
+// author would read raw JSON instead of the issues. The shape is what matters.
+function issuesOf(err: unknown): IssueLike[] | undefined {
+  const candidate = err as { name?: unknown; issues?: unknown } | null;
+  return candidate?.name === 'ZodError' && Array.isArray(candidate.issues) ? (candidate.issues as IssueLike[]) : undefined;
+}
 
 function validateWith<T>(manifestPath: string, parse: (raw: unknown) => T): ManifestValidation<T> {
   if (!fs.existsSync(manifestPath)) {
@@ -20,10 +31,11 @@ function validateWith<T>(manifestPath: string, parse: (raw: unknown) => T): Mani
   try {
     return { ok: true, manifest: parse(raw) };
   } catch (err) {
+    const issues = issuesOf(err);
     const reason =
-      err instanceof ZodError
-        ? `failed manifest validation:\n${err.issues.map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`).join('\n')}`
-        : `failed manifest validation: ${(err as Error).message}`;
+      issues === undefined
+        ? `failed manifest validation: ${(err as Error).message}`
+        : `failed manifest validation:\n${issues.map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`).join('\n')}`;
     return { ok: false, message: `${manifestPath} ${reason}`, reason };
   }
 }

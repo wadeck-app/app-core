@@ -290,7 +290,7 @@ describe('check: requires and contributions', () => {
       const provider = await packagedProvider();
       const dir = track(makeModule(contributorFiles({ 'manifest.json': menuManifest({ path: undefined }) })));
       const issues = (await checkModule(dir, { links: { '@x/prov': provider } })).issues;
-      expect(issues.filter((i) => i.file === 'manifest.json').map((i) => i.problem).join('\n')).toMatch(/add a \\?"path\\?"/);
+      expect(issues.filter((i) => i.file === 'manifest.json').map((i) => i.problem).join('\n')).toContain('add a "path"');
     });
   });
 });
