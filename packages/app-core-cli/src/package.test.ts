@@ -132,7 +132,9 @@ describe('packageModule: output manifest and views', () => {
       await packageModule({ moduleDir: withShowInNav(false), outDir: out, version: '1.0.0' });
       expect(JSON.parse(read(out, 'manifest.json'))).toMatchObject({ id: 'tiny', showInNav: false });
       const validated = validateManifestFile(path.join(out, 'manifest.json'));
-      if (!validated.ok) throw new Error(validated.message);
+      if (!validated.ok) {
+        throw new Error(validated.message);
+      }
       expect(validated.manifest.showInNav).toBe(false);
     });
 
@@ -161,7 +163,9 @@ describe('packageModule: output manifest and views', () => {
       await packageModule({ moduleDir: withTitle('Tiny module'), outDir: out, version: '1.0.0' });
       expect(JSON.parse(read(out, 'manifest.json'))).toMatchObject({ id: 'tiny', title: 'Tiny module' });
       const validated = validateManifestFile(path.join(out, 'manifest.json'));
-      if (!validated.ok) throw new Error(validated.message);
+      if (!validated.ok) {
+        throw new Error(validated.message);
+      }
       expect(validated.manifest.title).toBe('Tiny module');
     });
 

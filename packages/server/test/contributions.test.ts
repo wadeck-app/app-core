@@ -216,7 +216,9 @@ describe('menu contributions (<provider>:nav)', () => {
     try {
       fn();
     } catch (err) {
-      if (err instanceof ZodError) return err.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+      if (err instanceof ZodError) {
+        return err.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+      }
       throw err;
     }
     return [];

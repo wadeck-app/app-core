@@ -17,15 +17,7 @@ export default {
   rules: {
     // src/backend/index.ts and src/dsl-components/index.ts are fixed entry points (decision 81), not barrels.
     'ts/no-barrel-index': { $exclude: ['**/app-module-*/src/backend/index.ts', '**/app-module-*/src/dsl-components/index.ts'] },
-    './.violations/rules/app-module-no-raw-timers.ts': true,
-    './.violations/rules/app-module-manifest-exists-and-valid.ts': true,
-    './.violations/rules/app-module-backend-entry-location.ts': true,
-    './.violations/rules/app-module-view-location.ts': true,
-    './.violations/rules/app-module-no-react.ts': true,
-    './.violations/rules/app-module-source-layout.ts': true,
-    './.violations/rules/app-module-import-boundaries.ts': true,
-    './.violations/rules/app-module-publishing.ts': true,
-    './.violations/rules/app-module-naming-convention.ts': true,
+    // The app-module/* rules come from @wadeck-app/violations-rules (always active); only this one is local.
     './.violations/rules/app-core-sdk-no-internal-dependencies.ts': true,
   },
 } satisfies ViolationsConfig

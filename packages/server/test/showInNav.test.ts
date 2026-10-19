@@ -18,9 +18,11 @@ function copyFixtureWith(configDir: string, fixture: string, id: string, showInN
   const target = path.join(configDir, `copy-${id}`, 'dist-module');
   fs.cpSync(sourceDir, target, { recursive: true });
   const manifestPath = path.join(target, 'manifest.json');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
+  const manifest: Record<string, unknown> = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   manifest['id'] = id;
-  if (showInNav !== undefined) manifest['showInNav'] = showInNav;
+  if (showInNav !== undefined) {
+    manifest['showInNav'] = showInNav;
+  }
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   return manifestPath;
 }
@@ -86,7 +88,7 @@ describe('GET /api/modules: title', () => {
   it('reports the title the manifest gives, and none for a module that gives none (the shell derives it from the id)', async () => {
     const modules = path.join(configDir, 'modules');
     const titled = copyFixtureWith(configDir, 'app-module-minimal', 'titled-one', undefined);
-    const manifest = JSON.parse(fs.readFileSync(titled, 'utf8')) as Record<string, unknown>;
+    const manifest: Record<string, unknown> = JSON.parse(fs.readFileSync(titled, 'utf8'));
     fs.writeFileSync(titled, JSON.stringify({ ...manifest, title: 'Fancy Name' }, null, 2));
     writeRegistryEntry(modules, { id: 'titled-one', source: { type: 'file', path: titled } });
     writeRegistryEntry(modules, { id: 'plain-one', source: { type: 'file', path: copyFixtureWith(configDir, 'app-module-minimal', 'plain-one', undefined) } });

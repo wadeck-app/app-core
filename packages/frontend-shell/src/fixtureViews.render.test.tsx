@@ -278,9 +278,13 @@ describe('compiler diagnostics on the packaged fixture views', () => {
   beforeAll(async () => {
     await ensureSharedGlobals();
     for (const fixture of fixtures) {
-      if (fixture.manifest.dslLib === undefined) continue;
+      if (fixture.manifest.dslLib === undefined) {
+        continue;
+      }
       const loaded = (await import(/* @vite-ignore */ pathToFileURL(path.resolve(fixture.distDir, fixture.manifest.dslLib.entry)).href)) as { default?: ComponentRegistryEntry[] };
-      if (!Array.isArray(loaded.default)) throw new Error(`${fixture.manifest.id}: dslLib.entry must default-export the ComponentRegistryEntry[] array.`);
+      if (!Array.isArray(loaded.default)) {
+        throw new Error(`${fixture.manifest.id}: dslLib.entry must default-export the ComponentRegistryEntry[] array.`);
+      }
       registerModuleEntries(fixture.manifest.id, loaded.default);
       compiledModules.push(fixture.manifest.id);
     }
