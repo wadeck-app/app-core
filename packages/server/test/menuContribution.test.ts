@@ -13,11 +13,11 @@ interface ModulesBody {
   failed: Array<{ id: string; error: string }>;
 }
 
-// A module copied from a packaged fixture, with its manifest edited, registered under its own id.
+// A module copied from a packaged fixture (by default the menu provider), with its manifest edited, registered under its own id.
 // The folder is named "dist-module" on purpose: vitest.config.ts only lets Node load a CommonJS bundle natively from such a path.
-function addModule(configDir: string, id: string, edit: (manifest: Json) => void): void {
+function addModule(configDir: string, id: string, edit: (manifest: Json) => void, fixture = 'app-module-menu-provider'): void {
   const target = path.join(configDir, `copy-${id}`, 'dist-module');
-  fs.cpSync(path.dirname(fixtureManifest('app-module-live-page')), target, { recursive: true });
+  fs.cpSync(path.dirname(fixtureManifest(fixture)), target, { recursive: true });
   const manifestPath = path.join(target, 'manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Json;
   manifest['id'] = id;
@@ -142,6 +142,83 @@ describe('a module adds a page to the side menu of the module it requires', () =
     const after = await get(server);
     expect(after.modules).toEqual([]);
     expect(after.failed.map((f) => f.id)).toEqual(['menu-contrib']);
+    await server.close();
+  });
+});
+
+// The same feature with the dedicated fixtures: menu-provider (two pages of its own) and two modules that only add
+// a page to its side menu, built by scripts/build-fixtures.mjs.
+describe('fixtures menu-provider, menu-contributor-a and menu-contributor-b', () => {
+  let configDir: string;
+
+  beforeEach(() => {
+    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-menu-fx-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  type Server = Awaited<ReturnType<typeof buildServer>>['server'];
+  const register = (server: Server, id: string, fixture: string) =>
+    server.inject({ method: 'POST', url: '/api/modules/register', payload: { id, source: { type: 'file', path: fixtureManifest(fixture) } } });
+  const modules = async (server: Server): Promise<ModulesBody> => (await server.inject({ method: 'GET', url: '/api/modules' })).json() as ModulesBody;
+
+  async function registerAll(server: Server): Promise<void> {
+    // The provider first: the contributors require it.
+    for (const [id, fixture] of [
+      ['menu-provider', 'app-module-menu-provider'],
+      ['menu-contributor-a', 'app-module-menu-contributor-a'],
+      ['menu-contributor-b', 'app-module-menu-contributor-b'],
+    ]) {
+      const res = await register(server, id, fixture);
+      expect(res.statusCode, res.body).toBe(201);
+    }
+  }
+
+  it('registers the provider and both contributors, which put their page on "menu-provider:nav"', async () => {
+    const { server } = await buildServer({ configDir });
+    await registerAll(server);
+    const body = await modules(server);
+    expect(body.failed).toEqual([]);
+    const pages = (id: string) => body.modules.find((m) => m.id === id)!.extensionPoints.map((ep) => [ep.slot, ep.label, ep.path]);
+    expect(pages('menu-provider')).toEqual([
+      ['nav', 'Provider home', '/'],
+      ['nav', 'Provider list', '/list'],
+    ]);
+    expect(pages('menu-contributor-a')).toEqual([['menu-provider:nav', 'Contributor A page', '/a']]);
+    expect(pages('menu-contributor-b')).toEqual([['menu-provider:nav', 'Contributor B page', '/b']]);
+    await server.close();
+  });
+
+  it('serves the contributions through the generic slot endpoint, sorted by order (B has 10, A has 20)', async () => {
+    const { server } = await buildServer({ configDir });
+    await registerAll(server);
+    const res = await server.inject({ method: 'GET', url: '/api/slots/menu-provider:nav' });
+    expect(res.statusCode).toBe(200);
+    // The endpoint answers the bare views, sorted: B (order 10) then A (order 20).
+    expect((res.json() as Array<{ label: string }>).map((v) => v.label)).toEqual(['menu-contributor-b-page', 'menu-contributor-a-page']);
+    await server.close();
+  });
+
+  it('refuses a contributor registered before its provider, naming the provider and the fix', async () => {
+    const { server } = await buildServer({ configDir });
+    const res = await register(server, 'menu-contributor-a', 'app-module-menu-contributor-a');
+    expect(res.statusCode).toBe(422);
+    expect(res.body).toContain('requires \\"menu-provider\\"');
+    expect(res.body).toContain('Register \\"menu-provider\\" first');
+    await server.close();
+  });
+
+  it('unregistering the provider takes both contributors with it and says why', async () => {
+    const { server } = await buildServer({ configDir });
+    await registerAll(server);
+    const res = await server.inject({ method: 'POST', url: '/api/modules/unregister', payload: { id: 'menu-provider' } });
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as { cascaded: string[] }).cascaded.sort()).toEqual(['menu-contributor-a', 'menu-contributor-b']);
+    const after = await modules(server);
+    expect(after.modules).toEqual([]);
+    expect(after.failed.map((f) => f.error).join('\n')).toContain('required module "menu-provider" was unregistered');
     await server.close();
   });
 });

@@ -1,0 +1,9 @@
+{
+  "name": "@wadeck-app/app-module-menu-contributor-a",
+  "version": "0.0.0",
+  "private": true,
+  "files": ["dist-module"],
+  "dependencies": {
+    "@wadeck-app/app-module-menu-provider": "*"
+  }
+}

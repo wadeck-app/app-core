@@ -1,0 +1,6 @@
+{
+  "name": "@wadeck-app/app-module-menu-provider",
+  "version": "0.0.0",
+  "private": true,
+  "files": ["dist-module"]
+}

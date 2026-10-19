@@ -1,0 +1,14 @@
+{
+  "id": "menu-contributor-b",
+  "requires": { "menu-provider": "^1.0.0" },
+  "extensionPoints": [
+    {
+      "kind": "page",
+      "slot": "menu-provider:nav",
+      "label": "Contributor B page",
+      "path": "/b",
+      "order": 10,
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "menu-contributor-b-page" } }
+    }
+  ]
+}

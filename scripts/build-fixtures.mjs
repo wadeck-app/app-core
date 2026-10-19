@@ -31,6 +31,10 @@ export const VERSIONS = {
   'app-module-example': '1.0.0',
   'app-module-live-page': '1.0.0',
   'app-module-live-widget': '1.0.0',
+  'app-module-menu-contributor-a': '1.0.0',
+  'app-module-menu-contributor-b': '1.0.0',
+  // Built before the contributors (see packageOrder), which are checked against its dist-module.
+  'app-module-menu-provider': '1.0.0',
   'app-module-minimal': '1.0.0',
   'app-module-slot-contributor-a': '1.0.0',
   'app-module-slot-contributor-b': '1.0.0',

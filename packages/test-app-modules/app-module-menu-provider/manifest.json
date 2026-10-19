@@ -1,0 +1,19 @@
+{
+  "id": "menu-provider",
+  "extensionPoints": [
+    {
+      "kind": "page",
+      "slot": "nav",
+      "label": "Provider home",
+      "path": "/",
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "menu-provider-home" } }
+    },
+    {
+      "kind": "page",
+      "slot": "nav",
+      "label": "Provider list",
+      "path": "/list",
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "menu-provider-list" } }
+    }
+  ]
+}
