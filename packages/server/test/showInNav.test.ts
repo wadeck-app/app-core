@@ -71,3 +71,29 @@ describe('GET /api/modules: showInNav', () => {
     await server.close();
   });
 });
+
+describe('GET /api/modules: title', () => {
+  let configDir: string;
+
+  beforeEach(() => {
+    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-title-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  it('reports the title the manifest gives, and none for a module that gives none (the shell derives it from the id)', async () => {
+    const modules = path.join(configDir, 'modules');
+    const titled = copyFixtureWith(configDir, 'app-module-minimal', 'titled-one', undefined);
+    const manifest = JSON.parse(fs.readFileSync(titled, 'utf8')) as Record<string, unknown>;
+    fs.writeFileSync(titled, JSON.stringify({ ...manifest, title: 'Fancy Name' }, null, 2));
+    writeRegistryEntry(modules, { id: 'titled-one', source: { type: 'file', path: titled } });
+    writeRegistryEntry(modules, { id: 'plain-one', source: { type: 'file', path: copyFixtureWith(configDir, 'app-module-minimal', 'plain-one', undefined) } });
+
+    const { server } = await buildServer({ configDir });
+    const body = (await server.inject({ method: 'GET', url: '/api/modules' })).json() as { modules: Array<{ id: string; title?: string }>; failed: unknown[] };
+    expect(Object.fromEntries(body.modules.map((m) => [m.id, m.title])), `failed: ${JSON.stringify(body.failed)}`).toEqual({ 'titled-one': 'Fancy Name', 'plain-one': undefined });
+    await server.close();
+  });
+});

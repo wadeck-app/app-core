@@ -197,3 +197,11 @@ describe('pages contributed to another module side menu (<provider>:nav)', () =>
     });
   });
 });
+
+describe('title (the manifest display name)', () => {
+  it('is the title of the module in the navigation when the manifest gives one, else derived from the id', () => {
+    const named = { ...mod('flow-chart', page('nav', 'Home', '/')), title: 'Flow Charts' };
+    const plain = mod('billing-reports', page('nav', 'Home', '/'));
+    expect(navModulesFor([named, plain]).map((m) => m.title)).toEqual(['Flow Charts', 'Billing reports']);
+  });
+});

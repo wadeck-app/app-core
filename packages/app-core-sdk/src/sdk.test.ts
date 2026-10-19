@@ -114,3 +114,28 @@ describe('app-core-sdk module author types (decisions 95 and 97)', () => {
     await teardown({ id: 'author', version: '1.0.0', previousVersion: null, dataDir: '/tmp/data/author', reason: 'shutdown', instance });
   });
 });
+
+describe('app-core-sdk title', () => {
+  const widget = { kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: { $type: 'Badge', label: 'ok' } } };
+  const packaged = { id: 'sdk-test', version: '1.0.0', backendEntryPath: './b.cjs', extensionPoints: [widget] };
+
+  it('is optional in both manifests', () => {
+    expect(parseSourceManifest({ id: 'sdk-test', extensionPoints: [widget] }).title).toBeUndefined();
+    expect(parseManifest(packaged).title).toBeUndefined();
+  });
+
+  it('is trimmed and kept in both', () => {
+    expect(parseSourceManifest({ id: 'sdk-test', extensionPoints: [widget], title: '  Flow chart ' }).title).toBe('Flow chart');
+    expect(parseManifest({ ...packaged, title: 'Flow chart' }).title).toBe('Flow chart');
+  });
+
+  it('rejects a blank or non-string title, saying what to do', () => {
+    for (const value of ['', '   ', 3, null]) {
+      const source = SourceManifestSchema.safeParse({ id: 'sdk-test', extensionPoints: [widget], title: value });
+      expect(source.success, String(value)).toBe(false);
+      expect(ManifestSchema.safeParse({ ...packaged, title: value }).success, String(value)).toBe(false);
+    }
+    const blank = SourceManifestSchema.safeParse({ id: 'sdk-test', extensionPoints: [widget], title: ' ' });
+    expect(blank.success ? '' : blank.error.issues[0].message).toContain('remove the field to derive it from the id');
+  });
+});

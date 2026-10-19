@@ -153,6 +153,29 @@ describe('packageModule: output manifest and views', () => {
     });
   });
 
+  describe('title', () => {
+    const withTitle = (value: unknown) => module_({ 'manifest.json': JSON.stringify({ ...BASE_MANIFEST, title: value }) });
+
+    it('copies the title to the packaged manifest, which stays valid', async () => {
+      const out = outDir();
+      await packageModule({ moduleDir: withTitle('Tiny module'), outDir: out, version: '1.0.0' });
+      expect(JSON.parse(read(out, 'manifest.json'))).toMatchObject({ id: 'tiny', title: 'Tiny module' });
+      const validated = validateManifestFile(path.join(out, 'manifest.json'));
+      if (!validated.ok) throw new Error(validated.message);
+      expect(validated.manifest.title).toBe('Tiny module');
+    });
+
+    it('writes no title when the source has none', async () => {
+      const out = outDir();
+      await packageModule({ moduleDir: module_(), outDir: out, version: '1.0.0' });
+      expect(JSON.parse(read(out, 'manifest.json'))).not.toHaveProperty('title');
+    });
+
+    it('refuses a blank title, naming the field', async () => {
+      await expect(packageModule({ moduleDir: withTitle('  '), outDir: outDir(), version: '1.0.0' })).rejects.toThrow(/title/);
+    });
+  });
+
   it('re-emits the view compact and parsed (YAML in, JSON out)', async () => {
     const out = outDir();
     await packageModule({ moduleDir: module_(), outDir: out, version: '1.0.0' });

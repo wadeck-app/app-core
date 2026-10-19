@@ -97,6 +97,10 @@ const LifecycleSchema = z
 // `page` / `nav` extension point is never listed, whatever this says. Must be a boolean: a string like "false" is rejected.
 const ShowInNavSchema = z.boolean().optional();
 
+// The name the shell shows for the module (tab, side menu heading, dashboard shortcut). Absent means it is derived from
+// the id ("billing-reports" -> "Billing reports"). Blank is rejected: it would give an empty tab.
+const TitleSchema = z.string().trim().min(1, 'title must not be blank: give the module a display name, or remove the field to derive it from the id').optional();
+
 export const DSL_LIB_DIR = 'dsl-lib';
 
 // entry and css are paths inside the module's dsl-lib/ folder; the loader additionally checks
@@ -127,6 +131,7 @@ export const ManifestSchema = z.object({
   expose: ExposeSchema.optional(),
   lifecycle: LifecycleSchema.optional(),
   showInNav: ShowInNavSchema,
+  title: TitleSchema,
 });
 
 // The manifest an author writes at the module root (decision 81). It never names what `package`
@@ -142,6 +147,7 @@ export const SourceManifestSchema = z
     expose: ExposeSchema.optional(),
     lifecycle: LifecycleSchema.optional(),
     showInNav: ShowInNavSchema,
+    title: TitleSchema,
   })
   .strict();
 

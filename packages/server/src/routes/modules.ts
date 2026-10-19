@@ -157,6 +157,8 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
       dslLib: m.dslLib,
       // Always present for the shell (the manifest field is optional and means true when absent).
       showInNav: m.manifest.showInNav ?? true,
+      // Only when the manifest names the module; the shell derives a title from the id otherwise.
+      ...(m.manifest.title === undefined ? {} : { title: m.manifest.title }),
     }));
     return reply.code(200).send({ modules, failed: manager.listFailed() });
   });

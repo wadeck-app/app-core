@@ -101,8 +101,11 @@ You write the source manifest; app-core loads the packaged one.
 | `expose` | optional; `types` is `./src/commons/<file>.ts` | `types` becomes `./types/index.d.ts` |
 | `lifecycle` | optional; `teardown` / `migrate` are `./src/backend/<file>.ts` | `./api-backend/teardown.cjs` / `./api-backend/migrate.cjs` |
 | `showInNav` | optional boolean, `true` when absent | copied |
+| `title` | optional non-blank string | copied |
 
 The source manifest is strict: any other field fails `check`.
+
+**Display name.** `"title": "Flow charts"` is the name the shell shows (top-bar tab, side-menu heading, dashboard shortcut, and the two letters of the logo). Without it the shell derives one from the id (`flow-chart` becomes "Flow chart"). A blank title fails `check` and `package`.
 
 **Keeping a module out of the navigation.** `"showInNav": false` removes the module from the shell's navigation: no tab in the top bar and no shortcut on the dashboard menu. The module is still loaded and its pages stay routable (reachable by link); while one of them is open, the side menu lists the module's pages. A module without any `page` / `nav` extension point (widgets only) is never listed, with or without this field, so use `showInNav: false` for a module that has `nav` pages you do not want in the menu. The value must be a boolean: `"false"` (a string) fails `check` and `package`.
 

@@ -314,6 +314,7 @@ export async function packageModule(options: PackageOptions): Promise<PackageRes
     ...(manifest.requires === undefined ? {} : { requires: manifest.requires }),
     ...(expose === undefined ? {} : { expose }),
     ...(manifest.showInNav === undefined ? {} : { showInNav: manifest.showInNav }),
+    ...(manifest.title === undefined ? {} : { title: manifest.title }),
     extensionPoints,
     ...(manifest.dslLib === undefined || lib === undefined
       ? {}

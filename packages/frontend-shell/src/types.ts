@@ -27,6 +27,8 @@ export interface LoadedModuleSummary {
   dslLib?: ModuleDslLib;
   // From the manifest's `showInNav`: false keeps the module out of the top bar and the dashboard menu. Absent means true.
   showInNav?: boolean;
+  // From the manifest's `title`: the display name. Absent means the shell derives one from the id.
+  title?: string;
 }
 
 // A registered module that could not be loaded; `error` is the reason, `source` the manifest path.

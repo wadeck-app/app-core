@@ -84,7 +84,7 @@ export function navModulesFor(modules: LoadedModuleSummary[]): NavModule[] {
   const contributed = contributedPagesFor(modules);
   return modules.flatMap((m): NavModule[] => {
     const menu = [...pages.filter((p) => p.moduleId === m.id), ...contributed.filter((c) => c.provider === m.id).map((c) => c.page)];
-    return menu.length > 0 ? [{ id: m.id, title: titleFromId(m.id), basePath: `/modules/${m.id}`, pages: menu, listed: m.showInNav !== false }] : [];
+    return menu.length > 0 ? [{ id: m.id, title: m.title ?? titleFromId(m.id), basePath: `/modules/${m.id}`, pages: menu, listed: m.showInNav !== false }] : [];
   });
 }
 
