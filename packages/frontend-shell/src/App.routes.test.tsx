@@ -104,3 +104,22 @@ describe('App: parameterised module pages', () => {
     expect(screen.queryByRole('link', { name: 'Other' })).toBeNull();
   });
 });
+
+describe('App: /modules/<id> alone', () => {
+  afterEach(() => {
+    window.history.pushState({}, '', '/');
+  });
+
+  it('opens the first page of the module instead of a dead end', async () => {
+    window.history.pushState({}, '', '/modules/jobs-mod');
+    render(<App />);
+    expect(await screen.findByText('list-page')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/modules/jobs-mod/0');
+  });
+
+  it('names the module and what to do when it is not loaded', async () => {
+    window.history.pushState({}, '', '/modules/ghost');
+    render(<App />);
+    expect(await screen.findByText(/No module "ghost" is loaded/)).toBeInTheDocument();
+  });
+});

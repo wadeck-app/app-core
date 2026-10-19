@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AbExperiments, RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { Dashboard } from './Dashboard.js';
+import { ModuleIndex } from './ModuleIndex.js';
 import { ModulePage } from './ModulePage.js';
 import { OverlayWidgets } from './OverlayWidgets.js';
 import { ShellNotifier } from './ShellNotifier.js';
@@ -89,6 +90,7 @@ export default function App(): React.ReactElement {
                   />
                 ))}
                 <Route path="/modules/:moduleId/:index" element={<ModulePage modules={modules} />} />
+                <Route path="/modules/:moduleId" element={<ModuleIndex modules={modules} />} />
                 <Route path="*" element={<p className="p-4 text-muted">Page not found (the module may have been unloaded).</p>} />
               </Routes>
             </AppFrame>

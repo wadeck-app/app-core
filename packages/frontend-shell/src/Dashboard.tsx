@@ -1,25 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AbDock, PageContent, PageSection, useAbTest } from '@wadeck-app/dsl-ui';
-import { DashboardBar } from './DashboardBar.js';
+import { DashboardBar, type DashboardBarStyle, type DashboardChipStyle } from './DashboardBar.js';
 import { WidgetCell, type DashboardWidget } from './WidgetCell.js';
-import type { WidgetFrameVariant } from './WidgetFrame.js';
 import { navModulesFor, titleFromId } from './layout/navModel.js';
 import { useDockTests } from './useDockTests.js';
 import { useHiddenWidgets, useRefreshTick, useWidgetOrder, type RefreshInterval } from './useDashboardState.js';
+import { useGridColumns } from './useGridColumns.js';
 import type { LoadedModuleSummary } from './types.js';
 
 export interface DashboardProps {
   modules: LoadedModuleSummary[];
 }
 
-type GridWidth = 'fill' | 'wide' | 'medium' | 'narrow';
-// How much of the page the dashboard takes. The class names are written out in full so that Tailwind finds them.
-const WIDTH_CLASS: Record<GridWidth, string> = {
-  fill: '',
-  wide: 'mx-auto max-w-[1600px]',
-  medium: 'mx-auto max-w-[1280px]',
-  narrow: 'mx-auto max-w-[1024px]',
-};
+// Options of the A/B tests below, as numbers the grid computes with.
+const SHARE: Record<'fill' | 'p90' | 'p80' | 'p70', string> = { fill: '100%', p90: '90%', p80: '80%', p70: '70%' };
+const MIN_COLUMN: Record<'c220' | 'c260' | 'c320' | 'c400', number> = { c220: 220, c260: 260, c320: 320, c400: 400 };
+const GAP_PX: Record<'tight' | 'normal' | 'roomy', number> = { tight: 8, normal: 16, roomy: 24 };
+const ROW_REM: Record<'short' | 'normal' | 'tall', number> = { short: 7, normal: 9, tall: 12 };
 
 // Base slot: widget/dashboard -> rendered into a grid (frontend-shell.md "Base slots").
 // Widgets use the same GenericPageRunner + fetcher path as pages (ModulePage.tsx)
@@ -45,32 +42,73 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
   const [overKey, setOverKey] = useState<string | undefined>(undefined);
 
   // A/B tests open on the dashboard (see the A/B testing rule in the project CLAUDE.md).
-  const frame = useAbTest<WidgetFrameVariant>({
-    id: 'widget-frame',
-    label: 'Widget frame',
-    initial: 'datadog',
-    options: {
-      datadog: { label: 'Datadog', hint: 'Slim header: grip to drag, color dot, title, module name, and the tools (refresh, expand, menu) always visible.' },
-      'datadog-compact': { label: 'Compact', hint: 'Denser: 32px header, tighter body; the module name only shows as a tooltip.' },
-      'datadog-accent': { label: 'Accent', hint: 'A bar of the module color down the left edge and a faint wash of it in the header.' },
-      'datadog-footer': { label: 'Footer', hint: 'Datadog + a footer: link to the module and when the widget was last refreshed.' },
-      'datadog-logo': { label: 'Logo', hint: 'The module logo instead of the dot (says which module it is without the name).' },
-    },
-  });
-  const width = useAbTest<GridWidth>({
+  const share = useAbTest<keyof typeof SHARE>({
     id: 'dashboard-width',
     label: 'Dashboard width',
     initial: 'fill',
     options: {
       fill: { label: 'Fill', hint: 'Today: the grid takes the whole width of the page.' },
-      wide: { label: 'Wide', hint: 'At most 1600px, centered: keeps widgets from stretching on very wide screens.' },
-      medium: { label: 'Medium', hint: 'At most 1280px, centered: three or four widgets per row on a laptop.' },
-      narrow: { label: 'Narrow', hint: 'At most 1024px, centered: a reading column, two widgets per row.' },
+      p90: { label: '90%', hint: 'The grid takes 90% of the page, centered: whatever the screen, a margin appears on both sides.' },
+      p80: { label: '80%', hint: 'The grid takes 80% of the page, centered.' },
+      p70: { label: '70%', hint: 'The grid takes 70% of the page, centered: fewer, larger columns on a wide screen.' },
     },
   });
-
+  const columns = useAbTest<keyof typeof MIN_COLUMN>({
+    id: 'dashboard-columns',
+    label: 'Columns',
+    initial: 'c260',
+    options: {
+      c220: { label: '220px', hint: 'Columns at least 220px wide: the most columns, small widgets.' },
+      c260: { label: '260px', hint: 'Columns at least 260px wide (about today).' },
+      c320: { label: '320px', hint: 'Columns at least 320px wide: fewer, roomier widgets.' },
+      c400: { label: '400px', hint: 'Columns at least 400px wide: two or three big widgets per row.' },
+    },
+  });
+  const gap = useAbTest<keyof typeof GAP_PX>({
+    id: 'dashboard-gap',
+    label: 'Gap',
+    initial: 'normal',
+    options: {
+      tight: { label: 'Tight', hint: '8px between widgets: more on screen, a denser look.' },
+      normal: { label: 'Normal', hint: '16px between widgets (today).' },
+      roomy: { label: 'Roomy', hint: '24px between widgets: airy, each widget stands on its own.' },
+    },
+  });
+  const row = useAbTest<keyof typeof ROW_REM>({
+    id: 'dashboard-row',
+    label: 'Cell height',
+    initial: 'normal',
+    options: {
+      short: { label: '7rem', hint: 'A cell is 7rem high: a widget of height 2 is 14rem and a gap.' },
+      normal: { label: '9rem', hint: 'A cell is 9rem high (today).' },
+      tall: { label: '12rem', hint: 'A cell is 12rem high: big widgets get a lot of room.' },
+    },
+  });
+  const barStyle = useAbTest<DashboardBarStyle>({
+    id: 'dashboard-bar',
+    label: 'Bar',
+    initial: 'inline',
+    options: {
+      inline: { label: 'Inline', hint: 'Today: the bar scrolls away with the page.' },
+      sticky: { label: 'Sticky', hint: 'The bar stays at the top while the widgets scroll under it (blurred background).' },
+      segmented: { label: 'Segmented', hint: 'The module filter is one connected control instead of separate pills.' },
+    },
+  });
+  const chipStyle = useAbTest<DashboardChipStyle>({
+    id: 'dashboard-chips',
+    label: 'Filter chips',
+    initial: 'plain',
+    options: {
+      plain: { label: 'Plain', hint: 'The module name and its count.' },
+      dots: { label: 'Dots', hint: 'A dot in the color of the module before its name, like in the widget header.' },
+    },
+  });
+  const tests = [share, columns, gap, row, barStyle, chipStyle];
   // In the one dock of the app-wide host when there is one, else in a dock of its own.
-  const hosted = useDockTests([frame, width]);
+  const hosted = useDockTests(tests);
+
+  const gapPx = GAP_PX[gap.value];
+  const { ref: gridRef, columns: columnCount } = useGridColumns<HTMLDivElement>(MIN_COLUMN[columns.value], gapPx);
 
   const visible = order.ordered.filter((w) => !hidden.has(w.key) && (filter === undefined || w.moduleId === filter));
   const visibleKeys = visible.map((w) => w.key);
@@ -84,11 +122,17 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
     setOverKey(undefined);
   };
 
+  // A widget N columns wide takes at most the columns that exist; N cells high is N rows of the cell height and the gaps.
+  const layoutOf = (w: DashboardWidget) => ({
+    span: Math.min(w.width ?? 1, columnCount),
+    minHeight: w.height === undefined ? undefined : `calc(${w.height} * ${ROW_REM[row.value]}rem + ${w.height - 1} * ${gapPx}px)`,
+  });
+
   const cell = (w: DashboardWidget): React.ReactElement => (
     <WidgetCell
       key={w.key}
       widget={w}
-      variant={frame.value}
+      layout={layoutOf(w)}
       tick={tick}
       moduleHref={moduleHref.get(w.moduleId)}
       onHide={() => hide(w.key)}
@@ -116,12 +160,14 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
       <PageContent
         sections={
           <PageSection title="Dashboard">
-            <div className={WIDTH_CLASS[width.value]}>
+            <div ref={gridRef} className="mx-auto" style={{ width: SHARE[share.value] }}>
               {widgets.length === 0 ? (
                 <p className="text-muted">No widgets registered yet.</p>
               ) : (
                 <>
                   <DashboardBar
+                    barStyle={barStyle.value}
+                    chipStyle={chipStyle.value}
                     refreshedAt={refreshedAt}
                     onRefresh={refresh}
                     hiddenCount={widgets.filter((w) => hidden.has(w.key)).length}
@@ -137,7 +183,9 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
                   {visible.length === 0 ? (
                     <p className="text-muted">Every widget is hidden or filtered out.</p>
                   ) : (
-                    <div className="grid grid-flow-dense grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">{visible.map(cell)}</div>
+                    <div className="grid grid-flow-dense" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`, gap: gapPx }}>
+                      {visible.map(cell)}
+                    </div>
                   )}
                 </>
               )}
@@ -145,7 +193,7 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
           </PageSection>
         }
       />
-      {hosted ? null : <AbDock tests={[frame, width]} />}
+      {hosted ? null : <AbDock tests={tests} />}
     </>
   );
 }
