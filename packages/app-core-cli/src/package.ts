@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { build, type BuildFailure } from 'esbuild';
 import { load as parseYaml } from 'js-yaml';
+import semver from 'semver';
 import type { Manifest, SourceManifest } from '@wadeck-app/app-core-sdk';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { appCoreShared } from './appCoreShared.js';
@@ -51,7 +52,7 @@ export function parsePackageArgs(args: string[]): { out: string | undefined; ver
     }
     const value = args[i + 1];
     if (value === undefined || value.startsWith('--')) {
-      throw new Error(`${flag} needs a value, e.g. "app-core-cli package ./my-module ${flag} ${flag === '--out' ? 'dist-module' : '2026.10.18-001'}".`);
+      throw new Error(`${flag} needs a value, e.g. "app-core-cli package ./my-module ${flag} ${flag === '--out' ? 'dist-module' : '1.2.3'}".`);
     }
     parsed[flag === '--out' ? 'out' : 'version'] = value;
   }
@@ -62,7 +63,7 @@ export function parsePackageArgs(args: string[]): { out: string | undefined; ver
 export function resolveVersion(flag: string | undefined, env: Record<string, string | undefined>): string {
   if (flag !== undefined) {
     if (flag.trim() === '') {
-      throw new Error('--version needs a non-empty value, e.g. --version 2026.10.18-001.');
+      throw new Error('--version needs a non-empty value, e.g. --version 1.2.3.');
     }
     return flag;
   }
@@ -299,6 +300,12 @@ export async function packageModule(options: PackageOptions): Promise<PackageRes
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
   const warnings: string[] = [];
+  // A module that others `requires` is matched against ranges in strict semver: with another version it can never be a provider.
+  if (semver.valid(options.version) === null) {
+    warnings.push(
+      `version "${options.version}" is not valid semver (for example 1.2.3 or 2026.10.19-5): modules that "requires" this one will fail to load against it. Ignore this if no module requires it.`,
+    );
+  }
 
   await buildBackendFile(moduleDir, outDir, 'the backend', BACKEND_ENTRY, BACKEND_OUTPUT);
   const lifecycle = await buildHooks(moduleDir, outDir, manifest);

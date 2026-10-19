@@ -155,6 +155,20 @@ describe('packageModule: output manifest and views', () => {
     });
   });
 
+  describe('version that is not semver', () => {
+    it('warns, because a module requiring this one could never match it, and still packages', async () => {
+      const result = await packageModule({ moduleDir: module_(), outDir: outDir(), version: '2026.10.18-001' });
+      expect(result.warnings).toEqual([expect.stringContaining('"2026.10.18-001" is not valid semver')]);
+    });
+
+    it('does not warn for a semver version, prerelease included', async () => {
+      for (const version of ['1.2.3', '2026.10.19-5']) {
+        const result = await packageModule({ moduleDir: module_(), outDir: outDir(), version });
+        expect(result.warnings, version).toEqual([]);
+      }
+    });
+  });
+
   describe('title', () => {
     const withTitle = (value: unknown) => module_({ 'manifest.json': JSON.stringify({ ...BASE_MANIFEST, title: value }) });
 
