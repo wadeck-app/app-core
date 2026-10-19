@@ -18,11 +18,13 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const [distDir, dir, configDir] = process.argv.slice(2);
+const [distDir, dir, configDir, linkDir] = process.argv.slice(2);
 const { buildServer } = await import(pathToFileURL(path.join(distDir, 'server.js')).href);
 
 fs.mkdirSync(path.join(dir, 'api-backend'), { recursive: true });
 const manifestPath = path.join(dir, 'manifest.json');
+// Files are written at the real place; the register request names the manifest through the link when there is one.
+const registeredPath = linkDir ? path.join(linkDir, 'manifest.json') : manifestPath;
 const writeVersion = (n) => {
   fs.writeFileSync(manifestPath, JSON.stringify({
     id: 'seq',
@@ -39,7 +41,7 @@ const { server } = await buildServer({ configDir });
 const rows = [];
 for (let n = 1; n <= 3; n++) {
   writeVersion(n);
-  const registered = await server.inject({ method: 'POST', url: '/api/modules/register', payload: { id: 'seq', source: { type: 'file', path: manifestPath } } });
+  const registered = await server.inject({ method: 'POST', url: '/api/modules/register', payload: { id: 'seq', source: { type: 'file', path: registeredPath } } });
   const answers = [];
   for (let r = 1; r <= 3; r++) {
     const res = await server.inject({ method: 'GET', url: '/api/modules/seq/r' + r });
@@ -62,7 +64,9 @@ describe('registering an updated module again over HTTP (compiled server, real N
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it('serves the routes of the latest update after each register: 404 only for routes it does not have yet', () => {
+  // Runs the sequence in a child node process; `linked` registers through a link to the module folder, like a global npm
+  // prefix that is a junction to the real folder (nvm) does.
+  function runSequence(linked: boolean): unknown {
     if (!fs.existsSync(path.join(serverDist, 'server.js'))) {
       throw new Error(`${serverDist}/server.js not found: this test runs the compiled server. Run "npm run build" from the repository root first.`);
     }
@@ -71,20 +75,39 @@ describe('registering an updated module again over HTTP (compiled server, real N
     try {
       const script = path.join(scriptDir, 'run.mjs');
       fs.writeFileSync(script, CHILD_SCRIPT);
+      const real = path.join(dir, 'dist-module');
+      const args = [script, serverDist, real, path.join(dir, 'cfg')];
+      if (linked) {
+        fs.mkdirSync(real, { recursive: true });
+        const link = path.join(dir, 'link');
+        // A junction needs no privilege on Windows; on other systems the type is ignored and it is a plain symlink.
+        fs.symlinkSync(real, link, 'junction');
+        args.push(link);
+      }
       let stdout: string;
       try {
-        stdout = execFileSync(process.execPath, [script, serverDist, path.join(dir, 'dist-module'), path.join(dir, 'cfg')], { encoding: 'utf8', stdio: 'pipe' });
+        stdout = execFileSync(process.execPath, args, { encoding: 'utf8', stdio: 'pipe' });
       } catch (err) {
         const failure = err as { stdout?: string; stderr?: string };
         throw new Error(`child node process failed:\n${failure.stdout ?? ''}${failure.stderr ?? ''}`);
       }
-      expect(JSON.parse(stdout.trim().split('\n').at(-1)!)).toEqual([
-        { registered: 201, answers: [1, 404, 404] },
-        { registered: 201, answers: [2, 2, 404] },
-        { registered: 201, answers: [3, 3, 3] },
-      ]);
+      return JSON.parse(stdout.trim().split('\n').at(-1)!);
     } finally {
       fs.rmSync(scriptDir, { recursive: true, force: true });
     }
+  }
+
+  const EXPECTED = [
+    { registered: 201, answers: [1, 404, 404] },
+    { registered: 201, answers: [2, 2, 404] },
+    { registered: 201, answers: [3, 3, 3] },
+  ];
+
+  it('serves the routes of the latest update after each register: 404 only for routes it does not have yet', () => {
+    expect(runSequence(false)).toEqual(EXPECTED);
+  });
+
+  it('does the same when the manifest path goes through a link (a junction): Node keys its cache by the real path', () => {
+    expect(runSequence(true)).toEqual(EXPECTED);
   });
 });

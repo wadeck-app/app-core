@@ -374,8 +374,11 @@ export class ModuleManager {
     // mtime+size are part of the key: an update pushed without a version bump must still load the new code.
     const { mtimeMs, size } = fs.statSync(file);
     // Native Node caches a CommonJS file by path and ignores the query below, so a rewritten .cjs (what
-    // "package" emits) would keep serving the old code: drop its cache entry first.
+    // "package" emits) would keep serving the old code: drop its cache entry first. Node keys that cache by the REAL
+    // path, which differs from `file` when a folder on the way is a link (a global npm prefix that is a junction, nvm):
+    // drop both, or the update would never be seen.
     delete nodeRequire.cache[file];
+    delete nodeRequire.cache[fs.realpathSync(file)];
     const specifier = `${pathToFileURL(file).href}?v=${encodeURIComponent(version)}&m=${mtimeMs}-${size}`;
     let mod: BackendEntryExports;
     try {
