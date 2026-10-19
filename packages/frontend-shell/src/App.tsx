@@ -4,6 +4,7 @@ import { RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { Dashboard } from './Dashboard.js';
 import { ModulePage } from './ModulePage.js';
 import { OverlayWidgets } from './OverlayWidgets.js';
+import { ShellNotifier } from './ShellNotifier.js';
 import { modulePagePath } from './modulePaths.js';
 import { useModules } from './useModules.js';
 import { ModuleLibsProvider, useModuleLibs } from './useModuleLibs.js';
@@ -44,6 +45,8 @@ export default function App(): React.ReactElement {
       {/* Provides UrlParamContext/RouterContext: module views bind components to URL params (e.g. Pagination `urlParam`). */}
       <RouterProvider>
         <ToastProvider>
+          {/* The outcome of every module action (row/batch actions, forms, brains) is shown as a toast. */}
+          <ShellNotifier>
           <ModuleLibsProvider value={libStatuses}>
             <AppFrame modules={modules} failed={failedModules}>
               {error ? (
@@ -88,6 +91,7 @@ export default function App(): React.ReactElement {
               </Routes>
             </AppFrame>
           </ModuleLibsProvider>
+          </ShellNotifier>
         </ToastProvider>
       </RouterProvider>
     </BrowserRouter>

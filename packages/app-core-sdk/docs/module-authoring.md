@@ -335,6 +335,18 @@ no base-path logic to worry about. Keep the module id a fixed literal in the URL
 a `$route`/dynamic placeholder -- an empty-placeholder path silently skips the fetch in the
 underlying DSL renderer, so a fixed literal is the safe pattern.
 
+### Feedback of user actions (`$actions`)
+
+The shell shows the outcome of every action of a view (row and batch actions, forms, brains) as a toast; you write no code for it.
+
+- A failure always shows: `Action "<name>" failed (HTTP <status>): <server message>`. The message is the `message` (else `error`) of your route's JSON answer, so make it say what to do. Error toasts stay until dismissed.
+- A success shows only when the action declares `successMessage`. Add `errorPrefix` to put your own words in front of the server message.
+
+```yaml
+$actions:
+  replay: { url: "POST /api/modules/queue/jobs/{id}/replay", successMessage: "Job queued again", errorPrefix: "Could not replay" }
+```
+
 ### Navbar and overlay widgets
 
 Two more widget slots exist for things that live outside any page:

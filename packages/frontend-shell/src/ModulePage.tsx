@@ -1,9 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { GenericPageRunner } from '@wadeck-app/dsl-renderer';
 import { PageContent } from '@wadeck-app/dsl-ui';
-import { appRegistry } from './registry.js';
-import { fetcher } from './fetcher.js';
+import { ModuleView } from './ModuleView.js';
 import { ModuleLibGate } from './useModuleLibs.js';
 import type { LoadedModuleSummary } from './types.js';
 
@@ -33,7 +31,7 @@ export function ModulePage({ modules, target }: { modules: LoadedModuleSummary[]
 
   return (
     <ModuleLibGate moduleId={mod.id}>
-      <PageContent sections={<GenericPageRunner yamlText={ep.rawYaml} registry={appRegistry} fetcher={fetcher} />} />
+      <PageContent sections={<ModuleView rawYaml={ep.rawYaml} />} />
     </ModuleLibGate>
   );
 }

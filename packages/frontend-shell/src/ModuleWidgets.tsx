@@ -1,8 +1,6 @@
 import React from 'react';
-import { GenericPageRunner } from '@wadeck-app/dsl-renderer';
 import { getErrorMessage } from './errors.js';
-import { appRegistry } from './registry.js';
-import { fetcher } from './fetcher.js';
+import { ModuleView } from './ModuleView.js';
 import { ModuleLibGate } from './useModuleLibs.js';
 import type { LoadedModuleSummary } from './types.js';
 
@@ -67,13 +65,13 @@ class WidgetErrorBoundary extends React.Component<BoundaryProps, { message?: str
   }
 }
 
-// Renders one widget view like a dashboard widget (GenericPageRunner + shared fetcher + registry), once its
+// Renders one widget view like a dashboard widget (ModuleView: shared registry and fetcher), once its
 // module's components are ready. A failure of the lib itself is already reported by the shell banner.
 export function ModuleWidget({ moduleId, rawYaml, slot }: { moduleId: string; rawYaml: string; slot: ShellWidgetSlot }): React.ReactElement {
   return (
     <ModuleLibGate moduleId={moduleId} quiet>
       <WidgetErrorBoundary key={rawYaml} moduleId={moduleId} slot={slot}>
-        <GenericPageRunner yamlText={rawYaml} registry={appRegistry} fetcher={fetcher} />
+        <ModuleView rawYaml={rawYaml} />
       </WidgetErrorBoundary>
     </ModuleLibGate>
   );
