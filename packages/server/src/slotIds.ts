@@ -9,6 +9,11 @@ export const SLOT_LOCAL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 export const SLOT_LOCAL_RULE = 'start with a letter or digit and contain only letters, digits, "_" and "-"';
 
+// The local name of a module's side menu. `<providerId>:nav` is a slot every module has: a module that `requires` the
+// provider contributes a `page` to it to get an entry in the provider's side menu. It is never declared in
+// `expose.slots` (the provider does not choose it, it is always there), which is why that name is reserved.
+export const MENU_SLOT_LOCAL = 'nav';
+
 // Splits `<providerId>:<local>`; undefined for a shell slot or anything malformed.
 export function splitCustomSlot(slot: string): { providerId: string; local: string } | undefined {
   const parts = slot.split(':');
@@ -17,6 +22,12 @@ export function splitCustomSlot(slot: string): { providerId: string; local: stri
     return undefined;
   }
   return MODULE_ID_PATTERN.test(providerId) && SLOT_LOCAL_PATTERN.test(local) ? { providerId, local } : undefined;
+}
+
+// The provider whose side menu `slot` targets (`flow:nav` -> "flow"), or undefined when it is not a menu slot.
+export function menuSlotProvider(slot: string): string | undefined {
+  const custom = splitCustomSlot(slot);
+  return custom?.local === MENU_SLOT_LOCAL ? custom.providerId : undefined;
 }
 
 // Why a slot id is not allowed, or undefined when it is.

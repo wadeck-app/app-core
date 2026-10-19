@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { ZodError } from 'zod';
 import { rootTypeOf, validateContributions, type ProviderLookup } from '../src/contributions.js';
 import { orderByRequires } from '../src/loadOrder.js';
-import { slotIdProblem, splitCustomSlot } from '../src/slotIds.js';
+import { menuSlotProvider, slotIdProblem, splitCustomSlot } from '../src/slotIds.js';
 import { parseManifest, parseSourceManifest } from '../src/manifest.js';
 
 const widget = (slot: string) => ({ kind: 'widget', slot, view: { type: 'inline', value: { $type: 'Badge', label: 'x' } } });
@@ -196,6 +197,137 @@ describe('validateContributions', () => {
       const [problem] = validateContributions({ moduleId: 'c', requires: { p: 'not a range' }, contributions: [], lookup: lookupOf({}), mode });
       expect(problem!.problem, mode).toContain('invalid semver range "not a range"');
     }
+  });
+});
+
+// A module that requires another one can add pages to that module's side menu: a `page` on slot `<provider>:nav`.
+describe('menu contributions (<provider>:nav)', () => {
+  const entry = (overrides: Record<string, unknown> = {}) => ({
+    kind: 'page',
+    slot: 'flow:nav',
+    label: 'Flow chart',
+    path: '/chart',
+    view: { type: 'inline', value: { $type: 'Badge', label: 'x' } },
+    ...overrides,
+  });
+  const parse = (extensionPoints: unknown[]) => parseSourceManifest({ id: 'flow-chart', requires: { flow: '^1.0.0' }, extensionPoints });
+  // The messages the author reads, one per problem (a thrown ZodError prints as escaped JSON).
+  const problemsOf = (fn: () => unknown): string[] => {
+    try {
+      fn();
+    } catch (err) {
+      if (err instanceof ZodError) return err.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+      throw err;
+    }
+    return [];
+  };
+
+  describe('slot ids', () => {
+    it('knows which provider a menu slot targets, and nothing else', () => {
+      expect(menuSlotProvider('flow:nav')).toBe('flow');
+      expect(menuSlotProvider('flow:shared-slot')).toBeUndefined();
+      expect(menuSlotProvider('nav')).toBeUndefined();
+      expect(menuSlotProvider('flow:nav:x')).toBeUndefined();
+    });
+  });
+
+  describe('the manifest of the contributor', () => {
+    it('accepts a page with a label and a fixed path', () => {
+      expect(parse([entry()]).extensionPoints[0]).toMatchObject({ slot: 'flow:nav', label: 'Flow chart', path: '/chart' });
+    });
+
+    it('accepts the home path "/" of the contributor and an order', () => {
+      expect(() => parse([entry({ path: '/', order: 10 })])).not.toThrow();
+    });
+
+    it('refuses anything but a page, saying what a contribution to a menu is', () => {
+      const [problem] = problemsOf(() => parse([entry({ kind: 'widget', path: undefined })])).filter((p) => p.startsWith('extensionPoints.0.kind'));
+      expect(problem).toContain('is an entry in the side menu of "flow", so its kind must be "page" (got "widget")');
+    });
+
+    it('needs a label: it is the text of the entry', () => {
+      for (const label of [undefined, '  ']) {
+        const problems = problemsOf(() => parse([entry({ label })]));
+        expect(problems, String(label)).toEqual([expect.stringMatching(/^extensionPoints\.0\.label: .*side menu of "flow": add a "label", it is the text of the entry$/)]);
+      }
+    });
+
+    it('needs a path, and a fixed one (a menu entry has a fixed address)', () => {
+      expect(problemsOf(() => parse([entry({ path: undefined })]))).toEqual([expect.stringContaining('add a "path" (for example "/chart")')]);
+      expect(problemsOf(() => parse([entry({ path: '/runs/:id' })]))).toEqual([expect.stringContaining('its path "/runs/:id" has a ":param" segment, but a menu entry needs a fixed address')]);
+    });
+
+    it('reports every missing piece at once, each on the field it is about', () => {
+      const problems = problemsOf(() => parse([entry({ kind: 'widget', label: undefined, path: undefined })]));
+      for (const field of ['kind', 'label', 'path']) expect(problems.some((p) => p.startsWith(`extensionPoints.0.${field}:`)), field).toBe(true);
+    });
+
+    it('does not apply to the other slots: a widget in a custom slot or a nav page of its own is unchanged', () => {
+      expect(() => parse([entry({ kind: 'widget', slot: 'flow:shared-slot', label: undefined, path: undefined })])).not.toThrow();
+      expect(() => parse([entry({ slot: 'nav', path: undefined, label: undefined })])).not.toThrow();
+    });
+
+    it('is enforced on the packaged manifest too', () => {
+      const packaged = (extensionPoints: unknown[]) => parseManifest({ id: 'flow-chart', version: '1.0.0', backendEntryPath: './b.cjs', requires: { flow: '^1.0.0' }, extensionPoints });
+      expect(problemsOf(() => packaged([entry({ path: undefined })]))).toEqual([expect.stringContaining('add a "path"')]);
+      expect(() => packaged([entry()])).not.toThrow();
+    });
+  });
+
+  describe('expose.slots', () => {
+    it('refuses a slot named "nav": it is reserved, every module has a side menu without declaring it', () => {
+      const problems = problemsOf(() => parseSourceManifest({ id: 'flow', extensionPoints: [widget('dashboard')], expose: { slots: { nav: { accepts: ['Badge'] } } } }));
+      expect(problems).toEqual([expect.stringContaining('slot name "nav" is reserved: every module\'s side menu is "<id>:nav" and accepts pages from the modules that require it, no declaration needed')]);
+    });
+
+    it('still accepts other slot names', () => {
+      expect(() => parseSourceManifest({ id: 'flow', extensionPoints: [widget('dashboard')], expose: { slots: { 'row-actions': { accepts: ['Badge'] } } } })).not.toThrow();
+    });
+  });
+
+  describe('validateContributions', () => {
+    const menu = { index: 3, slot: 'flow:nav', rootType: 'PageHeader' };
+
+    it('passes for a required provider that exposes nothing: the menu needs no declaration and no accepted $type', () => {
+      const problems = validateContributions({ moduleId: 'flow-chart', requires: { flow: '^1.0.0' }, contributions: [menu], lookup: lookupOf({ flow: { version: '1.2.0' } }), mode: 'load' });
+      expect(problems).toEqual([]);
+    });
+
+    it('does not check the root $type of the page against the provider (a page is not a widget of the provider)', () => {
+      const problems = validateContributions({
+        moduleId: 'flow-chart',
+        requires: { flow: '*' },
+        contributions: [{ ...menu, rootType: undefined }],
+        lookup: lookupOf({ flow: { expose: providerExpose } }),
+        mode: 'package',
+      });
+      expect(problems).toEqual([]);
+    });
+
+    it('still needs the provider in "requires", with the fix', () => {
+      const [problem, ...rest] = validateContributions({ moduleId: 'flow-chart', requires: {}, contributions: [menu], lookup: lookupOf({ flow: {} }), mode: 'package' });
+      expect(rest).toEqual([]);
+      expect(problem).toMatchObject({ about: 'manifest', extensionPointIndex: 3 });
+      expect(problem!.problem).toContain('"requires" does not list "flow"');
+      expect(problem!.fix).toContain('"requires": { "flow":');
+    });
+
+    it('still needs the provider to be found', () => {
+      const [problem] = validateContributions({ moduleId: 'flow-chart', requires: { flow: '*' }, contributions: [menu], lookup: lookupOf({}), mode: 'package' });
+      expect(problem!.problem).toContain('provider flow is absent');
+    });
+
+    it('still checks the version range at load, so an incompatible provider is reported once', () => {
+      const problems = validateContributions({ moduleId: 'flow-chart', requires: { flow: '^2.0.0' }, contributions: [menu], lookup: lookupOf({ flow: { version: '1.2.0' } }), mode: 'load' });
+      expect(problems).toHaveLength(1);
+      expect(problems[0].problem).toContain('version 1.2.0 of "flow" is loaded');
+    });
+
+    it('refuses a module that contributes to its own menu, and says to use slot "nav"', () => {
+      const [problem] = validateContributions({ moduleId: 'flow', requires: {}, contributions: [{ index: 0, slot: 'flow:nav', rootType: 'Badge' }], lookup: lookupOf({}), mode: 'load' });
+      expect(problem!.problem).toContain('the side menu of this very module');
+      expect(problem!.fix).toContain('Use slot "nav"');
+    });
   });
 });
 

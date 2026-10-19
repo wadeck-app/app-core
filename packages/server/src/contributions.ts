@@ -1,6 +1,6 @@
 import semver from 'semver';
 import type { ModuleExpose } from './manifest.js';
-import { splitCustomSlot } from './slotIds.js';
+import { MENU_SLOT_LOCAL, splitCustomSlot } from './slotIds.js';
 
 // What a contribution is validated against (decision 82). Pure: the server feeds it the loaded modules,
 // the CLI feeds it the provider found in node_modules, so both reject the same things.
@@ -89,6 +89,15 @@ function checkContribution(contribution: Contribution, input: ValidateContributi
   let providerVersion = '';
 
   if (providerId === input.moduleId) {
+    if (local === MENU_SLOT_LOCAL) {
+      problems.push({
+        about: 'manifest',
+        extensionPointIndex: contribution.index,
+        problem: `${where} contributes to "${contribution.slot}", the side menu of this very module`,
+        fix: `Use slot "${MENU_SLOT_LOCAL}" for the pages of your own menu; "<id>:${MENU_SLOT_LOCAL}" is for a module that requires another one and adds pages to that module's menu.`,
+      });
+      return;
+    }
     expose = input.selfExpose;
   } else {
     if (input.requires?.[providerId] === undefined) {
@@ -112,6 +121,10 @@ function checkContribution(contribution: Contribution, input: ValidateContributi
         problem: `${where} contributes to "${contribution.slot}" but ${result.why}`,
         fix: result.fix,
       });
+      return;
+    }
+    // The side menu of a module exists whatever its `expose`: `requires` (checked above) and a found provider are enough.
+    if (local === MENU_SLOT_LOCAL) {
       return;
     }
     expose = result.provider.expose;

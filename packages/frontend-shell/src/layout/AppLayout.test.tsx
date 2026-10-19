@@ -251,3 +251,41 @@ describe('AppLayout: module accent', () => {
     expect(rootAccent()).toBe('');
   });
 });
+
+// A module that requires "billing" and adds a page to its side menu (slot "billing:nav"): it has no tab of its own.
+describe('AppLayout: a page contributed to another module side menu', () => {
+  const modules = [
+    ...FIXTURE_MODULES,
+    { id: 'billing-chart', version: '1.0.0', extensionPoints: [{ kind: 'page', slot: 'billing:nav', label: 'Revenue chart', path: '/chart', view: {}, rawYaml: '' }] },
+  ];
+  const navModules = navModulesFor(modules);
+  const renderContrib = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <AppLayout modules={[]} navModules={navModules}>
+          <p>content</p>
+        </AppLayout>
+      </MemoryRouter>,
+    );
+  const side = () => within(screen.getByRole('navigation', { name: 'Billing pages' }));
+
+  it('lists it after the own pages of the provider, linked to the contributor route', () => {
+    renderContrib(billing.basePath);
+    const links = side().getAllByRole('link');
+    expect(links.map((l) => l.textContent)).toEqual([...billing.pages.map((p) => p.label), 'Revenue chart']);
+    expect(side().getByRole('link', { name: 'Revenue chart' })).toHaveAttribute('href', '/modules/billing-chart/chart');
+  });
+
+  it('adds no tab for the contributor', () => {
+    renderContrib('/');
+    expect(within(screen.getByRole('navigation', { name: 'Modules' })).getAllByRole('link')).toHaveLength(FIXTURE_MODULES.length + 1);
+  });
+
+  it('on the contributed page, keeps the provider tab, side menu and accent, with the entry marked as current', () => {
+    renderContrib('/modules/billing-chart/chart');
+    expect(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: /Billing/ })).toHaveAttribute('aria-current', 'true');
+    expect(side().getByRole('link', { name: 'Revenue chart' })).toHaveAttribute('aria-current', 'page');
+    expect(side().getAllByRole('link').filter((l) => l.getAttribute('aria-current') === 'page')).toHaveLength(1);
+    expect(rootAccent()).toBe(moduleColor('billing'));
+  });
+});

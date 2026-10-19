@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MODULE_ID_PATTERN, MODULE_ID_RULE } from './moduleId.js';
-import { SLOT_LOCAL_PATTERN, SLOT_LOCAL_RULE, slotIdProblem } from './slotIds.js';
+import { MENU_SLOT_LOCAL, SLOT_LOCAL_PATTERN, SLOT_LOCAL_RULE, menuSlotProvider, slotIdProblem } from './slotIds.js';
 
 // Manifest shape: a module declares any number of UI contributions
 // (widgets, pages) in a single manifest/version.
@@ -36,7 +36,26 @@ const ExtensionPointSchema = z
     path: ['path'],
   })
   // A custom slot is always `<providerId>:<local>` (decision 82).
-  .refine((ep) => slotIdProblem(ep.slot) === undefined, (ep) => ({ message: slotIdProblem(ep.slot) ?? '', path: ['slot'] }));
+  .refine((ep) => slotIdProblem(ep.slot) === undefined, (ep) => ({ message: slotIdProblem(ep.slot) ?? '', path: ['slot'] }))
+  // A contribution to `<providerId>:nav` is an entry in that module's side menu: it needs what a menu entry needs.
+  .superRefine((ep, ctx) => {
+    const provider = menuSlotProvider(ep.slot);
+    if (provider === undefined) {
+      return;
+    }
+    const what = `an entry in the side menu of "${provider}"`;
+    if (ep.kind !== 'page') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['kind'], message: `a contribution to "${ep.slot}" is ${what}, so its kind must be "page" (got "${ep.kind}")` });
+    }
+    if (ep.label === undefined || ep.label.trim() === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['label'], message: `a contribution to "${ep.slot}" is ${what}: add a "label", it is the text of the entry` });
+    }
+    if (ep.path === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['path'], message: `a contribution to "${ep.slot}" is ${what}: add a "path" (for example "/chart"), it is the page's address under /modules/<your id>` });
+    } else if (ep.path.includes(':')) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['path'], message: `a contribution to "${ep.slot}" is ${what}: its path "${ep.path}" has a ":param" segment, but a menu entry needs a fixed address` });
+    }
+  });
 
 export const ModuleIdSchema = z.string().regex(MODULE_ID_PATTERN, `module id must ${MODULE_ID_RULE}`);
 
@@ -51,7 +70,12 @@ const ExposeSchema = z
     types: z.string().min(1).optional(),
     slots: z
       .record(
-        z.string().regex(SLOT_LOCAL_PATTERN, `slot name must ${SLOT_LOCAL_RULE} (no ":", the module id is added as the prefix)`),
+        z
+          .string()
+          .regex(SLOT_LOCAL_PATTERN, `slot name must ${SLOT_LOCAL_RULE} (no ":", the module id is added as the prefix)`)
+          .refine((name) => name !== MENU_SLOT_LOCAL, {
+            message: `slot name "${MENU_SLOT_LOCAL}" is reserved: every module's side menu is "<id>:${MENU_SLOT_LOCAL}" and accepts pages from the modules that require it, no declaration needed`,
+          }),
         z.object({ accepts: z.array(z.string().min(1)).min(1, 'accepts must list at least one $type') }).strict(),
       )
       .optional(),

@@ -264,6 +264,35 @@ describe('check: requires and contributions', () => {
     const issues = (await checkModule(dir)).issues;
     expect(issues.some((i) => /invalid semver range/.test(i.problem))).toBe(true);
   });
+
+  describe('a page in the side menu of the provider ("prov:nav")', () => {
+    const menuManifest = (entry: Record<string, unknown> = {}, extra: Record<string, unknown> = {}): string =>
+      JSON.stringify({
+        id: 'contrib',
+        requires: { prov: '^1.0.0' },
+        extensionPoints: [{ kind: 'page', slot: 'prov:nav', label: 'Chart', path: '/chart', view: { type: 'inline', value: { $type: 'Badge', label: 'c' } }, ...entry }],
+        ...extra,
+      });
+
+    it('passes against a provider that exposes no "nav" slot', async () => {
+      const provider = await packagedProvider();
+      const dir = track(makeModule(contributorFiles({ 'manifest.json': menuManifest() })));
+      expect((await checkModule(dir, { links: { '@x/prov': provider } })).issues).toEqual([]);
+    });
+
+    it('still requires "requires" to list the provider', async () => {
+      const provider = await packagedProvider();
+      const dir = track(makeModule(contributorFiles({ 'manifest.json': menuManifest({}, { requires: undefined }) })));
+      expect(only((await checkModule(dir, { links: { '@x/prov': provider } })).issues, 'manifest.json').problem).toContain('"requires" does not list "prov"');
+    });
+
+    it('reports a missing path with the fix', async () => {
+      const provider = await packagedProvider();
+      const dir = track(makeModule(contributorFiles({ 'manifest.json': menuManifest({ path: undefined }) })));
+      const issues = (await checkModule(dir, { links: { '@x/prov': provider } })).issues;
+      expect(issues.some((i) => i.file === 'manifest.json' && i.problem.includes('add a "path"'))).toBe(true);
+    });
+  });
 });
 
 describe('package: requires and expose', () => {

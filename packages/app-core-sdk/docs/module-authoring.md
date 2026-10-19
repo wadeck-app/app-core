@@ -383,6 +383,22 @@ Slot ids are the shell slots (`dashboard`, `nav`, `route`, `navbar`, `overlay`) 
 
 At load, app-core applies the same rules to the modules it has loaded, plus the version: the module goes to `failed` (register answers 422) with the fix when a required module is not loaded or failed, its version is outside the `requires` range (strict semver; a non-semver version never matches), or the slot or `$type` is rejected. At startup modules load in `requires` order; members of a require cycle go to `failed`.
 
+### Adding a page to another module's side menu (`<providerId>:nav`)
+
+Every module's side menu is the slot `<id>:nav`, with nothing to declare. A module that `requires` the provider adds an entry with a `page`:
+
+```json
+{ "id": "flow-chart", "requires": { "flow": "^1.0.0" }, "extensionPoints": [{ "kind": "page", "slot": "flow:nav", "label": "Flow chart", "path": "/chart", "order": 10, "view": { "type": "path", "value": "./src/dsl-views/chart.yaml" } }] }
+```
+
+- The entry shows after the provider's own pages, sorted by `order` (none last), then module order.
+- The page stays yours: it is served at `/modules/<your id><path>`. While it is open, the provider's tab, side menu and accent are active.
+- Required: `kind: "page"`, a `label` (the entry text) and a fixed `path` (no `:param`). `check`, `package` and load report what is missing.
+- The provider needs no `expose`, and `expose.slots` may not be named `nav` (reserved). The root `$type` is not checked.
+- Like any contribution: `requires` must list the provider, and it must be found (see above). Its version must satisfy the range in strict semver, so a date-based provider version never matches.
+- A module cannot use `<own id>:nav`: use `nav` for your own pages. A module with only such pages gets no tab; the provider's tab carries them.
+- When the provider is unregistered, the entry goes with it (dependents rules below).
+
 ### Providers and dependents
 
 A module that `requires` another follows it:

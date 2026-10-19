@@ -124,3 +124,76 @@ describe('activeNavModule / activeNavPage', () => {
     expect(activeNavPage('/modules/billing/invoices/42', billing)?.label).toBe('Invoices');
   });
 });
+
+describe('pages contributed to another module side menu (<provider>:nav)', () => {
+  const flow = mod('flow', page('nav', 'Runs', '/runs'), page('nav', 'Templates', '/templates'));
+  const chart = mod('flow-chart', page('flow:nav', 'Flow chart', '/chart'));
+
+  it('lists the contributed entries after the own ones, routed under the contributor', () => {
+    const [nav] = navModulesFor([flow, chart]);
+    expect(nav.pages.map((p) => [p.label, p.moduleId, p.routePath])).toEqual([
+      ['Runs', 'flow', '/modules/flow/runs'],
+      ['Templates', 'flow', '/modules/flow/templates'],
+      ['Flow chart', 'flow-chart', '/modules/flow-chart/chart'],
+    ]);
+  });
+
+  it('does not make the contributor a module of its own when it has no own nav page', () => {
+    expect(navModulesFor([flow, chart]).map((m) => m.id)).toEqual(['flow']);
+  });
+
+  it('keeps a provider that has only contributed entries', () => {
+    const [nav] = navModulesFor([mod('flow', page('route', 'Detail', '/d')), chart]);
+    expect(nav.id).toBe('flow');
+    expect(nav.pages.map((p) => p.label)).toEqual(['Flow chart']);
+  });
+
+  it('sorts contributions by order (none last), then by module order', () => {
+    const late = mod('c-late', page('flow:nav', 'Late', '/l'));
+    const first = mod('c-first', { ...page('flow:nav', 'First', '/f'), order: 1 });
+    const second = mod('c-second', { ...page('flow:nav', 'Second', '/s'), order: 2 });
+    const [nav] = navModulesFor([flow, late, second, first, chart]);
+    expect(nav.pages.slice(2).map((p) => p.label)).toEqual(['First', 'Second', 'Late', 'Flow chart']);
+  });
+
+  it('ignores a contribution whose provider is not loaded, and a module contributing to itself', () => {
+    expect(navModulesFor([chart])).toEqual([]);
+    const [nav] = navModulesFor([mod('flow', page('nav', 'Runs', '/runs'), page('flow:nav', 'Self', '/self'))]);
+    expect(nav.pages.map((p) => p.label)).toEqual(['Runs']);
+  });
+
+  it('ignores a contribution without a path, as it has no address', () => {
+    const [nav] = navModulesFor([flow, mod('x', page('flow:nav', 'Nowhere'))]);
+    expect(nav.pages.map((p) => p.label)).toEqual(['Runs', 'Templates']);
+  });
+
+  it('does not list the contributed entry among the quick-launch targets or as a module', () => {
+    const home = homeNavModule(navModulesFor([flow, chart]));
+    expect(home.pages.map((p) => p.label)).toEqual(['Dashboard', 'Flow']);
+  });
+
+  describe('active module', () => {
+    const nav = navModulesFor([flow, chart, mod('billing', page('nav', 'Overview', '/'))]);
+
+    it('is the provider on a contributed page, with the page current in its menu', () => {
+      const active = activeNavModule('/modules/flow-chart/chart', nav);
+      expect(active?.id).toBe('flow');
+      expect(activeNavPage('/modules/flow-chart/chart', active!)?.label).toBe('Flow chart');
+    });
+
+    it('still is the provider on a sub-route of the contributed page', () => {
+      expect(activeNavModule('/modules/flow-chart/chart/42', nav)?.id).toBe('flow');
+    });
+
+    it('leaves the pages of the provider and of other modules alone', () => {
+      expect(activeNavModule('/modules/flow/runs', nav)?.id).toBe('flow');
+      expect(activeNavModule('/modules/billing', nav)?.id).toBe('billing');
+    });
+
+    it('keeps the contributor own page with its own module when it has one that is more specific', () => {
+      const own = navModulesFor([flow, mod('flow-chart', page('nav', 'Home', '/'), page('nav', 'Deep', '/chart/deep'), page('flow:nav', 'Flow chart', '/chart'))]);
+      expect(activeNavModule('/modules/flow-chart/chart/deep', own)?.id).toBe('flow-chart');
+      expect(activeNavModule('/modules/flow-chart/chart', own)?.id).toBe('flow');
+    });
+  });
+});
