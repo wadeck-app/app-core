@@ -38,7 +38,7 @@ describe('App: layout', () => {
     render(<App />);
     expect(await screen.findByText('overview-page')).toBeInTheDocument();
     const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' });
-    expect(tab.querySelector('[data-logo]')).toHaveAttribute('data-logo', 'JM');
+    expect(tab.querySelector('[data-initials]')).toHaveAttribute('data-initials', 'JM');
     expect(within(screen.getByTestId('shell-menu')).getByRole('link', { name: 'History' })).toBeInTheDocument();
   });
 

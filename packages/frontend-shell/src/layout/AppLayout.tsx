@@ -1,11 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AppShell, type ShellItem, type ShellLinkProps, type ShellMenu } from './AppShell.js';
+import { AppShell, useRootAccent, type ShellItem, type ShellLinkProps, type ShellMenu } from '@wadeck-app/dsl-ui';
 import { Logo, moduleColor } from './Logo.js';
 import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent } from './navModel.js';
 import { TopBarActions } from './TopBarActions.js';
 import type { LayoutProps } from './types.js';
-import { useRootAccent } from './useRootAccent.js';
 
 const routerLink = ({ href, children, ...rest }: ShellLinkProps): React.ReactElement => (
   <Link to={href} {...rest}>
@@ -53,7 +52,15 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   };
 
   return (
-    <AppShell brand="app-core" tabs={tabs} tabsLabel="Modules" menu={menu} actions={<TopBarActions modules={modules} failed={failed} />} renderLink={routerLink}>
+    <AppShell
+      brand="app-core"
+      tabs={tabs}
+      tabsLabel="Modules"
+      menu={menu}
+      actions={<TopBarActions modules={modules} failed={failed} />}
+      renderLink={routerLink}
+      skipLabel="Skip to content"
+    >
       {children}
     </AppShell>
   );

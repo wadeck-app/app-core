@@ -2,6 +2,7 @@ import React from 'react';
 import { render, waitFor } from '@testing-library/react';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { GenericPageRunner, type ComponentRegistryEntry } from '@wadeck-app/dsl-renderer';
+import { compileDslDocument } from '@wadeck-app/dsl-renderer/build/dslCompiler';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -165,6 +166,7 @@ function textNodes(container: HTMLElement): string[] {
 }
 
 const registeredModules: string[] = [];
+const compiledModules: string[] = [];
 const matchedExpectations = new Set<string>();
 
 describe('every packaged fixture view renders visible content (not a blank page)', () => {
@@ -245,13 +247,76 @@ function stubEventSource(): void {
 }
 
 describe('registry child key contract', () => {
-  // `app-core-cli package` warns about `children:` on built-in nodes (packages/app-core-cli/src/childKeys.ts) because
-  // the registry has no node schema and ignores unknown keys. That warning is only right while no built-in component
-  // other than FieldWrapper reads node['children']. If this fails, update CHILDREN_READERS in childKeys.ts.
-  it('only FieldWrapper reads a "children" key among the built-in components', () => {
-    const builtIns = Object.values(appRegistry).filter((entry) => !entry.name.includes(':'));
+  // `app-core-cli package` warns about `children:` on built-in nodes (packages/app-core-cli/src/childKeys.ts) because it
+  // has no registry to ask: the warning is only right while no built-in component other than FieldWrapper takes a
+  // "children" key. The registry now declares the keys each component takes (`knownKeys`), so this reads that data
+  // instead of the source of the render functions. If it fails, update CHILDREN_READERS in childKeys.ts.
+  const builtIns = Object.values(appRegistry).filter((entry) => !entry.name.includes(':'));
+
+  it('only FieldWrapper takes a "children" key among the built-in components', () => {
     expect(builtIns.length).toBeGreaterThan(50);
-    const readers = builtIns.filter((entry) => /node\[['"]children['"]\]/.test(entry.render.toString())).map((entry) => entry.name);
-    expect(readers).toEqual(['FieldWrapper']);
+    expect(builtIns.filter((entry) => entry.knownKeys?.includes('children')).map((entry) => entry.name)).toEqual(['FieldWrapper']);
+  });
+
+  it('declares its keys for every built-in component, so the compiler can check every view (no "unchecked-keys")', () => {
+    expect(builtIns.filter((entry) => entry.knownKeys === undefined).map((entry) => entry.name)).toEqual([]);
+  });
+
+  it('declares the child nodes of a container under "items" (the key the renderer reads), never under "children"', () => {
+    const containers = builtIns.filter((entry) => entry.allowedChildren !== undefined);
+    expect(containers.length).toBeGreaterThan(10);
+    // Named slots such as PageHeader's "headerActions" are legitimate; "children" was the stale key. FieldWrapper really
+    // takes a "children" prop (the one exception, also listed in childKeys.ts).
+    expect(containers.filter((entry) => 'children' in (entry.allowedChildren ?? {})).map((entry) => entry.name)).toEqual(['FieldWrapper']);
+    expect(containers.filter((entry) => 'items' in (entry.allowedChildren ?? {})).map((entry) => entry.name)).toEqual(expect.arrayContaining(['Card', 'ActionBar', 'ChipButton']));
+  });
+});
+
+// The compiler of @wadeck-app/dsl-renderer checks every view against the registry: unknown component, unknown key
+// (with a "did you mean" suggestion), schema. This is the check that would have caught the blank pages.
+describe('compiler diagnostics on the packaged fixture views', () => {
+  beforeAll(async () => {
+    await ensureSharedGlobals();
+    for (const fixture of fixtures) {
+      if (fixture.manifest.dslLib === undefined) continue;
+      const loaded = (await import(/* @vite-ignore */ pathToFileURL(path.resolve(fixture.distDir, fixture.manifest.dslLib.entry)).href)) as { default?: ComponentRegistryEntry[] };
+      if (!Array.isArray(loaded.default)) throw new Error(`${fixture.manifest.id}: dslLib.entry must default-export the ComponentRegistryEntry[] array.`);
+      registerModuleEntries(fixture.manifest.id, loaded.default);
+      compiledModules.push(fixture.manifest.id);
+    }
+  });
+
+  afterAll(() => {
+    for (const id of compiledModules) unregisterModuleEntries(id);
+  });
+
+  it.each(allViews.map((view) => [view.name, view] as const))('%s compiles without any error', (_name, view) => {
+    const artifact = compileDslDocument(JSON.stringify(view.view), appRegistry, { sourcePath: view.name });
+    const errors = artifact.diagnostics.filter((d) => d.severity === 'error');
+    expect(errors, `${view.name}: ${errors.map((d) => `${d.code} at ${d.nodePath}: ${d.message}`).join(' | ')}`).toEqual([]);
+  });
+
+  it('only leaves "unchecked-keys" warnings for components that modules define themselves', () => {
+    for (const view of allViews) {
+      const artifact = compileDslDocument(JSON.stringify(view.view), appRegistry, { sourcePath: view.name });
+      const unchecked = artifact.diagnostics.filter((d) => d.code === 'unchecked-keys' && !d.type.includes(':'));
+      expect(unchecked, `${view.name}: built-in components without knownKeys`).toEqual([]);
+    }
+  });
+
+  it('catches the blank-page mistake: "children:" under a container is an error that suggests "items"', () => {
+    const view = { $type: 'VerticalStack', children: [{ $type: 'Badge', label: 'x' }] };
+    const artifact = compileDslDocument(JSON.stringify(view), appRegistry, { sourcePath: 'blank-page.yaml' });
+    const unknown = artifact.diagnostics.filter((d) => d.code === 'unknown-key');
+    expect(unknown).toHaveLength(1);
+    expect(unknown[0].severity).toBe('error');
+    expect(unknown[0].message).toContain('children');
+    expect(unknown[0].message).toContain('items');
+  });
+
+  it('accepts the same view written with "items:"', () => {
+    const view = { $type: 'VerticalStack', items: [{ $type: 'Badge', label: 'x' }] };
+    const artifact = compileDslDocument(JSON.stringify(view), appRegistry, { sourcePath: 'fixed.yaml' });
+    expect(artifact.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
   });
 });

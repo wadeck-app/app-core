@@ -17,7 +17,7 @@ const renderAt = (path: string) =>
     </MemoryRouter>,
   );
 
-const logosIn = (root: HTMLElement) => Array.from(root.querySelectorAll('[data-logo]')).map((l) => l.getAttribute('data-logo'));
+const logosIn = (root: HTMLElement) => Array.from(root.querySelectorAll('[data-initials]')).map((l) => l.getAttribute('data-initials'));
 // The accent is applied on <html> as inline custom properties.
 const rootAccent = () => document.documentElement.style.getPropertyValue('--color-primary-solid');
 
@@ -41,24 +41,23 @@ describe('AppLayout: top tabs', () => {
   });
 });
 
+// The look of the bar (height, shadow, theme tokens) belongs to dsl-ui's AppShell and is tested there.
 describe('AppLayout: top bar', () => {
-  it('is the Compact flat bar: 44px, no border, separated from the page by a soft shadow', () => {
-    renderAt(billing.basePath);
-    const classes = screen.getByRole('banner').className.split(/\s+/);
-    expect(classes).toContain('h-11');
-    expect(classes).toContain('shadow-sm');
-    expect(classes).toContain('bg-surface');
-    // No bottom border; z-10 keeps the shadow above the content below.
-    expect(classes).not.toContain('border-b');
-    expect(classes).toContain('z-10');
-  });
-
-  it('keeps the same app name size and puts the tabs and the actions in it', () => {
+  it('shows the app name, the module tabs and the app actions (theme toggle, versions) in the top bar', () => {
     renderAt(billing.basePath);
     const bar = within(screen.getByRole('banner'));
-    expect(bar.getByText('app-core').className).toContain('text-base');
+    expect(bar.getByText('app-core')).toBeInTheDocument();
     expect(bar.getByRole('navigation', { name: 'Modules' })).toBeInTheDocument();
     expect(bar.getByRole('button', { name: /Switch to (dark|light) mode/ })).toBeInTheDocument();
+    expect(bar.getByRole('button', { name: 'Versions' })).toBeInTheDocument();
+  });
+
+  it('offers a keyboard skip link to the content, in English like the rest of the app', () => {
+    renderAt(billing.basePath);
+    const skip = screen.getByRole('link', { name: 'Skip to content' });
+    expect(skip.getAttribute('href')).toMatch(/^#.+/);
+    // It targets the main area.
+    expect(screen.getByRole('main').id).toBe(skip.getAttribute('href')!.slice(1));
   });
 });
 
@@ -90,7 +89,7 @@ describe('AppLayout: sidebar, always visible', () => {
     renderAt(billing.basePath);
     const side = screen.getByTestId('shell-menu');
     // Neither a logo nor a visible title above the pages.
-    expect(side.querySelector('[data-logo]')).toBeNull();
+    expect(side.querySelector('[data-initials]')).toBeNull();
     const heading = within(side).getByRole('heading', { name: 'Billing' });
     expect(heading.className).toContain('sr-only');
     // The pages start right at the top of the sidebar.
@@ -98,23 +97,11 @@ describe('AppLayout: sidebar, always visible', () => {
     expect(side.children[1]).toBe(within(side).getByRole('navigation', { name: 'Billing pages' }));
   });
 
-  it('follows the theme: dsl-ui surface in light mode, deep slate only through dark: variants', () => {
+  it('uses the theme tokens only, so it follows light and dark (no hard-coded dark classes)', () => {
     renderAt(billing.basePath);
     const side = screen.getByTestId('shell-menu');
-    const classes = side.className.split(/\s+/);
-    expect(classes).toContain('bg-surface');
-    expect(classes).toContain('dark:bg-slate-900');
-    // A bare dark class would keep the sidebar dark in light mode.
-    expect(classes).not.toContain('bg-slate-900');
-    expect(classes).not.toContain('border-slate-800');
-    // Same for the entries: no unconditional light-on-dark text.
-    const links = within(side).getAllByRole('link');
-    for (const link of links) {
-      const c = link.className.split(/\s+/);
-      expect(c, link.textContent ?? '').not.toContain('text-white');
-      expect(c, link.textContent ?? '').not.toContain('text-slate-400');
-    }
-    expect(within(side).getByRole('heading', { name: 'Billing' }).className.split(/\s+/)).not.toContain('text-white');
+    const classes = [side, ...within(side).getAllByRole('link')].flatMap((el) => el.className.split(/\s+/));
+    expect(classes.filter((c) => c.startsWith('dark:') || /slate-/.test(c))).toEqual([]);
   });
 });
 
@@ -179,9 +166,9 @@ describe('AppLayout: adapter between the module model and the shell', () => {
 
   it('gives every module tab the same logo size, and the Dashboard tab none', () => {
     renderAt('/');
-    const sizes = FIXTURE_NAV.map((m) => tab(m.title).querySelector<HTMLElement>('[data-logo]')!.className.split(/\s+/).filter((c) => /^(h-|min-w-|px-|text-\[)/.test(c)).sort());
+    const sizes = FIXTURE_NAV.map((m) => tab(m.title).querySelector<HTMLElement>('[data-initials]')!.className.split(/\s+/).filter((c) => /^(h-|min-w-|px-|text-\[)/.test(c)).sort());
     for (const s of sizes) expect(s).toEqual(sizes[0]);
-    expect(tab('Dashboard').querySelector('[data-logo]')).toBeNull();
+    expect(tab('Dashboard').querySelector('[data-initials]')).toBeNull();
   });
 });
 

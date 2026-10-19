@@ -1,6 +1,5 @@
 import React from 'react';
-import { InitialsTile } from './InitialsTile.js';
-import { colorFromId, initialsOf } from './initials.js';
+import { InitialsTile, colorFromId, initialsOf } from '@wadeck-app/dsl-ui';
 
 // Tailwind 600 shades: each keeps white text readable (contrast >= 3.5) on its own.
 const MODULE_PALETTE = ['#e11d48', '#ea580c', '#d97706', '#059669', '#0d9488', '#0284c7', '#4f46e5', '#7c3aed', '#c026d3'] as const;
