@@ -327,9 +327,9 @@ describe('cli check / package (real subprocess)', () => {
     expect(run.stderr).toContain('Fix:');
   });
 
-  it('the usage line lists check and package', () => {
+  it('the usage line lists init, check and package', () => {
     const run = runCli(['nope']);
     expect(run.status).toBe(1);
-    expect(run.stderr).toContain('validate|check|package|dev|serve');
+    expect(run.stderr).toContain('validate|init|check|package|dev|serve');
   });
 });

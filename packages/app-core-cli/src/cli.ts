@@ -8,6 +8,7 @@ import { runServe } from './serve.js';
 import { checkModule, formatCheckIssues } from './check.js';
 import { DEFAULT_OUT_DIR, packageModule, parsePackageArgs, resolveVersion } from './package.js';
 import { parseLinkArgs } from './providers.js';
+import { INIT_USAGE, initModule, parseInitArgs } from './init.js';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
 import { UpdateManager } from '@wadeck-app/shared-cli/UpdateManager';
@@ -57,6 +58,22 @@ async function main(): Promise<void> {
       } else {
         console.error(result.message);
       }
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (command === 'init') {
+    if (!target) {
+      console.error(`Usage: ${INIT_USAGE}`);
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      const { id } = initModule(target, parseInitArgs(rest));
+      console.log(`OK: created module "${id}" in ${target}. Next: app-core-cli check ${target}, then app-core-cli dev ${target} --watch.`);
+    } catch (err) {
+      console.error(`app-core-cli init failed: ${getErrorMessage(err)}`);
       process.exitCode = 1;
     }
     return;
@@ -206,7 +223,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.error('Usage: app-core-cli <validate|check|package|dev|serve|version|update|self-check> [path]');
+  console.error('Usage: app-core-cli <validate|init|check|package|dev|serve|version|update|self-check> [path]');
   process.exitCode = 1;
 }
 

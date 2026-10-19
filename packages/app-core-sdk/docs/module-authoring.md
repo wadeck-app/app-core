@@ -10,7 +10,7 @@ Contents: [Start here](#start-here-the-5-minute-path) - [Layout and workflow](#l
 
 Install the CLI once: `npm install -g @wadeck-app/app-core-cli`.
 
-1. **Copy.** Copy `packages/test-app-modules/app-module-example` into your repo as `app-module-<name>` (the comments in its sources say why each line exists). It requires the `slot-provider` fixture; for a first module drop `requires`, `expose` and the contribution to `slot-provider:shared-slot` from `manifest.json`, or start from this smallest module (checked and packaged with the built CLI):
+1. **Create.** `app-core-cli init ./app-module-<name> [--id <id>] [--title "Display name"]` writes the smallest module below (it refuses a folder that already has content), and it passes `check` as is. Or **copy** `packages/test-app-modules/app-module-example` into your repo as `app-module-<name>` (the comments in its sources say why each line exists). It requires the `slot-provider` fixture; for a first module drop `requires`, `expose` and the contribution to `slot-provider:shared-slot` from `manifest.json`, or start from this smallest module (checked and packaged with the built CLI):
 
    ```
    app-module-mini/
