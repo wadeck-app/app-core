@@ -124,6 +124,35 @@ describe('packageModule: output manifest and views', () => {
     expect(validated.manifest.dslLib).toBeUndefined();
   });
 
+  describe('showInNav', () => {
+    const withShowInNav = (value: unknown) => module_({ 'manifest.json': JSON.stringify({ ...BASE_MANIFEST, showInNav: value }) });
+
+    it('copies showInNav: false to the packaged manifest, and the result is a valid output manifest', async () => {
+      const out = outDir();
+      await packageModule({ moduleDir: withShowInNav(false), outDir: out, version: '1.0.0' });
+      expect(JSON.parse(read(out, 'manifest.json'))).toMatchObject({ id: 'tiny', showInNav: false });
+      const validated = validateManifestFile(path.join(out, 'manifest.json'));
+      if (!validated.ok) throw new Error(validated.message);
+      expect(validated.manifest.showInNav).toBe(false);
+    });
+
+    it('copies an explicit true too', async () => {
+      const out = outDir();
+      await packageModule({ moduleDir: withShowInNav(true), outDir: out, version: '1.0.0' });
+      expect(JSON.parse(read(out, 'manifest.json')).showInNav).toBe(true);
+    });
+
+    it('writes no showInNav when the source has none (absent means listed)', async () => {
+      const out = outDir();
+      await packageModule({ moduleDir: module_(), outDir: out, version: '1.0.0' });
+      expect(JSON.parse(read(out, 'manifest.json'))).not.toHaveProperty('showInNav');
+    });
+
+    it('refuses a value that is not a boolean (a "false" string would otherwise look like it works), naming the field', async () => {
+      await expect(packageModule({ moduleDir: withShowInNav('false'), outDir: outDir(), version: '1.0.0' })).rejects.toThrow(/showInNav/);
+    });
+  });
+
   it('re-emits the view compact and parsed (YAML in, JSON out)', async () => {
     const out = outDir();
     await packageModule({ moduleDir: module_(), outDir: out, version: '1.0.0' });

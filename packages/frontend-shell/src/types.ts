@@ -25,6 +25,8 @@ export interface LoadedModuleSummary {
   version: string;
   extensionPoints: ResolvedExtensionPoint[];
   dslLib?: ModuleDslLib;
+  // From the manifest's `showInNav`: false keeps the module out of the top bar and the dashboard menu. Absent means true.
+  showInNav?: boolean;
 }
 
 // A registered module that could not be loaded; `error` is the reason, `source` the manifest path.

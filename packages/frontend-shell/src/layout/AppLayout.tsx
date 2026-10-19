@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AppShell, useRootAccent, type ShellItem, type ShellLinkProps, type ShellMenu } from '@wadeck-app/dsl-ui';
 import { Logo, moduleColor } from './Logo.js';
-import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent } from './navModel.js';
+import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent, listedNavModules } from './navModel.js';
 import { TopBarActions } from './TopBarActions.js';
 import type { LayoutProps } from './types.js';
 
@@ -26,7 +26,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
 
   const tabs: ShellItem[] = [
     { id: DASHBOARD_TAB_ID, label: 'Dashboard', href: '/', current: pathname === '/' ? 'page' : undefined },
-    ...navModules.map((m) => ({
+    ...listedNavModules(navModules).map((m) => ({
       id: m.id,
       label: m.title,
       href: m.pages[0].routePath,

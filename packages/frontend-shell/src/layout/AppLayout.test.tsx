@@ -3,7 +3,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AppLayout } from './AppLayout.js';
 import { moduleColor } from './Logo.js';
-import { FIXTURE_NAV } from './testFixtures.js';
+import { navModulesFor } from './navModel.js';
+import { FIXTURE_MODULES, FIXTURE_NAV } from './testFixtures.js';
 
 const billing = FIXTURE_NAV[0];
 const settings = FIXTURE_NAV[4];
@@ -102,6 +103,57 @@ describe('AppLayout: sidebar, always visible', () => {
     const side = screen.getByTestId('shell-menu');
     const classes = [side, ...within(side).getAllByRole('link')].flatMap((el) => el.className.split(/\s+/));
     expect(classes.filter((c) => c.startsWith('dark:') || /slate-/.test(c))).toEqual([]);
+  });
+});
+
+// A module whose manifest says showInNav: false: no tab and no dashboard shortcut, but its pages are still served.
+describe('AppLayout: a module that is not listed (showInNav: false)', () => {
+  const modules = FIXTURE_MODULES.map((m) => (m.id === 'reports' ? { ...m, showInNav: false } : m));
+  const navModules = navModulesFor(modules);
+  const reports = navModules.find((m) => m.id === 'reports')!;
+
+  const renderHidden = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <AppLayout modules={[]} navModules={navModules}>
+          <p>content</p>
+        </AppLayout>
+      </MemoryRouter>,
+    );
+  const tabNames = () => within(screen.getByRole('navigation', { name: 'Modules' })).getAllByRole('link').map((l) => l.textContent);
+
+  it('has no tab in the top bar', () => {
+    renderHidden('/');
+    expect(tabNames()).toEqual(['Dashboard', 'BIBilling', 'INInventory', 'ALAudit log', 'SESettings']);
+  });
+
+  it('has no shortcut on the dashboard menu', () => {
+    renderHidden('/');
+    const labels = within(screen.getByRole('navigation', { name: 'Dashboard pages' })).getAllByRole('link').map((l) => l.textContent);
+    expect(labels).toEqual(['DADashboard', 'BIBilling', 'INInventory', 'ALAudit log', 'SESettings']);
+  });
+
+  it('still lists its pages in the side menu while one of them is open, with the current one marked', () => {
+    renderHidden(`${reports.basePath}/p1`);
+    const side = within(screen.getByRole('navigation', { name: 'Reports pages' }));
+    expect(side.getAllByRole('link').map((l) => l.textContent)).toEqual(reports.pages.map((p) => p.label));
+    expect(side.getByRole('link', { name: 'Scheduled exports' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('highlights no tab on its pages (it has none), and the other tabs stay plain', () => {
+    renderHidden(reports.basePath);
+    const links = within(screen.getByRole('navigation', { name: 'Modules' })).getAllByRole('link');
+    expect(links.filter((l) => l.getAttribute('aria-current') !== null)).toEqual([]);
+  });
+
+  it('keeps the accent of its own color on its pages', () => {
+    renderHidden(reports.basePath);
+    expect(document.documentElement.style.getPropertyValue('--color-primary-solid')).toBe(moduleColor('reports'));
+  });
+
+  it('lists every module again when the option is absent or true', () => {
+    renderAt('/');
+    expect(within(screen.getByRole('navigation', { name: 'Modules' })).getAllByRole('link')).toHaveLength(FIXTURE_MODULES.length + 1);
   });
 });
 

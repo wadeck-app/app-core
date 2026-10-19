@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LoadedModuleSummary } from '../types.js';
-import { activeNavModule, activeNavPage, navModulesFor, navPagesFor, titleFromId } from './navModel.js';
+import { activeNavModule, activeNavPage, homeNavModule, listedNavModules, navModulesFor, navPagesFor, titleFromId } from './navModel.js';
 
 const page = (slot: string, label: string, path?: string) => ({ kind: 'page', slot, label, path, view: {}, rawYaml: '' });
 const mod = (id: string, ...extensionPoints: LoadedModuleSummary['extensionPoints']): LoadedModuleSummary => ({ id, version: '1.0.0', extensionPoints });
@@ -55,6 +55,46 @@ describe('navModulesFor', () => {
     const result = navModulesFor(modules);
     expect(result.some((m) => m.id === 'widgets-only')).toBe(false);
     expect(result[0].pages.some((p) => p.label === 'Invoice')).toBe(false);
+  });
+});
+
+describe('showInNav (the manifest option that keeps a module out of the navigation)', () => {
+  const modules: LoadedModuleSummary[] = [
+    mod('billing', page('nav', 'Overview', '/')),
+    { ...mod('internal', page('nav', 'Console', '/')), showInNav: false },
+    { ...mod('explicit', page('nav', 'Home', '/')), showInNav: true },
+    // Widgets only: never listed, whatever showInNav says.
+    { ...mod('widgets', { kind: 'widget', slot: 'dashboard', view: {}, rawYaml: '' }), showInNav: true },
+  ];
+
+  it('keeps a module with showInNav: false in the model (its pages still need a side menu) but marks it not listed', () => {
+    const nav = navModulesFor(modules);
+    expect(nav.map((m) => [m.id, m.listed])).toEqual([
+      ['billing', true],
+      ['internal', false],
+      ['explicit', true],
+    ]);
+  });
+
+  it('treats a missing option as listed, and never lists a module without nav pages', () => {
+    const nav = navModulesFor(modules);
+    expect(nav.find((m) => m.id === 'billing')?.listed).toBe(true);
+    expect(nav.some((m) => m.id === 'widgets')).toBe(false);
+  });
+
+  it('listedNavModules keeps only the modules to show in the top bar', () => {
+    expect(listedNavModules(navModulesFor(modules)).map((m) => m.id)).toEqual(['billing', 'explicit']);
+  });
+
+  it('leaves the module out of the dashboard shortcuts', () => {
+    const home = homeNavModule(navModulesFor(modules));
+    expect(home.pages.map((p) => p.label)).toEqual(['Dashboard', 'Billing', 'Explicit']);
+  });
+
+  it('still finds a not listed module from its URL, so its pages get their side menu', () => {
+    const nav = navModulesFor(modules);
+    expect(activeNavModule('/modules/internal', nav)?.id).toBe('internal');
+    expect(activeNavPage('/modules/internal', activeNavModule('/modules/internal', nav)!)?.label).toBe('Console');
   });
 });
 

@@ -57,6 +57,34 @@ describe('app-core-sdk manifest id and source manifest', () => {
   });
 });
 
+describe('app-core-sdk showInNav', () => {
+  const widget = { kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: { $type: 'Badge', label: 'ok' } } };
+  const packaged = { id: 'sdk-test', version: '1.0.0', backendEntryPath: './b.cjs', extensionPoints: [widget] };
+
+  it('is optional in the source and in the packaged manifest, and means listed when absent', () => {
+    expect(parseSourceManifest({ id: 'sdk-test', extensionPoints: [widget] }).showInNav).toBeUndefined();
+    expect(parseManifest(packaged).showInNav).toBeUndefined();
+  });
+
+  it('accepts a boolean in both', () => {
+    for (const value of [true, false]) {
+      expect(parseSourceManifest({ id: 'sdk-test', extensionPoints: [widget], showInNav: value }).showInNav).toBe(value);
+      expect(parseManifest({ ...packaged, showInNav: value }).showInNav).toBe(value);
+    }
+  });
+
+  it('rejects anything else, so "false" (a string) does not silently count as hidden or shown', () => {
+    for (const value of ['false', 0, null, 'no']) {
+      expect(SourceManifestSchema.safeParse({ id: 'sdk-test', extensionPoints: [widget], showInNav: value }).success, String(value)).toBe(false);
+      expect(ManifestSchema.safeParse({ ...packaged, showInNav: value }).success, String(value)).toBe(false);
+    }
+  });
+
+  it('keeps the source manifest strict for every other unknown key', () => {
+    expect(SourceManifestSchema.safeParse({ id: 'sdk-test', extensionPoints: [widget], showInNavigation: false }).success).toBe(false);
+  });
+});
+
 describe('app-core-sdk module author types (decisions 95 and 97)', () => {
   // Compile-time check that the documented shapes type-check as an author writes them.
   interface Running {

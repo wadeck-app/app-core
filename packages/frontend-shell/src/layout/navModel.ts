@@ -31,6 +31,9 @@ export interface NavModule {
   // Every page route of the module lives under this prefix; used to find the active module from the URL.
   basePath: string;
   pages: NavPage[];
+  // Whether the module is listed (a tab, a dashboard shortcut). A module that is not listed still has its pages in the
+  // side menu while one of them is open, and still colors the accent.
+  listed: boolean;
 }
 
 // The manifest has no display name yet, so the title is derived from the module id ("billing-reports" -> "Billing reports").
@@ -39,14 +42,18 @@ export function titleFromId(id: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-// Modules without any page/nav entry have nothing to show in the navigation and are left out.
+// Modules without any page/nav entry have nothing to show in the navigation and are left out. A module with pages
+// whose manifest says `showInNav: false` is kept (its pages must still get a side menu) but is not `listed`.
 export function navModulesFor(modules: LoadedModuleSummary[]): NavModule[] {
   const pages = navPagesFor(modules);
-  return modules.flatMap((m) => {
+  return modules.flatMap((m): NavModule[] => {
     const own = pages.filter((p) => p.moduleId === m.id);
-    return own.length > 0 ? [{ id: m.id, title: titleFromId(m.id), basePath: `/modules/${m.id}`, pages: own }] : [];
+    return own.length > 0 ? [{ id: m.id, title: titleFromId(m.id), basePath: `/modules/${m.id}`, pages: own, listed: m.showInNav !== false }] : [];
   });
 }
+
+// The modules the top bar and the dashboard menu list.
+export const listedNavModules = (navModules: NavModule[]): NavModule[] => navModules.filter((m) => m.listed);
 
 // Pseudo-module shown by "always visible" sidebars outside any module (the dashboard): the dashboard itself,
 // then one quick-launch entry per module pointing to its first page.
@@ -59,8 +66,9 @@ export function homeNavModule(navModules: NavModule[]): NavModule {
     basePath: '/',
     pages: [
       { moduleId: HOME_MODULE_ID, routePath: '/', label: 'Dashboard', exact: true },
-      ...navModules.map((m) => ({ moduleId: m.id, routePath: m.pages[0].routePath, label: m.title, exact: false })),
+      ...listedNavModules(navModules).map((m) => ({ moduleId: m.id, routePath: m.pages[0].routePath, label: m.title, exact: false })),
     ],
+    listed: true,
   };
 }
 

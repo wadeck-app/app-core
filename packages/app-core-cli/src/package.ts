@@ -313,6 +313,7 @@ export async function packageModule(options: PackageOptions): Promise<PackageRes
     ...(lifecycle === undefined ? {} : { lifecycle }),
     ...(manifest.requires === undefined ? {} : { requires: manifest.requires }),
     ...(expose === undefined ? {} : { expose }),
+    ...(manifest.showInNav === undefined ? {} : { showInNav: manifest.showInNav }),
     extensionPoints,
     ...(manifest.dslLib === undefined || lib === undefined
       ? {}

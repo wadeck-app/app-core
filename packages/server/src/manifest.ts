@@ -67,6 +67,12 @@ const LifecycleSchema = z
   })
   .strict();
 
+// Whether the shell lists the module in its navigation (a tab in the top bar and a shortcut on the dashboard menu).
+// Absent means true. `false` is for a module whose pages are reached by link, or that offers widgets only: its pages
+// stay mounted and routable, and when one is open the side menu still lists the module's pages. A module without any
+// `page` / `nav` extension point is never listed, whatever this says. Must be a boolean: a string like "false" is rejected.
+const ShowInNavSchema = z.boolean().optional();
+
 export const DSL_LIB_DIR = 'dsl-lib';
 
 // entry and css are paths inside the module's dsl-lib/ folder; the loader additionally checks
@@ -96,6 +102,7 @@ export const ManifestSchema = z.object({
   requires: RequiresSchema.optional(),
   expose: ExposeSchema.optional(),
   lifecycle: LifecycleSchema.optional(),
+  showInNav: ShowInNavSchema,
 });
 
 // The manifest an author writes at the module root (decision 81). It never names what `package`
@@ -110,6 +117,7 @@ export const SourceManifestSchema = z
     requires: RequiresSchema.optional(),
     expose: ExposeSchema.optional(),
     lifecycle: LifecycleSchema.optional(),
+    showInNav: ShowInNavSchema,
   })
   .strict();
 

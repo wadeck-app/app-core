@@ -155,6 +155,8 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
       version: m.manifest.version,
       extensionPoints: m.resolvedViews,
       dslLib: m.dslLib,
+      // Always present for the shell (the manifest field is optional and means true when absent).
+      showInNav: m.manifest.showInNav ?? true,
     }));
     return reply.code(200).send({ modules, failed: manager.listFailed() });
   });
