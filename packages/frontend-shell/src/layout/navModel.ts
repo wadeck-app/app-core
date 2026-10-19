@@ -75,6 +75,12 @@ export function activeNavModule(pathname: string, navModules: NavModule[]): NavM
     .sort((a, b) => b.basePath.length - a.basePath.length)[0];
 }
 
+// Whether `page` is the page being viewed. An `exact` page (a module home, "/") matches only its own path, so it does
+// not stay highlighted on the module's other pages; any other page also matches the routes below it.
+export function isPageCurrent(pathname: string, page: NavPage): boolean {
+  return page.exact ? pathname === page.routePath : isUnder(pathname, page.routePath);
+}
+
 export function activeNavPage(pathname: string, module: NavModule): NavPage | undefined {
-  return module.pages.find((p) => (p.exact ? pathname === p.routePath : isUnder(pathname, p.routePath)));
+  return module.pages.find((p) => isPageCurrent(pathname, p));
 }

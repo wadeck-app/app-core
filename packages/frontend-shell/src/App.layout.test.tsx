@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
+import { moduleColor } from './layout/Logo.js';
 
 vi.mock('./useModules.js', () => ({
   useModules: () => ({
@@ -20,7 +21,8 @@ vi.mock('./useModules.js', () => ({
   }),
 }));
 
-const accentStyles = () => Array.from(document.head.querySelectorAll('[data-module-accent]'));
+// The accent is applied on <html> as inline custom properties.
+const rootAccent = () => document.documentElement.style.getPropertyValue('--color-primary-solid');
 
 beforeEach(() => {
   localStorage.clear();
@@ -37,7 +39,7 @@ describe('App: layout', () => {
     expect(await screen.findByText('overview-page')).toBeInTheDocument();
     const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' });
     expect(tab.querySelector('[data-logo]')).toHaveAttribute('data-logo', 'JM');
-    expect(within(screen.getByTestId('module-sidebar')).getByRole('link', { name: 'History' })).toBeInTheDocument();
+    expect(within(screen.getByTestId('shell-menu')).getByRole('link', { name: 'History' })).toBeInTheDocument();
   });
 
   it('highlights the active module tab with the Up blend style, and no other tab', async () => {
@@ -57,12 +59,12 @@ describe('App: layout', () => {
   it('recolors the accent with the module being viewed, and not on the dashboard', async () => {
     const { unmount } = render(<App />);
     expect(await screen.findByText('overview-page')).toBeInTheDocument();
-    expect(accentStyles()).toHaveLength(1);
+    expect(rootAccent()).toBe(moduleColor('jobs-mod'));
     unmount();
-    expect(accentStyles()).toHaveLength(0);
+    expect(rootAccent()).toBe('');
 
     window.history.pushState({}, '', '/');
     render(<App />);
-    expect(accentStyles()).toHaveLength(0);
+    expect(rootAccent()).toBe('');
   });
 });
