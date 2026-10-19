@@ -1,10 +1,11 @@
 import React from 'react';
 import { EyeOff, Plus } from 'lucide-react';
+import { isDev } from './isDev.js';
 import { usePersistentSet } from './usePersistentSet.js';
 
-// Floating A/B test bar, dev server only (App renders it under import.meta.env.DEV). One test = one row:
-// [ LABEL (hide) | option option option ... ]. See the A/B testing rule in the project CLAUDE.md.
-export const HIDDEN_TESTS_KEY = 'shell.abHidden';
+// Floating A/B test bar. One test = one row: [ LABEL (hide) | option option option ... ]. Declare a test with
+// `useAbTest` (useAbTest.ts) and render `<AbDock tests={[...]} />`. See the A/B testing rule in the project CLAUDE.md.
+export const HIDDEN_TESTS_KEY = 'ab.hidden';
 
 export interface AbOption {
   id: string;
@@ -66,8 +67,13 @@ function AbRow({ test, onHide }: { test: AbTest; onHide: () => void }): React.Re
 
 // One opaque dock holds every row, so the page does not show through the gaps between them. It is anchored by its
 // bottom: adding or hiding rows grows or shrinks it upwards. A hidden row keeps its choice and leaves a reminder chip.
-export function AbDock({ tests }: { tests: readonly AbTest[] }): React.ReactElement {
+// Development only, built in: it renders nothing outside development (see isDev.ts), so a test left in the code can
+// never reach users. `enabled` forces it on or off, e.g. for a staging build or a host project with another bundler.
+// A production build still contains the code unless the bundler removes the dead branch: do not rely on this to
+// shrink the bundle, only to hide the tool.
+export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[]; enabled?: boolean }): React.ReactElement | null {
   const [hidden, toggleHidden] = usePersistentSet(HIDDEN_TESTS_KEY);
+  if (!enabled) return null;
   const shown = tests.filter((t) => !hidden.has(t.id));
   const reminders = tests.filter((t) => hidden.has(t.id));
   return (
