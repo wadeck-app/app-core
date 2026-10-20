@@ -1812,6 +1812,7 @@ TooltipEntry.allowedChildren = {"items":["atomic","composite"]};
 TooltipEntry.knownKeys = ["content","items"];
 BulkActionsToolbarEntry.knownKeys = ["items","onClearSelection","selectedCount"];
 DataTableEntry.allowedChildren = {"filtersTop":["filter"],"filters":["filter"]};
+DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","badge"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition"]}}}}}};
 DataTableEntry.knownKeys = ["batchActions","batchActionsPosition","columns","defaultFilters","emptyMessage","expansion","expansionCondition","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onPageChange","onRowClick","onSortColChange","onSortDirChange","page","rows","selectable","sortCol","sortDir"];
 DataTableEntry.providesContext = ["DataTableSelectionCtx","DataTableFilterCtx"];
 DataTableEntry.requiresContext = ["RouterContext"];
