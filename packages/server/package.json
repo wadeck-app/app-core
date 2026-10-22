@@ -12,6 +12,7 @@
     "./loader": { "import": "./dist/loader.js", "types": "./dist/loader.d.ts" },
     "./registry": { "import": "./dist/registry.js", "types": "./dist/registry.d.ts" },
     "./configDir": { "import": "./dist/configDir.js", "types": "./dist/configDir.d.ts" },
+    "./dslLib": { "import": "./dist/dslLib.js", "types": "./dist/dslLib.d.ts" },
     "./port": { "import": "./dist/port.js", "types": "./dist/port.d.ts" },
     "./portFile": { "import": "./dist/portFile.js", "types": "./dist/portFile.d.ts" },
     "./contributions": { "import": "./dist/contributions.js", "types": "./dist/contributions.d.ts" },

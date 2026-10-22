@@ -28,7 +28,7 @@ directory and sent as an absolute path. `env` defaults to `process.env`. `timeou
 |---|---|
 | `registered` (`port`, `note?`) | app-core took the module. `note` is set when its answer was missed but `GET /api/modules` then showed the manifest's version. |
 | `unconfirmed` (`port`, `failure`, `timeoutMs?`, `detail?`, `loadedVersion?`, `expectedVersion?`) | app-core is reachable but did not answer in time (`failure: 'timeout'`) or the connection broke (`'reset'`). It may have applied the registration: nothing is written; check `GET /api/modules` or register again. |
-| `refused` (`port`, `httpStatus`, `reason`) | app-core is running and said no; `reason` is its own `error` text. |
+| `refused` (`port`, `httpStatus`, `reason`, `code?`, `retained?`) | app-core is running and said no; `reason` is its own `error` text. `retained: true` means the previous version of the module keeps running. `code: 'shared-version-mismatch'` (HTTP 422): the module's components were built for other versions of the shared packages (`dslLib.shared`) than app-core's shell provides; registering the same files again changes nothing, rebuild the module or update the shell. |
 | `deferred` (`file`) | Nothing listens on the port (connection refused / unknown host); the pickup file it reads at its next start was written. |
 | `skipped` (`reason`) | app-core is not installed here; nothing was written. |
 | `unregistered` (`port`) | app-core removed the module, its routes and its registry file. |
@@ -64,3 +64,7 @@ export async function registerWithAppCore(manifestPath: string, log: (line: stri
   }
 }
 ```
+
+## Before updating a module
+
+`app-core-cli check` and `package` ask the app-core running on this machine (`GET /build-info.json`) which versions of react, react-dom, react-router-dom, dsl-ui and dsl-renderer its shell provides, and print a `warning:` for each `dslLib.shared` range of the module that the shell does not satisfy. The exit code does not change: the module may be meant for another machine. A `refused` outcome with `code: 'shared-version-mismatch'` is the same problem found at registration. An updater should treat any `refused` as a failed update (the old version still runs) and report `describeRegistration(outcome, id)`, not swallow it.

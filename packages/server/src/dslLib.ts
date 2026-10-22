@@ -20,6 +20,16 @@ const SHARED_PACKAGES: Record<string, string> = {
 
 export type SharedVersions = Record<string, string>;
 
+// The module declares `dslLib.shared` ranges the app-core shell cannot honour (unknown package, invalid range, or a version the
+// shell does not satisfy). The request was fine: the module has to be rebuilt, or app-core updated.
+export class SharedVersionError extends Error {
+  readonly code = 'shared-version-mismatch';
+  constructor(message: string) {
+    super(message);
+    this.name = 'SharedVersionError';
+  }
+}
+
 export function sharedVersionsFromBuildInfo(info: unknown): SharedVersions {
   if (typeof info !== 'object' || info === null) {
     return {};
@@ -43,16 +53,18 @@ export interface SharedCheckResult {
 // Throws an actionable Error when a declared range is invalid, names a package the shell does not
 // share, or is not satisfied by the version the shell was built with. `versions` undefined means
 // build-info.json was unavailable: nothing can be compared and every declared package is unverified.
-export function checkSharedRanges(shared: Record<string, string>, versions: SharedVersions | undefined): SharedCheckResult {
+// `origin` says where the versions come from (which file, built when); it ends up in the message so the one who reads it
+// can tell a shell that really is older from a build-info.json that is stale.
+export function checkSharedRanges(shared: Record<string, string>, versions: SharedVersions | undefined, origin?: string): SharedCheckResult {
   const unverified: string[] = [];
   for (const [pkg, range] of Object.entries(shared)) {
     if (!(pkg in SHARED_PACKAGES)) {
-      throw new Error(
+      throw new SharedVersionError(
         `dslLib.shared["${pkg}"] is not provided by the app-core shell. Shared packages: ${Object.keys(SHARED_PACKAGES).join(', ')}.`,
       );
     }
     if (semver.validRange(range) === null) {
-      throw new Error(`dslLib.shared["${pkg}"] has an invalid version range "${range}".`);
+      throw new SharedVersionError(`dslLib.shared["${pkg}"] has an invalid version range "${range}".`);
     }
     const provided = versions?.[pkg];
     if (provided === undefined) {
@@ -60,8 +72,8 @@ export function checkSharedRanges(shared: Record<string, string>, versions: Shar
       continue;
     }
     if (!semver.satisfies(provided, range, { includePrerelease: true })) {
-      throw new Error(
-        `the module's components were built for ${pkg} "${range}" but the app-core shell provides ${provided}. Rebuild the module's dsl-lib against that version, or update app-core.`,
+      throw new SharedVersionError(
+        `the module's components were built for ${pkg} "${range}" but the app-core shell provides ${provided}${origin === undefined ? '' : ` (${origin})`}. Rebuild the module's dsl-lib against that version, or update app-core.`,
       );
     }
   }

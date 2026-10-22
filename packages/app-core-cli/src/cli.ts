@@ -9,6 +9,7 @@ import { checkModule, formatCheckIssues } from './check.js';
 import { DEFAULT_OUT_DIR, packageModule, parsePackageArgs, resolveVersion } from './package.js';
 import { parseLinkArgs } from './providers.js';
 import { INIT_USAGE, initModule, parseInitArgs } from './init.js';
+import { shellWarningsForModule } from './shellPreflight.js';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
 import { UpdateManager } from '@wadeck-app/shared-cli/UpdateManager';
@@ -93,6 +94,9 @@ async function main(): Promise<void> {
         return;
       }
       console.log(`OK: ${target} follows the module layout and its manifest is valid.`);
+      for (const warning of await shellWarningsForModule(target)) {
+        console.error(`warning: ${warning}`);
+      }
     } catch (err) {
       console.error(`app-core-cli check failed: ${getErrorMessage(err)}`);
       process.exitCode = 1;
@@ -111,7 +115,7 @@ async function main(): Promise<void> {
       const version = resolveVersion(args.version, process.env);
       const outDir = args.out ?? join(target, DEFAULT_OUT_DIR);
       const result = await packageModule({ moduleDir: target, outDir, version, links: args.links });
-      for (const warning of result.warnings) {
+      for (const warning of [...result.warnings, ...(await shellWarningsForModule(target))]) {
         console.error(`warning: ${warning}`);
       }
       console.log(`OK: packaged ${target} (version ${version}) into ${result.outDir}`);

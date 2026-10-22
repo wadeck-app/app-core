@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import * as path from 'node:path';
 import { getErrorMessage } from '../errors.js';
+import { SharedVersionError } from '../dslLib.js';
 import { ManifestIdMismatchError, parseRegistrationPayload, parseUnregisterPayload, UnsupportedSourceTypeError } from '../manifest.js';
 import { hasRegistryEntry, removeRegistryEntry, writeRegistryEntry, type RegistryEntry } from '../registry.js';
 import { ManifestFileError, ModuleRequirementError, newChangeReport, type ChangeReport, type ModuleManager } from '../loader.js';
@@ -174,6 +175,11 @@ function sendError(reply: FastifyReply, err: unknown, extra: Record<string, unkn
   }
   if (err instanceof ModuleRequirementError) {
     return reply.code(422).send({ error: message(getErrorMessage(err)), ...extra });
+  }
+  // The module's dsl-lib was built for other versions of the shared packages than the shell provides: 422 and a code, so a
+  // daemon that registers can tell "rebuild me" from a server fault.
+  if (err instanceof SharedVersionError) {
+    return reply.code(422).send({ error: message(getErrorMessage(err)), code: err.code, ...extra });
   }
   if (err instanceof InvalidRequestError) {
     return reply.code(400).send({ error: message(getErrorMessage(err)), issues: err.issues, ...extra });

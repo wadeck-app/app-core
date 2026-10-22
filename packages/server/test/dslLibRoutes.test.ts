@@ -119,7 +119,9 @@ describe('dsl-lib: serving, validation and lifecycle', () => {
     await start();
     const bad = writeModule(path.join(root, 'bad'), { id: 'm2', shared: { react: '^18' } });
     const res = await register('m2', bad);
-    expect(res.statusCode).toBe(500);
+    // A fault of the module, not of the server: 422 and a code the daemon that registers can recognise.
+    expect(res.statusCode).toBe(422);
+    expect(res.json().code).toBe('shared-version-mismatch');
     expect(res.json().error).toMatch(/react "\^18".*provides 19\.3\.0/);
     const state = await modules();
     expect(state.modules.find((m) => m.id === 'm2')).toBeUndefined();
@@ -155,10 +157,40 @@ describe('dsl-lib: serving, validation and lifecycle', () => {
     await start();
     await register('m1', manifestPath);
     writeModule(moduleDir, { version: '2.0.0', shared: { react: '^18' } });
-    expect((await register('m1', manifestPath, '/api/modules/update')).statusCode).toBe(500);
+    expect((await register('m1', manifestPath, '/api/modules/update')).statusCode).toBe(422);
     const state = await modules();
     expect(state.modules.find((m) => m.id === 'm1')).toBeDefined();
     expect(state.failed.find((f) => f.id === 'm1')).toBeDefined();
+  });
+
+  it('says where the shell version comes from: the file and when the shell was built', async () => {
+    await start({ ...BUILD_INFO, builtAt: '2026-10-18T12:44:33.900Z', commit: '430ffa0e' });
+    const res = await register('m2', writeModule(path.join(root, 'bad'), { id: 'm2', shared: { react: '^18' } }));
+    expect(res.json().error).toContain('build-info.json, built 2026-10-18T12:44:33.900Z, commit 430ffa0e');
+  });
+
+  it('says so when the served shell is older than the packages installed next to it, and warns at startup', async () => {
+    // A checkout: <root>/public (the served shell) beside <root>/node_modules with a newer dsl-ui than the shell was built with.
+    const installed = path.join(root, 'node_modules', '@wadeck-app', 'dsl-ui');
+    fs.mkdirSync(installed, { recursive: true });
+    fs.writeFileSync(path.join(installed, 'package.json'), JSON.stringify({ name: '@wadeck-app/dsl-ui', version: '2026.10.22-123-a0f51351' }));
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      await start();
+      const res = await register('m2', writeModule(path.join(root, 'bad'), { id: 'm2', shared: { '@wadeck-app/dsl-ui': '>=2026.10.22-0' } }));
+      expect(res.statusCode).toBe(422);
+      expect(res.json().error).toContain('the served shell looks stale (@wadeck-app/dsl-ui 2026.10.22-123-a0f51351 installed, 2026.10.17-095-7b2c28f1 in the served shell)');
+      expect(res.json().error).toContain('npm run build:full');
+      expect(stderr.mock.calls.map((c) => String(c[0])).join('')).toContain('is older than the installed packages');
+    } finally {
+      stderr.mockRestore();
+    }
+  });
+
+  it('does not call the shell stale when nothing is installed next to it to compare with', async () => {
+    await start();
+    const res = await register('m2', writeModule(path.join(root, 'bad'), { id: 'm2', shared: { react: '^18' } }));
+    expect(res.json().error).not.toContain('stale');
   });
 
   it('fails a module that is missing its declared dsl-lib file', async () => {

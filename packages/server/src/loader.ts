@@ -91,6 +91,8 @@ export interface ModuleManagerOptions {
   // Versions of the shared singletons the served frontend was built with (from build-info.json);
   // undefined when unavailable, in which case dslLib.shared ranges cannot be verified.
   sharedVersions?: SharedVersions;
+  // Where those versions come from, for the messages (file, build time, and a note when it looks stale).
+  sharedOrigin?: string;
   // Receives warnings and teardown failures; defaults to a line on stderr.
   onWarning?: (message: string) => void;
 }
@@ -480,7 +482,7 @@ export class ModuleManager {
     if (manifest.dslLib === undefined) {
       return undefined;
     }
-    const { unverified } = checkSharedRanges(manifest.dslLib.shared, this.options.sharedVersions);
+    const { unverified } = checkSharedRanges(manifest.dslLib.shared, this.options.sharedVersions, this.options.sharedOrigin);
     if (unverified.length > 0) {
       (this.options.onWarning ?? writeWarning)(
         `module "${id}": cannot verify dslLib.shared for ${unverified.join(', ')} (no build-info.json with these versions next to the served frontend; run "npm run build:full").`,

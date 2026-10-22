@@ -156,6 +156,26 @@ describe('app-core module registration from a daemon', () => {
       });
     });
 
+    it('keeps the code and the retained flag app-core sent, so a daemon can tell a module to rebuild from a server fault', async () => {
+      fake = await startFakeAppCore(replyJson(422, { error: 'the module components were built for react "^18" but the app-core shell provides 19.3.0', code: 'shared-version-mismatch', retained: true }));
+      const outcome = await registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, path.join(tmp, 'cfg')) });
+      expect(outcome).toMatchObject({ status: 'refused', httpStatus: 422, code: 'shared-version-mismatch', retained: true });
+    });
+
+    it('says, in the log line of such a refusal, that the old version keeps running and what to rebuild', () => {
+      const line = describeRegistration(
+        { status: 'refused', port: 4850, httpStatus: 422, reason: 'built for react "^18" but the shell provides 19.3.0', code: 'shared-version-mismatch', retained: true },
+        'flow-chart',
+      );
+      expect(line).toContain('The previous version of the module keeps running.');
+      expect(line).toContain("rebuild the module's dsl-lib");
+      expect(line).toContain('Registering the same files again changes nothing.');
+    });
+
+    it('does not claim the old version runs when app-core did not say so', () => {
+      expect(describeRegistration({ status: 'refused', port: 4850, httpStatus: 400, reason: 'bad id' }, 'queue')).not.toContain('keeps running');
+    });
+
     it('reports a refusal whose body is not JSON, or empty, without losing the status', async () => {
       fake = await startFakeAppCore((res) => {
         res.writeHead(502, { 'Content-Type': 'text/plain' });

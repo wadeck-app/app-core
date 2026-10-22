@@ -34,7 +34,7 @@ export type RegistrationOutcome =
       expectedVersion?: string;
     }
   /** app-core is running and said no; `reason` is its own `error` text and names what to fix. */
-  | { status: 'refused'; port: number; httpStatus: number; reason: string }
+  | { status: 'refused'; port: number; httpStatus: number; reason: string; code?: string; retained?: boolean }
   /** app-core is installed but not running: the pickup file it reads at its next start was written. */
   | { status: 'deferred'; file: string }
   /** app-core is not installed here: nothing was written. */
@@ -45,7 +45,7 @@ export type UnregistrationOutcome =
   | { status: 'unregistered'; port: number }
   /** app-core is running and did not know that id. */
   | { status: 'not-registered'; port: number; reason: string }
-  | { status: 'refused'; port: number; httpStatus: number; reason: string }
+  | { status: 'refused'; port: number; httpStatus: number; reason: string; code?: string; retained?: boolean }
   /** app-core is not running: the pending pickup file for that id was removed. */
   | { status: 'cleared'; file: string }
   /** app-core is not running and there was nothing pending to remove. */
@@ -144,17 +144,24 @@ async function loadedVersionOf(port: number, id: string, timeoutMs: number): Pro
   }
 }
 
-async function refusalReason(response: Response): Promise<string> {
+interface Refusal {
+  reason: string;
+  code?: string;
+  retained?: boolean;
+}
+
+// What app-core said when it refused: its own text, and the fields that tell an automatic caller what kind of refusal it is.
+async function refusalOf(response: Response): Promise<Refusal> {
   const text = await response.text().catch(() => '');
   try {
-    const { error } = JSON.parse(text) as { error?: unknown };
+    const { error, code, retained } = JSON.parse(text) as { error?: unknown; code?: unknown; retained?: unknown };
     if (typeof error === 'string' && error.trim() !== '') {
-      return error;
+      return { reason: error, ...(typeof code === 'string' ? { code } : {}), ...(typeof retained === 'boolean' ? { retained } : {}) };
     }
   } catch {
     // Not JSON: report what was actually said.
   }
-  return text.trim() === '' ? response.statusText || 'no reason given' : text.trim();
+  return { reason: text.trim() === '' ? response.statusText || 'no reason given' : text.trim() };
 }
 
 function pickupFile(configDir: string, id: string): string {
@@ -241,7 +248,7 @@ export async function registerModule(options: RegisterModuleOptions): Promise<Re
   if (response.ok) {
     return { status: 'registered', port };
   }
-  return { status: 'refused', port, httpStatus: response.status, reason: await refusalReason(response) };
+  return { status: 'refused', port, httpStatus: response.status, ...(await refusalOf(response)) };
 }
 
 /**
@@ -267,11 +274,11 @@ export async function unregisterModule(options: UnregisterModuleOptions): Promis
   if (response.ok) {
     return { status: 'unregistered', port };
   }
-  const reason = await refusalReason(response);
+  const refusal = await refusalOf(response);
   if (response.status === 404) {
-    return { status: 'not-registered', port, reason };
+    return { status: 'not-registered', port, reason: refusal.reason };
   }
-  return { status: 'refused', port, httpStatus: response.status, reason };
+  return { status: 'refused', port, httpStatus: response.status, ...refusal };
 }
 
 /** One log line per outcome. A refusal says what to do, since nobody is watching when it happens. */
@@ -297,8 +304,14 @@ export function describeRegistration(outcome: RegistrationOutcome | Unregistrati
       return `app-core: not running, left ${outcome.file} for its next start`;
     case 'skipped':
       return `app-core: module "${id}" not registered, ${outcome.reason}`;
-    case 'refused':
-      return `app-core: refused module "${id}" (HTTP ${outcome.httpStatus}): ${outcome.reason}. Fix what it names, then register again. app-core was on port ${outcome.port}.`;
+    case 'refused': {
+      const kept = outcome.retained === true ? ' The previous version of the module keeps running.' : '';
+      const fix =
+        outcome.code === 'shared-version-mismatch'
+          ? " This module's components do not match the versions of the shared packages that app-core's shell provides: rebuild the module's dsl-lib against them, or update app-core's shell, and register again. Registering the same files again changes nothing."
+          : ' Fix what it names, then register again.';
+      return `app-core: refused module "${id}" (HTTP ${outcome.httpStatus}): ${outcome.reason}.${kept}${fix} app-core was on port ${outcome.port}.`;
+    }
     case 'unregistered':
       return `app-core: module "${id}" removed (app-core on port ${outcome.port})`;
     case 'not-registered':

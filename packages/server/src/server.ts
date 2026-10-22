@@ -31,14 +31,49 @@ export interface AppCoreServer {
 // unreachable. No separate reconciliation step.
 // Versions of the shared singletons the served frontend was built with, from the
 // build-info.json written next to it. Undefined (with an explicit stderr line) when unreadable.
-function readSharedVersions(publicDir: string): SharedVersions | undefined {
+interface SharedInfo {
+  versions: SharedVersions;
+  origin: string;
+}
+
+// The versions of the shared packages installed in the checkout next to the served frontend (<repo>/node_modules), when
+// there is one: what a rebuild of the frontend would put in build-info.json.
+function installedVersions(publicDir: string): SharedVersions {
+  const installed: SharedVersions = {};
+  for (const pkg of ['react', 'react-dom', 'react-router-dom', '@wadeck-app/dsl-ui', '@wadeck-app/dsl-renderer']) {
+    try {
+      const version = (JSON.parse(fs.readFileSync(path.resolve(publicDir, '..', 'node_modules', pkg, 'package.json'), 'utf8')) as { version?: unknown }).version;
+      if (typeof version === 'string') {
+        installed[pkg] = version;
+      }
+    } catch {
+      // Not installed there (a served folder that is not inside a checkout): nothing to compare with.
+    }
+  }
+  return installed;
+}
+
+function readSharedVersions(publicDir: string): SharedInfo | undefined {
   const file = path.join(publicDir, 'build-info.json');
   if (!fs.existsSync(file)) {
     process.stderr.write(`[app-core] ${file} not found: dslLib.shared ranges of modules cannot be verified (run "npm run build:full").\n`);
     return undefined;
   }
   try {
-    return sharedVersionsFromBuildInfo(JSON.parse(fs.readFileSync(file, 'utf8')));
+    const info = JSON.parse(fs.readFileSync(file, 'utf8')) as { builtAt?: unknown; commit?: unknown };
+    const versions = sharedVersionsFromBuildInfo(info);
+    const built = typeof info.builtAt === 'string' ? `built ${info.builtAt}` : 'build time unknown';
+    const commit = typeof info.commit === 'string' ? `, commit ${info.commit}` : '';
+    let origin = `${file}, ${built}${commit}`;
+    // A frontend built before the packages were updated: the file describes what is served, but it is older than the install.
+    const installed = installedVersions(publicDir);
+    const differing = Object.entries(installed).filter(([pkg, version]) => versions[pkg] !== undefined && versions[pkg] !== version);
+    if (differing.length > 0) {
+      const detail = differing.map(([pkg, version]) => `${pkg} ${version} installed, ${versions[pkg]} in the served shell`).join('; ');
+      origin += `; the served shell looks stale (${detail}): run "npm run build:full" to rebuild it`;
+      process.stderr.write(`[app-core] ${file} is older than the installed packages (${detail}). Modules are checked against the served shell, not the installed packages: run "npm run build:full".\n`);
+    }
+    return { versions, origin };
   } catch (err) {
     process.stderr.write(`[app-core] ${file} is unreadable (${getErrorMessage(err)}): dslLib.shared ranges of modules cannot be verified.\n`);
     return undefined;
@@ -54,9 +89,11 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   const publicDir = opts.publicDir ?? path.resolve(__dirname, '../../../public');
   const hasPublic = fs.existsSync(publicDir);
   // Throws here, at startup, when APP_CORE_HOOK_TIMEOUT_MS is not a positive integer.
+  const shared = hasPublic ? readSharedVersions(publicDir) : undefined;
   const manager = new ModuleManager({
     configDir: opts.configDir ?? resolveConfigDir(),
-    sharedVersions: hasPublic ? readSharedVersions(publicDir) : undefined,
+    sharedVersions: shared?.versions,
+    sharedOrigin: shared?.origin,
   });
 
   const server = Fastify({ logger: false });
