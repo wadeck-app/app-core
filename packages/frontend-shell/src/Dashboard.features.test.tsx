@@ -211,6 +211,11 @@ describe('Dashboard: bar', () => {
     expect(screen.getByRole('toolbar', { name: 'Dashboard controls' }).className).toContain('sticky');
   });
 
+  it('has no line under it: a solid background is enough to hide what scrolls beneath', () => {
+    renderDashboard();
+    expect(screen.getByRole('toolbar', { name: 'Dashboard controls' }).className).not.toMatch(/\bborder/);
+  });
+
   it('writes the number of widgets of each module in parentheses, after a space', () => {
     renderDashboard();
     const filters = within(screen.getByRole('group', { name: 'Show widgets of' }));

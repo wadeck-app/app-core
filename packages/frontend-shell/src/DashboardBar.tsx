@@ -37,7 +37,7 @@ const segmentClass = (active: boolean): string => `${SEGMENT} ${active ? 'bg-pri
 export function DashboardBar(props: DashboardBarProps): React.ReactElement {
   const { refreshedAt, onRefresh, hiddenCount, onRestore, orderCustomized, onResetOrder, modules, filter, onFilter, interval, onInterval } = props;
   return (
-    <div role="toolbar" aria-label="Dashboard controls" className="sticky top-0 z-10 -mx-2 mb-4 flex flex-wrap items-center gap-2 border-b border-border bg-bg px-2 py-2">
+    <div role="toolbar" aria-label="Dashboard controls" className="sticky top-0 z-10 -mx-2 mb-4 flex flex-wrap items-center gap-2 bg-bg px-2 py-2">
       {modules.length > 1 ? (
         <div role="group" aria-label="Show widgets of" className="inline-flex divide-x divide-border overflow-hidden rounded-md border border-border bg-surface">
           <button type="button" aria-pressed={filter === undefined} className={segmentClass(filter === undefined)} onClick={() => onFilter(undefined)}>
