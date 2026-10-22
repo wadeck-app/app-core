@@ -185,6 +185,7 @@ export const CompactSelectEntry: ComponentRegistryEntry = {
 	render: ({ node, ctx }: RegistryRenderProps) => {
 		const bind = node['bind'] as string
 		const urlParam = (resolveExpressionValue(node['urlParam'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['urlParam']
+		const resetUrlParams = (resolveExpressionValue(node['resetUrlParams'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['resetUrlParams']
 		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['options']
 		const ariaLabel = (resolveExpressionValue(node['ariaLabel'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['ariaLabel']
 		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['placeholder']
@@ -194,7 +195,7 @@ export const CompactSelectEntry: ComponentRegistryEntry = {
 			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
 			return (
-				<CompactSelect urlParam={urlParam} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+				<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 			)
 		}
 		return <CompactSelectWithContext />
@@ -247,10 +248,11 @@ export const PageSizeSelectEntry: ComponentRegistryEntry = {
 	nodeSchema: null as never,
 	render: ({ node, ctx }: RegistryRenderProps) => {
 		const urlParam = (resolveExpressionValue(node['urlParam'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['urlParam']
+		const resetUrlParams = (resolveExpressionValue(node['resetUrlParams'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['resetUrlParams']
 		const value = (resolveExpressionValue(node['value'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['value']
 		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['options']
 		const onChange = (resolveExpressionValue(node['onChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/PageSizeSelect.js').PageSizeSelectProps['onChange']
-		return <PageSizeSelect urlParam={urlParam} value={value} options={options} onChange={onChange} />
+		return <PageSizeSelect urlParam={urlParam} resetUrlParams={resetUrlParams} value={value} options={options} onChange={onChange} />
 	},
 }
 
@@ -280,7 +282,10 @@ export const RefreshButtonEntry: ComponentRegistryEntry = {
 	render: ({ node, ctx }: RegistryRenderProps) => {
 		const onClick = (resolveExpressionValue(node['onClick'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RefreshButton.js').RefreshButtonProps['onClick']
 		const loading = (resolveExpressionValue(node['loading'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RefreshButton.js').RefreshButtonProps['loading']
-		return <RefreshButton onClick={onClick} loading={loading} />
+		const source = (resolveExpressionValue(node['source'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RefreshButton.js').RefreshButtonProps['source']
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RefreshButton.js').RefreshButtonProps['label']
+		const onRefresh = (resolveExpressionValue(node['onRefresh'], ctx) ?? ctx['$refresh']) as import('@wadeck-app/dsl-ui/dist/components/controls/RefreshButton.js').RefreshButtonProps['onRefresh']
+		return <RefreshButton onClick={onClick} loading={loading} source={source} label={label} onRefresh={onRefresh} />
 	},
 }
 
@@ -512,7 +517,8 @@ export const SkeletonEntry: ComponentRegistryEntry = {
 		const height = (resolveExpressionValue(node['height'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Skeleton.js').SkeletonProps['height']
 		const variant = (resolveExpressionValue(node['variant'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Skeleton.js').SkeletonProps['variant']
 		const count = (resolveExpressionValue(node['count'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Skeleton.js').SkeletonProps['count']
-		return <Skeleton width={width} height={height} variant={variant} count={count} />
+		const decorative = (resolveExpressionValue(node['decorative'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Skeleton.js').SkeletonProps['decorative']
+		return <Skeleton width={width} height={height} variant={variant} count={count} decorative={decorative} />
 	},
 }
 
@@ -1171,7 +1177,7 @@ export const StatTileEntry: ComponentRegistryEntry = {
 		const value = (resolveExpressionValue(node['value'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['value']
 		const trend = (resolveExpressionValue(node['trend'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['trend']
 		const icon = node['icon'] as unknown[] | undefined
-		const loading = (resolveExpressionValue(node['loading'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['loading']
+		const loading = (resolveExpressionValue(node['loading'], ctx) ?? ctx['$initialLoading']) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['loading']
 		return <StatTile label={label} value={value} trend={trend} icon={icon ? renderChildren(icon, registry, ctx) : null} loading={loading} />
 	},
 }
@@ -1472,7 +1478,8 @@ export const DataTableEntry: ComponentRegistryEntry = {
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const rows = (resolveExpressionValue(node['rows'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['rows']
 		const columns = (resolveExpressionValue(node['columns'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['columns']
-		const loading = (resolveExpressionValue(node['loading'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['loading']
+		const loading = (resolveExpressionValue(node['loading'], ctx) ?? ctx['$initialLoading']) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['loading']
+		const refreshing = (resolveExpressionValue(node['refreshing'], ctx) ?? ctx['$refreshing']) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['refreshing']
 		const emptyMessage = (resolveExpressionValue(node['emptyMessage'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['emptyMessage']
 		const onAction = (resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction']) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['onAction']
 		const navigateTo = (resolveExpressionValue(node['navigateTo'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['navigateTo']
@@ -1495,7 +1502,7 @@ export const DataTableEntry: ComponentRegistryEntry = {
 		const batchActionsPosition = (resolveExpressionValue(node['batchActionsPosition'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['batchActionsPosition']
 		const expansionCondition = (resolveExpressionValue(node['expansionCondition'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['expansionCondition']
 		const fontMono = (resolveExpressionValue(node['fontMono'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['fontMono']
-		return <DataTable rows={rows} columns={columns} loading={loading} emptyMessage={emptyMessage} onAction={onAction} navigateTo={navigateTo} onRowClick={onRowClick} filtersTop={filtersTop ? renderChildren(filtersTop, registry, ctx) : null} filters={filters ? renderChildren(filters, registry, ctx) : null} id={id} page={page} onPageChange={onPageChange} sortCol={sortCol} onSortColChange={onSortColChange} sortDir={sortDir} onSortDirChange={onSortDirChange} defaultFilters={defaultFilters} expansion={expansion} renderNode={renderNode} selectable={selectable} batchActions={batchActions} onBatchAction={onBatchAction} batchActionsPosition={batchActionsPosition} expansionCondition={expansionCondition} fontMono={fontMono} />
+		return <DataTable rows={rows} columns={columns} loading={loading} refreshing={refreshing} emptyMessage={emptyMessage} onAction={onAction} navigateTo={navigateTo} onRowClick={onRowClick} filtersTop={filtersTop ? renderChildren(filtersTop, registry, ctx) : null} filters={filters ? renderChildren(filters, registry, ctx) : null} id={id} page={page} onPageChange={onPageChange} sortCol={sortCol} onSortColChange={onSortColChange} sortDir={sortDir} onSortDirChange={onSortDirChange} defaultFilters={defaultFilters} expansion={expansion} renderNode={renderNode} selectable={selectable} batchActions={batchActions} onBatchAction={onBatchAction} batchActionsPosition={batchActionsPosition} expansionCondition={expansionCondition} fontMono={fontMono} />
 	},
 }
 
@@ -1544,13 +1551,14 @@ export const SearchBarEntry: ComponentRegistryEntry = {
 	nodeSchema: null as never,
 	render: ({ node, ctx }: RegistryRenderProps) => {
 		const urlParam = (resolveExpressionValue(node['urlParam'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['urlParam']
+		const resetUrlParams = (resolveExpressionValue(node['resetUrlParams'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['resetUrlParams']
 		const value = (resolveExpressionValue(node['value'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['value']
 		const onChange = (resolveExpressionValue(node['onChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['onChange']
 		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['placeholder']
 		const debounceMs = (resolveExpressionValue(node['debounceMs'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['debounceMs']
 		const focusExpand = (resolveExpressionValue(node['focusExpand'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['focusExpand']
 		const size = (resolveExpressionValue(node['size'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['size']
-		return <SearchBar urlParam={urlParam} value={value} onChange={onChange} placeholder={placeholder} debounceMs={debounceMs} focusExpand={focusExpand} size={size} />
+		return <SearchBar urlParam={urlParam} resetUrlParams={resetUrlParams} value={value} onChange={onChange} placeholder={placeholder} debounceMs={debounceMs} focusExpand={focusExpand} size={size} />
 	},
 }
 
@@ -1696,15 +1704,15 @@ CheckboxGroupEntry.knownKeys = ["bind","label","options","orientation"];
 ChipButtonEntry.allowedChildren = {"items":["atomic"]};
 ChipButtonEntry.knownKeys = ["active","aria-label","aria-pressed","color","emphasis","items","onClick","shape","title"];
 ColorPickerEntry.knownKeys = ["bind","label","options"];
-CompactSelectEntry.knownKeys = ["ariaLabel","bind","disabled","options","placeholder","urlParam"];
+CompactSelectEntry.knownKeys = ["ariaLabel","bind","disabled","options","placeholder","resetUrlParams","urlParam"];
 DeleteButtonEntry.knownKeys = ["items"];
 IconButtonEntry.knownKeys = ["aria-label","icon","size"];
 InviteTokenWidgetEntry.knownKeys = ["inviteToken","isPending","onGenerateToken"];
 InviteTokenWidgetEntry.requiresContext = ["ToastContext"];
 LiveToggleEntry.knownKeys = ["live","onChange"];
-PageSizeSelectEntry.knownKeys = ["onChange","options","urlParam","value"];
+PageSizeSelectEntry.knownKeys = ["onChange","options","resetUrlParams","urlParam","value"];
 RadioGroupEntry.knownKeys = ["bind","label","options","orientation"];
-RefreshButtonEntry.knownKeys = ["loading","onClick"];
+RefreshButtonEntry.knownKeys = ["label","loading","onClick","onRefresh","source"];
 SliderEntry.knownKeys = ["bind","disabled","label","max","min","showValue","step"];
 SwitchEntry.knownKeys = ["bind","disabled","label","size"];
 TabButtonEntry.knownKeys = ["active"];
@@ -1725,7 +1733,7 @@ PageHeaderEntry.allowedChildren = {"headerActions":["button","action"]};
 PageHeaderEntry.knownKeys = ["headerActions","icon","size","subtitle","title"];
 ProgressEntry.knownKeys = ["label","layout","max","showValue","size","value","valueLabel","variant"];
 RelativeDateEntry.knownKeys = ["date","format","live","tooltip"];
-SkeletonEntry.knownKeys = ["count","height","variant","width"];
+SkeletonEntry.knownKeys = ["count","decorative","height","variant","width"];
 SpinnerEntry.knownKeys = ["label","size"];
 TagEntry.knownKeys = ["color","label","onRemove"];
 ButtonCancelEntry.knownKeys = ["disabled","label","onCancel"];
@@ -1813,13 +1821,13 @@ TooltipEntry.knownKeys = ["content","items"];
 BulkActionsToolbarEntry.knownKeys = ["items","onClearSelection","selectedCount"];
 DataTableEntry.allowedChildren = {"filtersTop":["filter"],"filters":["filter"]};
 DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","badge"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition"]}}}}}};
-DataTableEntry.knownKeys = ["batchActions","batchActionsPosition","columns","defaultFilters","emptyMessage","expansion","expansionCondition","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onPageChange","onRowClick","onSortColChange","onSortDirChange","page","rows","selectable","sortCol","sortDir"];
+DataTableEntry.knownKeys = ["batchActions","batchActionsPosition","columns","defaultFilters","emptyMessage","expansion","expansionCondition","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onPageChange","onRowClick","onSortColChange","onSortDirChange","page","refreshing","rows","selectable","sortCol","sortDir"];
 DataTableEntry.providesContext = ["DataTableSelectionCtx","DataTableFilterCtx"];
 DataTableEntry.requiresContext = ["RouterContext"];
 FilterBarEntry.knownKeys = ["filters","onClearAll","onFilterChange","onSearchChange","placeholder","search"];
 FilterChipsEntry.knownKeys = ["bind","mode","onChange","options","value"];
 PaginationEntry.knownKeys = ["onPageChange","page","size","total","urlParam"];
-SearchBarEntry.knownKeys = ["debounceMs","focusExpand","onChange","placeholder","size","urlParam","value"];
+SearchBarEntry.knownKeys = ["debounceMs","focusExpand","onChange","placeholder","resetUrlParams","size","urlParam","value"];
 ShownFetchedCounterEntry.knownKeys = ["entriesField","pushRight","raw","totalField"];
 SortableColumnEntry.knownKeys = ["currentSort","label","onSort","sortKey"];
 StatusFilterEntry.knownKeys = ["field","onChange","options","value"];
