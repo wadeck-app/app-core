@@ -10,10 +10,29 @@ import { DEFAULT_PORT, parsePortEnv } from '@wadeck-app/app-core-server/port';
 import { readServerPort } from '@wadeck-app/app-core-server/portFile';
 
 const DEFAULT_TIMEOUT_MS = 3000;
+const DEFAULT_PROBE_TIMEOUT_MS = 1000;
 
 export type RegistrationOutcome =
-  /** app-core took the module (a module it already knew is reloaded). */
-  | { status: 'registered'; port: number }
+  /**
+   * app-core took the module (a module it already knew is reloaded). `note` is set when the answer to
+   * the registration was missed but app-core was then seen serving the manifest's version.
+   */
+  | { status: 'registered'; port: number; note?: string }
+  /**
+   * app-core is reachable but did not confirm: no answer within `timeoutMs` (`failure: 'timeout'`, typically a
+   * module whose setup or migrate is slow, the registration may still be applying) or the connection broke
+   * (`failure: 'reset'`, `detail` says how). Nothing was written: the registration may well have been applied.
+   * `loadedVersion` / `expectedVersion` are set when GET /api/modules showed the module at another version.
+   */
+  | {
+      status: 'unconfirmed';
+      port: number;
+      failure: 'timeout' | 'reset';
+      timeoutMs?: number;
+      detail?: string;
+      loadedVersion?: string;
+      expectedVersion?: string;
+    }
   /** app-core is running and said no; `reason` is its own `error` text and names what to fix. */
   | { status: 'refused'; port: number; httpStatus: number; reason: string }
   /** app-core is installed but not running: the pickup file it reads at its next start was written. */
@@ -39,8 +58,10 @@ export interface RegisterModuleOptions {
   manifestPath: string;
   /** Defaults to process.env. APP_CORE_PORT and APP_CORE_CONFIG_DIR are read from it. */
   env?: NodeJS.ProcessEnv;
-  /** How long to wait for app-core before treating it as not running. Default 3000. */
+  /** How long to wait for app-core's answer before checking what it did (outcome `unconfirmed`). Default 3000. */
   timeoutMs?: number;
+  /** How long the check of GET /api/modules after a missing answer may take. Default 1000. */
+  probeTimeoutMs?: number;
 }
 
 export interface UnregisterModuleOptions {
@@ -64,17 +85,62 @@ function assertValidId(id: string): void {
   }
 }
 
-// Undefined means app-core is not serving: connection refused, or it accepted and never answered.
-async function postJson(port: number, endpoint: string, body: object, timeoutMs: number): Promise<Response | undefined> {
+// Why a request got no HTTP answer. Only 'unreachable' proves nothing listens (connection refused, unknown host);
+// a timeout or a broken connection says nothing about whether app-core received and applied the request.
+type RequestFailure = { kind: 'unreachable' | 'timeout' | 'reset'; detail: string };
+
+function classifyFailure(err: unknown): RequestFailure {
+  const code = (err as { cause?: { code?: unknown } } | null)?.cause?.code;
+  const detail = typeof code === 'string' ? `${getErrorMessage(err)} (${code})` : getErrorMessage(err);
+  if (err instanceof Error && err.name === 'TimeoutError') {
+    return { kind: 'timeout', detail };
+  }
+  if (code === 'ECONNREFUSED' || code === 'ENOTFOUND') {
+    return { kind: 'unreachable', detail };
+  }
+  return { kind: 'reset', detail };
+}
+
+async function request(port: number, endpoint: string, init: RequestInit, timeoutMs: number): Promise<Response | RequestFailure> {
   try {
-    return await fetch(`http://127.0.0.1:${port}/api/modules/${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    return await fetch(`http://127.0.0.1:${port}/api/modules${endpoint}`, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  } catch (err) {
+    return classifyFailure(err);
+  }
+}
+
+function postRequest(port: number, endpoint: string, body: object, timeoutMs: number): Promise<Response | RequestFailure> {
+  return request(port, endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, timeoutMs);
+}
+
+// Unregistration keeps the coarse reading: undefined means no answer, whatever the reason.
+async function postJson(port: number, endpoint: string, body: object, timeoutMs: number): Promise<Response | undefined> {
+  const result = await postRequest(port, `/${endpoint}`, body, timeoutMs);
+  return result instanceof Response ? result : undefined;
+}
+
+// The version of the module as the manifest declares it, undefined when it cannot be read (app-core would refuse it anyway).
+function readManifestVersion(manifestPath: string): string | undefined {
+  try {
+    const { version } = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as { version?: unknown };
+    return typeof version === 'string' ? version : undefined;
   } catch {
     return undefined;
+  }
+}
+
+// After a registration that got no answer: what does app-core serve now? `undefined` means the check itself failed.
+async function loadedVersionOf(port: number, id: string, timeoutMs: number): Promise<{ version: string | undefined } | RequestFailure> {
+  const response = await request(port, '', { method: 'GET' }, timeoutMs);
+  if (!(response instanceof Response)) {
+    return response;
+  }
+  try {
+    const { modules } = (await response.json()) as { modules?: Array<{ id?: unknown; version?: unknown }> };
+    const found = modules?.find((m) => m.id === id);
+    return { version: typeof found?.version === 'string' ? found.version : undefined };
+  } catch {
+    return { kind: 'reset', detail: 'GET /api/modules did not return a module list' };
   }
 }
 
@@ -101,7 +167,10 @@ function pickupFile(configDir: string, id: string): string {
  * machine without app-core, and the daemon must start the same either way. It rejects for what the
  * caller must fix: an invalid id, a malformed APP_CORE_PORT, or a manifest that does not exist.
  *
- * When app-core is not running, the registration is left in <configDir>/modules/<id>.json, which
+ * A missing answer (timeout, broken connection) is not "not running": app-core applies a registration while it
+ * answers slowly. GET /api/modules is then checked, giving `registered` (with a note) or `unconfirmed`.
+ *
+ * When nothing listens on the port (refused / unknown host), the registration is left in <configDir>/modules/<id>.json, which
  * app-core loads at its next start, but only if app-core's config dir already exists: a user who
  * never installed app-core gets no app-core folder.
  */
@@ -117,9 +186,46 @@ export async function registerModule(options: RegisterModuleOptions): Promise<Re
 
   const port = resolveAppCorePort(env);
   const payload = { id, source: { type: 'file', path: manifestPath } };
-  const response = await postJson(port, 'register', payload, timeoutMs);
+  const result = await postRequest(port, '/register', payload, timeoutMs);
 
-  if (response === undefined) {
+  let failure: RequestFailure | undefined;
+  let response: Response | undefined;
+  if (result instanceof Response) {
+    response = result;
+  } else {
+    failure = result;
+  }
+
+  // No answer is not "not running": app-core serves the request while its load (teardown, migrate, setup)
+  // runs, and may have applied it. Look at what it serves before saying anything.
+  if (failure !== undefined && failure.kind !== 'unreachable') {
+    const expectedVersion = readManifestVersion(manifestPath);
+    const seen = await loadedVersionOf(port, id, options.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS);
+    if ('kind' in seen && seen.kind === 'unreachable') {
+      // app-core went away between the two requests: it is not running after all.
+      failure = seen;
+    } else {
+      const loadedVersion = 'version' in seen ? seen.version : undefined;
+      if (loadedVersion !== undefined && loadedVersion === expectedVersion) {
+        return {
+          status: 'registered',
+          port,
+          note: `app-core did not answer the registration (${failure.kind}: ${failure.detail}), but it serves version ${loadedVersion} of "${id}"`,
+        };
+      }
+      return {
+        status: 'unconfirmed',
+        port,
+        failure: failure.kind,
+        ...(failure.kind === 'timeout' ? { timeoutMs } : {}),
+        detail: failure.detail,
+        ...(loadedVersion !== undefined ? { loadedVersion } : {}),
+        ...(loadedVersion !== undefined && expectedVersion !== undefined ? { expectedVersion } : {}),
+      };
+    }
+  }
+
+  if (failure !== undefined) {
     const configDir = resolveConfigDir(env);
     if (!fs.existsSync(configDir)) {
       return { status: 'skipped', reason: `app-core is not installed (${configDir} does not exist)` };
@@ -128,6 +234,9 @@ export async function registerModule(options: RegisterModuleOptions): Promise<Re
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(payload));
     return { status: 'deferred', file };
+  }
+  if (response === undefined) {
+    throw new Error('unreachable: a registration without an answer or a failure');
   }
   if (response.ok) {
     return { status: 'registered', port };
@@ -169,7 +278,21 @@ export async function unregisterModule(options: UnregisterModuleOptions): Promis
 export function describeRegistration(outcome: RegistrationOutcome | UnregistrationOutcome, id: string): string {
   switch (outcome.status) {
     case 'registered':
-      return `app-core: module "${id}" registered (app-core on port ${outcome.port})`;
+      return `app-core: module "${id}" registered (app-core on port ${outcome.port})${outcome.note === undefined ? '' : `. ${outcome.note}`}`;
+    case 'unconfirmed': {
+      const cause =
+        outcome.failure === 'timeout'
+          ? `app-core on port ${outcome.port} did not answer within ${outcome.timeoutMs ?? DEFAULT_TIMEOUT_MS} ms`
+          : `the connection to app-core on port ${outcome.port} broke (${outcome.detail ?? 'no detail'})`;
+      const seen =
+        outcome.loadedVersion === undefined
+          ? ''
+          : ` It serves version ${outcome.loadedVersion} of "${id}"${outcome.expectedVersion === undefined ? '' : `, the manifest is ${outcome.expectedVersion}`}.`;
+      return (
+        `app-core: registration of module "${id}" not confirmed: ${cause}. app-core is running and may still be applying it (a slow setup or migrate hook).${seen} ` +
+        `Nothing was written for its next start. Check GET http://127.0.0.1:${outcome.port}/api/modules, or register again.`
+      );
+    }
     case 'deferred':
       return `app-core: not running, left ${outcome.file} for its next start`;
     case 'skipped':

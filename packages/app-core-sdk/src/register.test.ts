@@ -24,7 +24,7 @@ interface FakeAppCore {
   close: () => Promise<void>;
 }
 
-type Responder = (res: http.ServerResponse) => void;
+type Responder = (res: http.ServerResponse, req: Recorded) => void;
 
 async function startFakeAppCore(respond: Responder): Promise<FakeAppCore> {
   const requests: Recorded[] = [];
@@ -34,8 +34,9 @@ async function startFakeAppCore(respond: Responder): Promise<FakeAppCore> {
       body += chunk.toString();
     });
     req.on('end', () => {
-      requests.push({ method: req.method, url: req.url, contentType: req.headers['content-type'], body });
-      respond(res);
+      const recorded = { method: req.method, url: req.url, contentType: req.headers['content-type'], body };
+      requests.push(recorded);
+      respond(res, recorded);
     });
   });
   await new Promise<void>((resolve) => {
@@ -58,7 +59,7 @@ async function startFakeAppCore(respond: Responder): Promise<FakeAppCore> {
 
 const replyJson =
   (status: number, body: object): Responder =>
-  (res) => {
+  (res, _req) => {
     res.writeHead(status, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(body));
   };
@@ -191,17 +192,85 @@ describe('app-core module registration from a daemon', () => {
       expect(fs.existsSync(configDir)).toBe(false);
     });
 
-    it('treats an app-core that accepts and never answers as not running, after the timeout', async () => {
+    // POST /api/modules/register never answers (a slow setup keeps the request open); GET /api/modules answers with `listed`.
+    const slowRegister =
+      (listed: Array<{ id: string; version: string }>): Responder =>
+      (res, req) => {
+        if (req.method === 'GET') {
+          replyJson(200, { modules: listed, failed: [] })(res, req);
+        }
+      };
+
+    it('does not claim app-core is down when it accepts and never answers: unconfirmed, no pickup file', async () => {
       const configDir = path.join(tmp, 'cfg');
       fs.mkdirSync(configDir);
-      fake = await startFakeAppCore(() => {
-        // never answers
-      });
+      fake = await startFakeAppCore(slowRegister([]));
       const started = Date.now();
       const outcome = await registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, configDir), timeoutMs: 150 });
 
-      expect(outcome.status).toBe('deferred');
+      expect(outcome).toMatchObject({ status: 'unconfirmed', port: fake.port, failure: 'timeout' });
       expect(Date.now() - started).toBeLessThan(2500);
+      expect(fs.existsSync(path.join(configDir, 'modules', 'queue.json'))).toBe(false);
+    });
+
+    it('reports registered, with a note, when the slow answer is missed but the module is loaded at the manifest version', async () => {
+      fs.writeFileSync(manifestPath, JSON.stringify({ id: 'queue', version: '2.0.0' }));
+      const configDir = path.join(tmp, 'cfg');
+      fs.mkdirSync(configDir);
+      fake = await startFakeAppCore(slowRegister([{ id: 'queue', version: '2.0.0' }]));
+      const outcome = await registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, configDir), timeoutMs: 150 });
+
+      expect(outcome).toMatchObject({ status: 'registered', port: fake.port });
+      expect(outcome.status === 'registered' ? outcome.note : '').toMatch(/2\.0\.0/);
+      expect(fs.existsSync(path.join(configDir, 'modules', 'queue.json'))).toBe(false);
+    });
+
+    it('stays unconfirmed, naming both versions, when the module is loaded at another version', async () => {
+      fs.writeFileSync(manifestPath, JSON.stringify({ id: 'queue', version: '2.0.0' }));
+      fake = await startFakeAppCore(slowRegister([{ id: 'queue', version: '1.0.0' }]));
+      const outcome = await registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, path.join(tmp, 'cfg')), timeoutMs: 150 });
+
+      expect(outcome).toMatchObject({ status: 'unconfirmed', failure: 'timeout', loadedVersion: '1.0.0', expectedVersion: '2.0.0' });
+    });
+
+    it('is unconfirmed, not deferred, when the connection is reset while app-core is reachable', async () => {
+      const configDir = path.join(tmp, 'cfg');
+      fs.mkdirSync(configDir);
+      fake = await startFakeAppCore((res, req) => {
+        if (req.method === 'POST') {
+          res.socket?.destroy();
+          return;
+        }
+        replyJson(200, { modules: [], failed: [] })(res, req);
+      });
+      const outcome = await registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, configDir), timeoutMs: 500 });
+
+      expect(outcome).toMatchObject({ status: 'unconfirmed', port: fake.port, failure: 'reset' });
+      expect(fs.existsSync(path.join(configDir, 'modules', 'queue.json'))).toBe(false);
+    });
+
+    it('is unconfirmed when the verification itself gets no answer, within the probe timeout', async () => {
+      fake = await startFakeAppCore(() => {
+        // never answers anything
+      });
+      const started = Date.now();
+      const outcome = await registerModule({
+        id: 'queue',
+        manifestPath,
+        env: envFor(fake.port, path.join(tmp, 'cfg')),
+        timeoutMs: 100,
+        probeTimeoutMs: 100,
+      });
+
+      expect(outcome).toMatchObject({ status: 'unconfirmed', failure: 'timeout' });
+      expect(Date.now() - started).toBeLessThan(2500);
+    });
+
+    it('still defers (and writes the pickup file) when the connection is refused', async () => {
+      const configDir = path.join(tmp, 'cfg');
+      fs.mkdirSync(configDir);
+      const outcome = await registerModule({ id: 'queue', manifestPath, env: envFor(await unusedPort(), configDir), probeTimeoutMs: 100 });
+      expect(outcome.status).toBe('deferred');
     });
 
     it('rejects for a manifest that does not exist, naming the path', async () => {
@@ -281,6 +350,7 @@ describe('app-core module registration from a daemon', () => {
       const lines = [
         describeRegistration({ status: 'registered', port: 4850 }, 'queue'),
         describeRegistration({ status: 'deferred', file: '/c/modules/queue.json' }, 'queue'),
+        describeRegistration({ status: 'unconfirmed', port: 4850, failure: 'timeout', timeoutMs: 3000 }, 'queue'),
         describeRegistration({ status: 'skipped', reason: 'app-core is not installed' }, 'queue'),
         describeRegistration({ status: 'refused', port: 4850, httpStatus: 400, reason: 'bad id' }, 'queue'),
         describeRegistration({ status: 'unregistered', port: 4850 }, 'queue'),
@@ -288,10 +358,28 @@ describe('app-core module registration from a daemon', () => {
         describeRegistration({ status: 'cleared', file: '/c/modules/queue.json' }, 'queue'),
       ];
       expect(new Set(lines).size).toBe(lines.length);
-      expect(lines[3]).toContain('HTTP 400');
-      expect(lines[3]).toContain('bad id');
-      expect(lines[3]).toContain('Fix');
+      expect(lines[4]).toContain('HTTP 400');
+      expect(lines[4]).toContain('bad id');
+      expect(lines[4]).toContain('Fix');
       expect(lines.every((line) => line.startsWith('app-core:'))).toBe(true);
+    });
+
+    it('words unconfirmed accurately: app-core is not said to be down, the port and the next step are named', () => {
+      const timeout = describeRegistration({ status: 'unconfirmed', port: 4850, failure: 'timeout', timeoutMs: 3000 }, 'queue');
+      expect(timeout).not.toMatch(/not running/);
+      expect(timeout).toContain('4850');
+      expect(timeout).toContain('3000 ms');
+      expect(timeout).toContain('/api/modules');
+      const reset = describeRegistration({ status: 'unconfirmed', port: 4850, failure: 'reset', detail: 'socket hang up' }, 'queue');
+      expect(reset).toContain('socket hang up');
+      expect(reset).not.toBe(timeout);
+      const versions = describeRegistration(
+        { status: 'unconfirmed', port: 4850, failure: 'timeout', timeoutMs: 3000, loadedVersion: '1.0.0', expectedVersion: '2.0.0' },
+        'queue',
+      );
+      expect(versions).toContain('1.0.0');
+      expect(versions).toContain('2.0.0');
+      expect(describeRegistration({ status: 'registered', port: 4850, note: 'NOTE-X' }, 'queue')).toContain('NOTE-X');
     });
 
     it('describes a failure as non-fatal for the daemon', () => {
