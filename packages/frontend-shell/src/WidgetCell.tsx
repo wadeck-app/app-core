@@ -111,7 +111,7 @@ export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEar
         drag.onDrop();
       }}
     >
-      <WidgetFrame moduleId={widget.moduleId} moduleTitle={widget.moduleTitle} label={widget.label} bare handle={handle} toolbar={toolbar}>
+      <WidgetFrame moduleTitle={widget.moduleTitle} label={widget.label} bare handle={handle} toolbar={toolbar}>
         {view}
       </WidgetFrame>
       <Dialog title={title} open={expanded} onOpenChange={setExpanded} size="xl">

@@ -82,7 +82,7 @@ describe('Dashboard: bar', () => {
     renderDashboard();
     const filters = within(screen.getByRole('group', { name: 'Show widgets of' }));
     // The module title from the manifest is used, not one derived from the id.
-    fireEvent.click(filters.getByRole('button', { name: 'Message queue 1' }));
+    fireEvent.click(filters.getByRole('button', { name: 'Message queue (1)' }));
     expect(screen.getAllByRole('article').map((a) => a.getAttribute('aria-label'))).toEqual(['Queue depth']);
     fireEvent.click(filters.getByRole('button', { name: 'All' }));
     expect(screen.getAllByRole('article')).toHaveLength(3);
@@ -202,5 +202,26 @@ describe('Dashboard: order of the widgets', () => {
     renderDashboard();
     drag('Flow health', 'Flow health');
     expect(window.localStorage.getItem('app-core.dashboard.order')).toBeNull();
+  });
+});
+
+describe('Dashboard: bar', () => {
+  it('stays at the top of the page while the widgets scroll under it', () => {
+    renderDashboard();
+    expect(screen.getByRole('toolbar', { name: 'Dashboard controls' }).className).toContain('sticky');
+  });
+
+  it('writes the number of widgets of each module in parentheses, after a space', () => {
+    renderDashboard();
+    const filters = within(screen.getByRole('group', { name: 'Show widgets of' }));
+    expect(filters.getAllByRole('button').map((b) => b.textContent)).toEqual(['All', 'Flow (2)', 'Message queue (1)']);
+  });
+
+  it('marks the module the dashboard is narrowed to', () => {
+    renderDashboard();
+    const filters = within(screen.getByRole('group', { name: 'Show widgets of' }));
+    fireEvent.click(filters.getByRole('button', { name: 'Flow (2)' }));
+    expect(filters.getByRole('button', { name: 'Flow (2)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(filters.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false');
   });
 });

@@ -4,7 +4,7 @@ import { WidgetFrame } from './WidgetFrame.js';
 
 const renderFrame = (label: string | undefined, bare = false) =>
   render(
-    <WidgetFrame moduleId="orchestrator" moduleTitle="Orchestrator" label={label} bare={bare} handle={<span>grip</span>} toolbar={<button>tools</button>}>
+    <WidgetFrame moduleTitle="Orchestrator" label={label} bare={bare} handle={<span>grip</span>} toolbar={<button>tools</button>}>
       <p>body</p>
     </WidgetFrame>,
   );
