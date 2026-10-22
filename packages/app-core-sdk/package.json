@@ -15,11 +15,17 @@
       "import": "./dist/register.bundle.js",
       "default": "./dist/register.bundle.js"
     },
+    "./violations": {
+      "types": "./dist/violations.bundle.d.ts",
+      "import": "./dist/violations.bundle.js",
+      "default": "./dist/violations.bundle.js"
+    },
     "./package.json": "./package.json"
   },
   "typesVersions": {
     "*": {
-      "register": ["dist/register.bundle.d.ts"]
+      "register": ["dist/register.bundle.d.ts"],
+      "violations": ["dist/violations.bundle.d.ts"]
     }
   },
   "files": [
@@ -27,6 +33,8 @@
     "dist/index.bundle.d.ts",
     "dist/register.bundle.js",
     "dist/register.bundle.d.ts",
+    "dist/violations.bundle.js",
+    "dist/violations.bundle.d.ts",
     "README.md",
     "docs/module-authoring.md",
     "docs/registering-a-module.md"

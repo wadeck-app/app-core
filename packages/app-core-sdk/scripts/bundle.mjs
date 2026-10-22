@@ -19,9 +19,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const external = ['zod', 'fastify'];
 
-// Two published entries: the main one (types and schemas, importable from browser code) and the
-// node-only `register` subpath (a daemon telling app-core about its module).
-for (const entry of ['index', 'register']) {
+// Three published entries: the main one (types and schemas, importable from browser code), the node-only `register`
+// subpath (a daemon telling app-core about its module) and the node-only `violations` subpath (a rule for the violations
+// runner that checks manifest.json with the same schemas).
+for (const entry of ['index', 'register', 'violations']) {
   await build({
     entryPoints: [path.join(root, `dist/${entry}.js`)],
     bundle: true,
@@ -54,6 +55,7 @@ async function bundleTypes(entry) {
 
 await bundleTypes('index');
 await bundleTypes('register');
+await bundleTypes('violations');
 
 // app-core-sdk is the "base" package every app-module depends on -- it must have
 // ZERO internal cross-package references in what actually gets published, runtime
@@ -81,6 +83,8 @@ function assertNoInternalReferences() {
     'dist/index.bundle.d.ts',
     'dist/register.bundle.js',
     'dist/register.bundle.d.ts',
+    'dist/violations.bundle.js',
+    'dist/violations.bundle.d.ts',
   ].map((f) => path.join(root, f));
 
   for (const file of publishedFiles) {
