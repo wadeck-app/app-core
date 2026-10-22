@@ -29,9 +29,12 @@ export function ModulePage({ modules, target }: { modules: LoadedModuleSummary[]
     return <p className="p-4 text-muted">Page not found (module may have been unloaded).</p>;
   }
 
+  // Every page is mounted as this same element, and the renderer tells pages apart by their route parameters only: two
+  // pages without any would share the state of the first (its $vars, its sources). The key makes each page start over.
+  const pageKey = `${mod.id}:${ep.path ?? index}`;
   return (
     <ModuleLibGate moduleId={mod.id}>
-      <PageContent sections={<ModuleView rawYaml={ep.rawYaml} />} />
+      <PageContent sections={<ModuleView key={pageKey} rawYaml={ep.rawYaml} />} />
     </ModuleLibGate>
   );
 }
