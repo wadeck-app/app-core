@@ -105,6 +105,8 @@ You write the source manifest; app-core loads the packaged one.
 
 The source manifest is strict: any other field fails `check`.
 
+**Validating a manifest from another tool.** The SDK main entry exports the schemas app-core and `check` apply: `import { parseSourceManifest, SourceManifestSchema, ManifestSchema } from '@wadeck-app/app-core-sdk'`. `SourceManifestSchema.safeParse(json)` returns every problem as an issue with a `path` and a `message` (the cross-field rules included: menu pages, widget sizes, reserved names). The entry depends on `zod` only (no Node module, no server), and the schemas are part of the SDK's public surface: a rule is added or tightened with the release that ships it. Do not copy the rules by hand.
+
 **Display name.** `"title": "Flow charts"` is the name the shell shows (top-bar tab, side-menu heading, dashboard shortcut, and the two letters of the logo). Without it the shell derives one from the id (`flow-chart` becomes "Flow chart"). A blank title fails `check` and `package`.
 
 **Keeping a module out of the navigation.** `"showInNav": false` removes the module from the shell's navigation: no tab in the top bar and no shortcut on the dashboard menu. The module is still loaded and its pages stay routable (reachable by link); while one of them is open, the side menu lists the module's pages. A module without any `page` / `nav` extension point (widgets only) is never listed, with or without this field, so use `showInNav: false` for a module that has `nav` pages you do not want in the menu. The value must be a boolean: `"false"` (a string) fails `check` and `package`.

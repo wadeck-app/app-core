@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { ModuleRouteRegistry } from '@wadeck-app/app-core-server/moduleRoutes';
 import type { ModuleContext, ModuleSetup, ModuleTeardownContext, ModuleTeardownHook, ModuleTimerHandle } from './index.js';
@@ -137,5 +139,39 @@ describe('app-core-sdk title', () => {
     }
     const blank = SourceManifestSchema.safeParse({ id: 'sdk-test', extensionPoints: [widget], title: ' ' });
     expect(blank.success ? '' : blank.error.issues[0].message).toContain('remove the field to derive it from the id');
+  });
+});
+
+// Other tools validate a manifest with these schemas (violations-rules depends on the SDK for it): the main entry has to
+// stay usable on its own, with the rules app-core applies, and without dragging in the server.
+describe('app-core-sdk as the manifest validator of other tools', () => {
+  const widget = { kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: { $type: 'Badge', label: 'ok' } } };
+
+  it('the built main entry imports nothing but zod: no node module, no fastify, no server', () => {
+    const bundle = path.join(import.meta.dirname, '..', 'dist', 'index.bundle.js');
+    if (!fs.existsSync(bundle)) {
+      throw new Error(`${bundle} not found: this test reads the built SDK. Run "npm run build" from the repository root first.`);
+    }
+    const imported = [...fs.readFileSync(bundle, 'utf8').matchAll(/^import[^"']*from\s*["']([^"']+)["']/gm)].map((m) => m[1]);
+    expect(imported).toEqual(['zod']);
+  });
+
+  it('applies the cross-field rules of app-core, not only the shape of the fields', () => {
+    const manifest = { id: 'm', extensionPoints: [{ ...widget, kind: 'page', slot: 'flow:nav', width: 2 }] };
+    const result = SourceManifestSchema.safeParse(manifest);
+    expect(result.success).toBe(false);
+    const messages = result.success ? [] : result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+    expect(messages.some((m) => m.startsWith('extensionPoints.0.label:'))).toBe(true);
+    expect(messages.some((m) => m.startsWith('extensionPoints.0.path:'))).toBe(true);
+    expect(messages.some((m) => m.startsWith('extensionPoints.0.width:'))).toBe(true);
+  });
+
+  it('gives each issue a path and a message a tool can print', () => {
+    const result = SourceManifestSchema.safeParse({ id: 'bad id', extensionPoints: [] });
+    expect(result.success).toBe(false);
+    for (const issue of result.success ? [] : result.error.issues) {
+      expect(Array.isArray(issue.path)).toBe(true);
+      expect(issue.message.length).toBeGreaterThan(0);
+    }
   });
 });
