@@ -948,13 +948,17 @@ export const FieldTimeEntry: ComponentRegistryEntry = {
 export const FieldWrapperEntry: ComponentRegistryEntry = {
 	name: 'FieldWrapper', category: 'disposition', tags: ["field","wrapper"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
+	render: ({ node, registry, ctx }: RegistryRenderProps) => {
+		const items = node['items'] as unknown[] | undefined
 		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['label']
 		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['description']
 		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['required']
 		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['error']
-		const children = (resolveExpressionValue(node['children'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['children']
-		return <FieldWrapper label={label} description={description} required={required} error={error} children={children} />
+		return (
+			<FieldWrapper label={label} description={description} required={required} error={error}>
+				{items ? renderChildren(items, registry, ctx) : null}
+			</FieldWrapper>
+		)
 	},
 }
 
@@ -1499,10 +1503,11 @@ export const DataTableEntry: ComponentRegistryEntry = {
 		const selectable = (resolveExpressionValue(node['selectable'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['selectable']
 		const batchActions = (resolveExpressionValue(node['batchActions'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['batchActions']
 		const onBatchAction = (resolveExpressionValue(node['onBatchAction'], ctx) ?? ctx['onBatchAction']) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['onBatchAction']
+		const actionPending = (resolveExpressionValue(node['actionPending'], ctx) ?? ctx['$actionPending']) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['actionPending']
 		const batchActionsPosition = (resolveExpressionValue(node['batchActionsPosition'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['batchActionsPosition']
 		const expansionCondition = (resolveExpressionValue(node['expansionCondition'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['expansionCondition']
 		const fontMono = (resolveExpressionValue(node['fontMono'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/DataTable.js').DataTableProps<Record<string, unknown>>['fontMono']
-		return <DataTable rows={rows} columns={columns} loading={loading} refreshing={refreshing} emptyMessage={emptyMessage} onAction={onAction} navigateTo={navigateTo} onRowClick={onRowClick} filtersTop={filtersTop ? renderChildren(filtersTop, registry, ctx) : null} filters={filters ? renderChildren(filters, registry, ctx) : null} id={id} page={page} onPageChange={onPageChange} sortCol={sortCol} onSortColChange={onSortColChange} sortDir={sortDir} onSortDirChange={onSortDirChange} defaultFilters={defaultFilters} expansion={expansion} renderNode={renderNode} selectable={selectable} batchActions={batchActions} onBatchAction={onBatchAction} batchActionsPosition={batchActionsPosition} expansionCondition={expansionCondition} fontMono={fontMono} />
+		return <DataTable rows={rows} columns={columns} loading={loading} refreshing={refreshing} emptyMessage={emptyMessage} onAction={onAction} navigateTo={navigateTo} onRowClick={onRowClick} filtersTop={filtersTop ? renderChildren(filtersTop, registry, ctx) : null} filters={filters ? renderChildren(filters, registry, ctx) : null} id={id} page={page} onPageChange={onPageChange} sortCol={sortCol} onSortColChange={onSortColChange} sortDir={sortDir} onSortDirChange={onSortDirChange} defaultFilters={defaultFilters} expansion={expansion} renderNode={renderNode} selectable={selectable} batchActions={batchActions} onBatchAction={onBatchAction} actionPending={actionPending} batchActionsPosition={batchActionsPosition} expansionCondition={expansionCondition} fontMono={fontMono} />
 	},
 }
 
@@ -1756,8 +1761,8 @@ FieldTagsEntry.knownKeys = ["allowDuplicates","bind","description","disabled","e
 FieldTextEntry.knownKeys = ["bind","description","error","label","readOnly","required"];
 FieldTextareaEntry.knownKeys = ["bind","description","label","rows"];
 FieldTimeEntry.knownKeys = ["bind","description","disabled","error","is12Hour","label","minuteStep","placeholder","required"];
-FieldWrapperEntry.allowedChildren = {"children":["atomic"]};
-FieldWrapperEntry.knownKeys = ["children","description","error","label","required"];
+FieldWrapperEntry.allowedChildren = {"items":["atomic"]};
+FieldWrapperEntry.knownKeys = ["description","error","items","label","required"];
 FormEntry.allowedChildren = {"fields":["field"],"actions":["action-bar","form-specific"]};
 FormEntry.knownKeys = ["actions","fields","initialData","onSubmit"];
 FormEntry.providesContext = ["FormContext"];
@@ -1821,7 +1826,7 @@ TooltipEntry.knownKeys = ["content","items"];
 BulkActionsToolbarEntry.knownKeys = ["items","onClearSelection","selectedCount"];
 DataTableEntry.allowedChildren = {"filtersTop":["filter"],"filters":["filter"]};
 DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","badge"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition"]}}}}}};
-DataTableEntry.knownKeys = ["batchActions","batchActionsPosition","columns","defaultFilters","emptyMessage","expansion","expansionCondition","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onPageChange","onRowClick","onSortColChange","onSortDirChange","page","refreshing","rows","selectable","sortCol","sortDir"];
+DataTableEntry.knownKeys = ["actionPending","batchActions","batchActionsPosition","columns","defaultFilters","emptyMessage","expansion","expansionCondition","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onPageChange","onRowClick","onSortColChange","onSortDirChange","page","refreshing","rows","selectable","sortCol","sortDir"];
 DataTableEntry.providesContext = ["DataTableSelectionCtx","DataTableFilterCtx"];
 DataTableEntry.requiresContext = ["RouterContext"];
 FilterBarEntry.knownKeys = ["filters","onClearAll","onFilterChange","onSearchChange","placeholder","search"];

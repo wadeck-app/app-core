@@ -248,14 +248,14 @@ function stubEventSource(): void {
 
 describe('registry child key contract', () => {
   // `app-core-cli package` warns about `children:` on built-in nodes (packages/app-core-cli/src/childKeys.ts) because it
-  // has no registry to ask: the warning is only right while no built-in component other than FieldWrapper takes a
-  // "children" key. The registry now declares the keys each component takes (`knownKeys`), so this reads that data
+  // has no registry to ask: the warning is only right while no built-in component takes a "children" key (FieldWrapper
+  // stopped with dsl 2026.10.23-127: its children are an `items` slot). The registry now declares the keys each component takes (`knownKeys`), so this reads that data
   // instead of the source of the render functions. If it fails, update CHILDREN_READERS in childKeys.ts.
   const builtIns = Object.values(appRegistry).filter((entry) => !entry.name.includes(':'));
 
-  it('only FieldWrapper takes a "children" key among the built-in components', () => {
+  it('no built-in component takes a "children" key', () => {
     expect(builtIns.length).toBeGreaterThan(50);
-    expect(builtIns.filter((entry) => entry.knownKeys?.includes('children')).map((entry) => entry.name)).toEqual(['FieldWrapper']);
+    expect(builtIns.filter((entry) => entry.knownKeys?.includes('children')).map((entry) => entry.name)).toEqual([]);
   });
 
   it('declares its keys for every built-in component, so the compiler can check every view (no "unchecked-keys")', () => {
@@ -265,9 +265,8 @@ describe('registry child key contract', () => {
   it('declares the child nodes of a container under "items" (the key the renderer reads), never under "children"', () => {
     const containers = builtIns.filter((entry) => entry.allowedChildren !== undefined);
     expect(containers.length).toBeGreaterThan(10);
-    // Named slots such as PageHeader's "headerActions" are legitimate; "children" was the stale key. FieldWrapper really
-    // takes a "children" prop (the one exception, also listed in childKeys.ts).
-    expect(containers.filter((entry) => 'children' in (entry.allowedChildren ?? {})).map((entry) => entry.name)).toEqual(['FieldWrapper']);
+    // Named slots such as PageHeader's "headerActions" are legitimate; "children" was the stale key.
+    expect(containers.filter((entry) => 'children' in (entry.allowedChildren ?? {})).map((entry) => entry.name)).toEqual([]);
     expect(containers.filter((entry) => 'items' in (entry.allowedChildren ?? {})).map((entry) => entry.name)).toEqual(expect.arrayContaining(['Card', 'ActionBar', 'ChipButton']));
   });
 });

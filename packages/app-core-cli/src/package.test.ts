@@ -248,7 +248,7 @@ describe('packageModule: output manifest and views', () => {
     expect(result.warnings[0]).toContain('"items:"');
   });
 
-  it('warns for an inline view too, and not for "items:", FieldWrapper or a dsl-lib component', async () => {
+  it('warns for an inline view too, and not for "items:" or a dsl-lib component', async () => {
     const inline = (value: unknown): string =>
       JSON.stringify({ ...BASE_MANIFEST, extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value } }] });
     const bad = await packageModule({
@@ -260,7 +260,7 @@ describe('packageModule: output manifest and views', () => {
     expect(bad.warnings[0]).toContain('extensionPoints[0] (inline view)');
     const fine = await packageModule({
       moduleDir: module_({
-        'manifest.json': inline({ $type: 'VerticalStack', items: [{ $type: 'FieldWrapper', children: 'x' }, { $type: 'tiny:Custom', children: [] }] }),
+        'manifest.json': inline({ $type: 'VerticalStack', items: [{ $type: 'FieldWrapper', items: [{ $type: 'Badge', label: 'x' }] }, { $type: 'tiny:Custom', children: [] }] }),
         'src/dsl-views/home.yaml': null,
       }),
       outDir: outDir(),

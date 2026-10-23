@@ -166,12 +166,27 @@ describe('dev --watch (real server)', () => {
   });
 
   it('writes nothing into the OS temp dir by itself: the only folders it leaves are the module copies the test removes', async () => {
-    const before = new Set(fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith('app-core-cli-dev-')));
-    const { handle } = await watch(false);
-    await handle.close();
-    const created = fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith('app-core-cli-dev-') && !before.has(name));
-    // Only the module copy of this test (named app-core-cli-module-*) is new; no app-core-cli-dev-* scratch dir.
-    expect(created).toEqual([]);
+    // Other processes on the machine (another test run, another `dev`) also write app-core-cli-dev-* folders into the shared
+    // temp dir, so the temp dir is private to this test: whatever shows up in it was written by the code under test.
+    const privateTemp = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-cli-tmpcheck-'));
+    dirs.push(privateTemp);
+    const saved = { TMPDIR: process.env['TMPDIR'], TEMP: process.env['TEMP'], TMP: process.env['TMP'] };
+    process.env['TMPDIR'] = process.env['TEMP'] = process.env['TMP'] = privateTemp;
+    try {
+      expect(os.tmpdir()).toBe(privateTemp);
+      const { handle } = await watch(false);
+      await handle.close();
+      // Only the module copy of this test (named app-core-cli-module-*) is new; no app-core-cli-dev-* scratch dir.
+      expect(fs.readdirSync(privateTemp).filter((name) => name.startsWith('app-core-cli-dev-'))).toEqual([]);
+    } finally {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    }
   });
 
   it('refuses watch without callbacks instead of dropping rebuild results', async () => {
