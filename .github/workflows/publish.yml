@@ -43,7 +43,21 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Patch-pinned like tray-go/go.mod: a new Go patch changes the binary's hash, which republishes the three platform
+      # packages on its own and moves the exact pin a rollback needs. Bump it together with tray-go/go.mod.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.5'
+          cache: false
+
       - run: npm run build
+
+      - name: Build tray binaries
+        run: npm run build-tray --workspace=packages/app-core-cli
+
+      - name: Vet tray-go
+        working-directory: packages/app-core-cli/tray-go
+        run: go vet ./...
 
       - run: npm run test:all
 
@@ -82,7 +96,31 @@ jobs:
           npm pkg set version="${{ steps.version.outputs.version }}" --workspace=packages/app-core-cli
           npm pkg set dependencies.@wadeck-app/app-core-sdk="${{ steps.version.outputs.version }}" --workspace=packages/app-core-cli
 
+      # Patch-pinned like tray-go/go.mod: a new Go patch changes the binary's hash, which republishes the three platform
+      # packages on its own and moves the exact pin a rollback needs. Bump it together with tray-go/go.mod.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.5'
+          cache: false
+
       - run: npm run build
+
+      - name: Build tray binaries
+        run: npm run build-tray --workspace=packages/app-core-cli
+
+      - name: Generate platform package directories
+        run: bash packages/app-core-cli/ci/scripts/generate-platform-packages.sh
+
+      - name: Copy tray binaries to platform packages
+        run: bash packages/app-core-cli/ci/scripts/copy-binaries.sh
+
+      # Publishes a platform package only when its binary changed, then pins the exact resolved versions into
+      # app-core-cli's optionalDependencies: updating app-core-cli updates the tray iff the pin moved.
+      - name: Publish platform packages (only if the tray binary changed) and pin them
+        run: |
+          bash packages/app-core-cli/ci/scripts/publish-platform-packages.sh \n            "${{ steps.version.outputs.version }}" "${{ steps.version.outputs.dist_tag }}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish app-core-sdk first (app-core-cli depends on it)
         working-directory: packages/app-core-sdk

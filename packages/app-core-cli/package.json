@@ -10,7 +10,8 @@
     "dist/app-core-cli-updater.cjs",
     "dist/public/**",
     "README.md",
-    "docs/serve.md"
+    "docs/serve.md",
+    "docs/tray.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
@@ -19,7 +20,8 @@
   "scripts": {
     "build": "tsc --build tsconfig.json && node scripts/bundle.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build-tray": "node scripts/build-tray-binary.mjs"
   },
   "dependencies": {
     "@fastify/static": "^8.0.0",
@@ -40,5 +42,10 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "optionalDependencies": {
+    "@wadeck-app/app-core-cli-darwin-arm64": ">=0.0.0-0",
+    "@wadeck-app/app-core-cli-darwin-x64": ">=0.0.0-0",
+    "@wadeck-app/app-core-cli-win32-x64": ">=0.0.0-0"
   }
 }

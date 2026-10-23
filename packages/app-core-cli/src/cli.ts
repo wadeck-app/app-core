@@ -13,9 +13,11 @@ import { shellWarningsForModule } from './shellPreflight.js';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
 import { UpdateManager } from '@wadeck-app/shared-cli/UpdateManager';
-import { cliVersionCommand, cliUpdateCommand } from '@wadeck-app/shared-cli/CliMetaCommands';
+import { cliVersionCommand, cliUpdateCommand, warnUnknownArgs } from '@wadeck-app/shared-cli/CliMetaCommands';
 import { readChannelFromConfig } from '@wadeck-app/shared-cli/ChannelConfig';
 import { runSelfCheck } from '@wadeck-app/shared-cli';
+import { startTray } from './tray/trayCommand.js';
+import { spawn } from 'node:child_process';
 
 // Injected by esbuild at bundle time via define; falls back to dev placeholder.
 declare const __APP_CORE_CLI_VERSION__: string;
@@ -189,16 +191,56 @@ async function main(): Promise<void> {
   }
 
   if (command === 'serve') {
+    const args = [target, ...rest].filter((arg): arg is string => arg !== undefined);
+    warnUnknownArgs(args, ['--no-tray'], 'serve');
     try {
       const { port, stop } = await runServe();
       console.log(`app-core-cli serve: listening on http://127.0.0.1:${port}`);
-      const shutdown = (): void => void stop().finally(() => process.exit(0));
+      let tray: Awaited<ReturnType<typeof startTray>> | null = null;
+      const shutdown = (): void => {
+        void (tray?.ok ? tray.companion.stop() : Promise.resolve()).then(stop).finally(() => process.exit(0));
+      };
+      // Starts a new serve once this one is down, for "Restart to apply the update" in the tray.
+      const restart = (): void => {
+        void (tray?.ok ? tray.companion.stop() : Promise.resolve())
+          .then(stop)
+          .then(() => {
+            spawn(process.execPath, [bundlePath, 'serve', ...args], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+          })
+          .finally(() => process.exit(0));
+      };
       process.on('SIGINT', shutdown);
       process.on('SIGTERM', shutdown);
+      if (args.includes('--no-tray')) {
+        console.log('app-core-cli serve: no tray icon (--no-tray)');
+      } else {
+        tray = await startTray({ mode: 'serve', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: join(dirname(bundlePath), 'app-core-cli-updater.cjs'), onQuit: shutdown, onRestart: restart });
+        if (!tray.ok) {
+          // The server keeps running; the icon is the part that is missing, and the reason says how to get it back.
+          console.warn(`app-core-cli serve: no tray icon: ${tray.reason}. Hide this warning with --no-tray.`);
+        }
+      }
     } catch (err) {
       console.error(`app-core-cli serve failed: ${getErrorMessage(err)}`);
       process.exitCode = 1;
     }
+    return;
+  }
+
+  if (command === 'tray') {
+    // A tray for a server started some other way (an orchestrator job, another terminal): it follows the port file.
+    const args = [target, ...rest].filter((arg): arg is string => arg !== undefined);
+    warnUnknownArgs(args, [], 'tray');
+    const quit = (): void => process.exit(0);
+    const tray = await startTray({ mode: 'watch', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: join(dirname(bundlePath), 'app-core-cli-updater.cjs'), onQuit: quit });
+    if (!tray.ok) {
+      console.error(`app-core-cli tray failed: ${tray.reason}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log('app-core-cli tray: running (Quit from its menu, or Ctrl+C)');
+    process.on('SIGINT', () => void tray.companion.stop().finally(quit));
+    process.on('SIGTERM', () => void tray.companion.stop().finally(quit));
     return;
   }
 
@@ -227,7 +269,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.error('Usage: app-core-cli <validate|init|check|package|dev|serve|version|update|self-check> [path]');
+  console.error('Usage: app-core-cli <validate|init|check|package|dev|serve|tray|version|update|self-check> [path]');
   process.exitCode = 1;
 }
 
