@@ -100,6 +100,33 @@ const running = services.map((s) => {
   return { name: s.name, child };
 });
 
+// The tray icon (blue: a dev server) lives and dies with this script. It is optional: without the CLI build or the
+// tray binary the servers still run, and the reason is printed. "Quit" in its menu (exit 0) stops everything.
+const cliBundle = resolve(root, 'packages/app-core-cli/dist/cli.bundle.js');
+if (!existsSync(cliBundle)) {
+  console.warn(`[dev-all] WARNING: no tray icon: ${cliBundle} not found. Build it with: npm run build --workspace=packages/app-core-cli`);
+} else {
+  const tray = spawn(process.execPath, [cliBundle, 'tray', '--url', `http://localhost:${services.find((s) => s.name === 'frontend').port}/`], {
+    cwd: root,
+    env: childEnv,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+  });
+  pipeWithPrefix(tray.stdout, process.stdout, '[tray] ');
+  pipeWithPrefix(tray.stderr, process.stderr, '[tray] ');
+  tray.on('error', (err) => console.warn(`[dev-all] WARNING: no tray icon: ${err.message}`));
+  tray.on('exit', (code) => {
+    if (shuttingDown) return;
+    if (code === 0) {
+      console.log('[dev-all] "Quit" chosen in the tray menu -- stopping.');
+      shutdown();
+    } else {
+      console.warn(`[dev-all] WARNING: the tray exited with code ${code} (see the [tray] lines above); the servers keep running.`);
+    }
+  });
+  running.push({ name: 'tray', child: tray });
+}
+
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 

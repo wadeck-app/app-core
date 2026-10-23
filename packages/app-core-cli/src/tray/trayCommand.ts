@@ -13,7 +13,10 @@ export interface StartTrayOptions {
   pkgName: string;
   /** app-core-cli-updater.cjs next to the bundle. */
   updaterPath: string;
+  /** Address "Open app-core" goes to, asked at click time. */
+  getUrl: () => string;
   onQuit: () => void;
+  /** Given only where the tray's owner can start the server again. */
   onRestart?: () => void;
 }
 
@@ -31,6 +34,20 @@ function openUrl(url: string): void {
   } else {
     // macOS: windowsHide has no meaning here, and opening the browser is the point.
     execFile('open', [url], done);
+  }
+}
+
+function openFolder(dir: string): void {
+  const done = (err: Error | null): void => {
+    if (err) {
+      process.stderr.write(`[tray] could not open ${dir}: ${getErrorMessage(err)}\n`);
+    }
+  };
+  if (process.platform === 'win32') {
+    // Passed without quotes: execFile is not a shell, quotes would become part of the path.
+    execFile('cmd.exe', ['/c', 'start', '', dir], { windowsHide: true }, done);
+  } else {
+    execFile('open', [dir], done);
   }
 }
 
@@ -87,7 +104,9 @@ export async function startTray(options: StartTrayOptions): Promise<StartTrayRes
     version: options.version,
     mode: options.mode,
     binaryPath,
+    getUrl: options.getUrl,
     openUrl,
+    openFolder,
     fetchLatestVersion: () => fetchLatestVersion(options.pkgName),
     runUpdate: () => runUpdate(options.updaterPath),
     onQuit: options.onQuit,

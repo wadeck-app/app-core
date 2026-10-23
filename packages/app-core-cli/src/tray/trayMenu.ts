@@ -1,68 +1,86 @@
 // The tray menu as a pure function of the state, so every state is testable without a tray.
-import { iconBase64, type IconState } from './trayIcons.js';
+// Laid out like orchestrator's: header with the PIDs, version (click to check), config dir, update, then status, then actions.
+import { TRAY_ICONS, type IconState } from './trayIcons.js';
 import type { MenuItemSnapshot, MenuSnapshot } from './trayProcess.js';
 
-export const TRAY_ACTIONS = ['open', 'check-update', 'update-install', 'restart', 'quit'] as const;
+export const TRAY_ACTIONS = ['check-update', 'update-install', 'open', 'open-logs', 'restart', 'quit'] as const;
 export type TrayActionId = (typeof TRAY_ACTIONS)[number];
 
 export type UpdateStatus = 'idle' | 'checking' | 'up-to-date' | 'available' | 'updating' | 'updated' | 'failed';
 
 export interface TrayState {
-  /** Port of the running server, or null when it is not running. */
-  port: number | null;
+  /** `dev`: a server run from sources or by `app-core-cli dev` (blue). `prod`: `app-core-cli serve` (green). */
+  mode: 'dev' | 'prod';
   version: string;
   update: UpdateStatus;
   latestVersion: string | null;
-  /** `serve`: the tray belongs to the server and quitting it stops the server. `watch`: it only observes one. */
-  mode: 'serve' | 'watch';
+  /** Config dir, as shown in the menu (home already shortened). */
+  configDir: string;
+  nodePid: number;
+  trayPid: number | null;
+  /** The tray can restart its server (`serve`). */
+  canRestart: boolean;
 }
 
-const UPDATE_LABELS: Partial<Record<UpdateStatus, (state: TrayState) => string>> = {
-  checking: () => 'Checking for update...',
-  'up-to-date': (state) => `app-core-cli v${state.version} (up to date)`,
-  updating: () => 'Updating...',
-  updated: (state) => `Updated to v${state.latestVersion ?? '?'}`,
-  failed: (state) => `app-core-cli v${state.version} (update check failed, see the log)`,
+const VERSION_TITLES: Partial<Record<UpdateStatus, (state: TrayState) => string>> = {
+  checking: () => 'Checking...',
+  'up-to-date': (state) => `v${state.version} (up to date)`,
+  failed: (state) => `v${state.version} (check failed, see the log)`,
+  idle: (state) => `v${state.version} (click to check)`,
 };
 
-function versionLabel(state: TrayState): string {
-  const label = UPDATE_LABELS[state.update];
-  return label ? label(state) : `app-core-cli v${state.version} (click to check for update)`;
+function versionTitle(state: TrayState): string {
+  if (state.mode === 'dev') {
+    return `v${state.version} (dev)`;
+  }
+  return VERSION_TITLES[state.update]?.(state) ?? `v${state.version}`;
 }
 
+const STATUS_TITLES: Partial<Record<UpdateStatus, (state: TrayState) => string>> = {
+  available: (state) => `Update available: v${state.latestVersion ?? '?'}`,
+  updating: () => 'Updating...',
+  updated: (state) => `Updated to v${state.latestVersion ?? '?'}: restart app-core to apply`,
+  failed: () => '[fail] Update check or install failed',
+};
+
+function statusTitle(state: TrayState): string {
+  return STATUS_TITLES[state.update]?.(state) ?? 'app-core is running';
+}
+
+// Anything the user should look at is amber, whatever the mode: an update to take, in progress, or that failed.
 function iconState(state: TrayState): IconState {
-  if (state.update === 'checking' || state.update === 'updating') {
-    return 'busy';
-  }
-  if (state.update === 'available' || state.update === 'updated') {
-    return 'update';
-  }
-  return state.port === null ? 'stopped' : 'running';
+  return state.update === 'idle' || state.update === 'up-to-date' ? state.mode : 'info';
 }
 
 export function buildMenuSnapshot(state: TrayState): MenuSnapshot {
-  const running = state.port !== null;
   const busy = state.update === 'checking' || state.update === 'updating';
+  const pids = state.trayPid === null ? `node:${state.nodePid}` : `node:${state.nodePid} tray:${state.trayPid}`;
   const items: MenuItemSnapshot[] = [
-    { id: 'status', type: 'normal', title: running ? `app-core is running on port ${state.port}` : 'app-core is not running', enabled: false },
-    { id: 'sep1', type: 'separator', title: '', enabled: false },
-    { id: 'open', type: 'normal', title: 'Open app-core', enabled: running },
-    { id: 'sep2', type: 'separator', title: '', enabled: false },
-    { id: 'check-update', type: 'normal', title: versionLabel(state), enabled: !busy },
+    { id: 'header', type: 'normal', title: `app-core (${state.mode}) [${pids}]`, enabled: false },
+    { id: 'check-update', type: 'normal', title: versionTitle(state), enabled: state.mode === 'prod' && !busy },
+    { id: 'config-dir', type: 'normal', title: `Config: ${state.configDir}`, enabled: false },
   ];
   if (state.update === 'available') {
-    items.push({ id: 'update-install', type: 'normal', title: `Update to v${state.latestVersion ?? '?'}`, enabled: true });
+    items.push({ id: 'update-install', type: 'normal', title: `Update to v${state.latestVersion ?? '?'} and restart`, enabled: true });
+  } else if (state.update === 'updating') {
+    items.push({ id: 'update-install', type: 'normal', title: 'Updating...', enabled: false });
   }
-  items.push({ id: 'sep3', type: 'separator', title: '', enabled: false });
-  // A restart only makes sense for the process that owns the server; an observing tray cannot start it again.
-  if (state.mode === 'serve' && state.update === 'updated') {
-    items.push({ id: 'restart', type: 'normal', title: 'Restart to apply the update', enabled: true });
+  items.push(
+    { id: 'sep1', type: 'separator', title: '', enabled: false },
+    { id: 'status', type: 'normal', title: statusTitle(state), enabled: false },
+    { id: 'sep2', type: 'separator', title: '', enabled: false },
+    { id: 'open', type: 'normal', title: 'Open app-core', enabled: true },
+    { id: 'open-logs', type: 'normal', title: 'Open logs', enabled: true },
+    { id: 'sep3', type: 'separator', title: '', enabled: false },
+  );
+  if (state.canRestart) {
+    items.push({ id: 'restart', type: 'normal', title: 'Restart', enabled: true });
   }
-  items.push({ id: 'quit', type: 'normal', title: state.mode === 'serve' ? 'Quit app-core' : 'Quit tray', enabled: true });
+  items.push({ id: 'quit', type: 'normal', title: 'Quit', enabled: true });
   return {
-    icon: iconBase64(iconState(state)),
+    icon: TRAY_ICONS[iconState(state)],
     isTemplateIcon: false,
-    tooltip: running ? `app-core (port ${state.port})` : 'app-core (not running)',
+    tooltip: state.update === 'available' ? `app-core (${state.mode}) - update available` : `app-core (${state.mode})`,
     items,
   };
 }

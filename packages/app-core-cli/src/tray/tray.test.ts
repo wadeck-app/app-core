@@ -2,11 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import * as zlib from 'node:zlib';
-import { iconPng } from './trayIcons.js';
+import { TRAY_ICONS } from './trayIcons.js';
 import { buildMenuSnapshot, type TrayState } from './trayMenu.js';
 import { pruneStagedBinaries, stageBinary, stagedBinaryPath } from './trayBinary.js';
-import { readRunningServer, TrayCompanion } from './trayCompanion.js';
+import { TrayCompanion } from './trayCompanion.js';
 import type { TrayProcess, MenuSnapshot } from './trayProcess.js';
 
 const dirs: string[] = [];
@@ -21,74 +20,92 @@ afterEach(() => {
   }
 });
 
-const base: TrayState = { port: 4850, version: '2026.10.23-10', update: 'idle', latestVersion: null, mode: 'serve' };
+const base: TrayState = {
+  mode: 'prod',
+  version: '2026.10.23-10',
+  update: 'idle',
+  latestVersion: null,
+  configDir: '/home/u/.config/app-core',
+  nodePid: 111,
+  trayPid: 222,
+  canRestart: true,
+};
 const ids = (menu: MenuSnapshot): string[] => menu.items.filter((item) => item.type === 'normal').map((item) => item.id);
 const item = (menu: MenuSnapshot, id: string) => menu.items.find((entry) => entry.id === id);
 
-describe('tray icons', () => {
-  it('draws a valid 64x64 RGBA PNG that is not empty', () => {
-    const png = iconPng('running');
-    expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-    expect(png.readUInt32BE(16)).toBe(64);
-    expect(png.readUInt32BE(20)).toBe(64);
-    // IDAT starts after the 8-byte signature and the 25-byte IHDR chunk; its length is the first field.
-    const idatLength = png.readUInt32BE(33);
-    const raw = zlib.inflateSync(png.subarray(41, 41 + idatLength));
-    expect(raw.length).toBe(64 * (1 + 64 * 4));
-    expect(raw.some((byte, index) => index % (1 + 64 * 4) !== 0 && byte !== 0)).toBe(true);
-  });
+function pngSize(base64: string): { width: number; height: number } {
+  const png = Buffer.from(base64, 'base64');
+  expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
+}
 
-  it('uses a different picture per state', () => {
-    const states = ['running', 'stopped', 'update', 'busy'] as const;
-    expect(new Set(states.map((state) => iconPng(state).toString('base64'))).size).toBe(4);
+describe('tray icons', () => {
+  it('has a 64x64 PNG per state, all different', () => {
+    for (const icon of Object.values(TRAY_ICONS)) {
+      expect(pngSize(icon)).toEqual({ width: 64, height: 64 });
+    }
+    expect(new Set(Object.values(TRAY_ICONS)).size).toBe(3);
   });
 });
 
 describe('tray menu', () => {
-  it('shows the port and offers to open a running server', () => {
+  it('is laid out like orchestrator: header with PIDs, version, config, status, then actions', () => {
     const menu = buildMenuSnapshot(base);
-    expect(item(menu, 'status')).toMatchObject({ title: 'app-core is running on port 4850', enabled: false });
-    expect(item(menu, 'open')?.enabled).toBe(true);
-    expect(menu.tooltip).toBe('app-core (port 4850)');
+    expect(menu.items.map((entry) => entry.id)).toEqual([
+      'header', 'check-update', 'config-dir', 'sep1', 'status', 'sep2', 'open', 'open-logs', 'sep3', 'restart', 'quit',
+    ]);
+    expect(item(menu, 'header')).toMatchObject({ title: 'app-core (prod) [node:111 tray:222]', enabled: false });
+    expect(item(menu, 'config-dir')?.title).toBe('Config: /home/u/.config/app-core');
+    expect(item(menu, 'status')?.title).toBe('app-core is running');
   });
 
-  it('disables Open when the server is not running', () => {
-    const menu = buildMenuSnapshot({ ...base, port: null });
-    expect(item(menu, 'status')?.title).toBe('app-core is not running');
-    expect(item(menu, 'open')?.enabled).toBe(false);
+  it('uses the green icon in prod, the blue one in dev', () => {
+    expect(buildMenuSnapshot(base).icon).toBe(TRAY_ICONS.prod);
+    expect(buildMenuSnapshot({ ...base, mode: 'dev' }).icon).toBe(TRAY_ICONS.dev);
   });
 
-  it('shows the version, and the update item only once one is available', () => {
-    expect(item(buildMenuSnapshot(base), 'check-update')?.title).toContain('v2026.10.23-10');
+  it('uses the amber icon for anything to look at, in both modes', () => {
+    for (const update of ['checking', 'available', 'updating', 'updated', 'failed'] as const) {
+      expect(buildMenuSnapshot({ ...base, update }).icon).toBe(TRAY_ICONS.info);
+    }
+    expect(buildMenuSnapshot({ ...base, update: 'up-to-date' }).icon).toBe(TRAY_ICONS.prod);
+    expect(buildMenuSnapshot({ ...base, mode: 'dev', update: 'available' }).icon).toBe(TRAY_ICONS.info);
+  });
+
+  it('offers the update only once one is available', () => {
     expect(ids(buildMenuSnapshot(base))).not.toContain('update-install');
     const menu = buildMenuSnapshot({ ...base, update: 'available', latestVersion: '2026.10.24-1' });
-    expect(item(menu, 'update-install')).toMatchObject({ title: 'Update to v2026.10.24-1', enabled: true });
+    expect(item(menu, 'update-install')).toMatchObject({ title: 'Update to v2026.10.24-1 and restart', enabled: true });
+    expect(item(menu, 'status')?.title).toBe('Update available: v2026.10.24-1');
   });
 
   it('blocks the version item while checking or updating', () => {
     expect(item(buildMenuSnapshot({ ...base, update: 'checking' }), 'check-update')?.enabled).toBe(false);
-    expect(item(buildMenuSnapshot({ ...base, update: 'updating' }), 'check-update')?.enabled).toBe(false);
+    const updating = buildMenuSnapshot({ ...base, update: 'updating' });
+    expect(item(updating, 'check-update')?.enabled).toBe(false);
+    expect(item(updating, 'update-install')).toMatchObject({ title: 'Updating...', enabled: false });
   });
 
-  it('offers a restart after an update only when the tray owns the server', () => {
-    expect(ids(buildMenuSnapshot({ ...base, update: 'updated', latestVersion: '2026.10.24-1' }))).toContain('restart');
-    expect(ids(buildMenuSnapshot({ ...base, update: 'updated', latestVersion: '2026.10.24-1', mode: 'watch' }))).not.toContain('restart');
+  it('has no update check in dev: a dev build has nothing to update to', () => {
+    const menu = buildMenuSnapshot({ ...base, mode: 'dev' });
+    expect(item(menu, 'check-update')).toMatchObject({ title: 'v2026.10.23-10 (dev)', enabled: false });
   });
 
-  it('names Quit for what it stops', () => {
-    expect(item(buildMenuSnapshot(base), 'quit')?.title).toBe('Quit app-core');
-    expect(item(buildMenuSnapshot({ ...base, mode: 'watch' }), 'quit')?.title).toBe('Quit tray');
+  it('shows Restart only where the owner can restart the server', () => {
+    expect(ids(buildMenuSnapshot(base))).toContain('restart');
+    expect(ids(buildMenuSnapshot({ ...base, canRestart: false }))).not.toContain('restart');
+  });
+
+  it('leaves the tray PID out until it is known', () => {
+    expect(item(buildMenuSnapshot({ ...base, trayPid: null }), 'header')?.title).toBe('app-core (prod) [node:111]');
   });
 
   // The Go tray's pipe corrupts on non-ASCII text (lesson from wdrive's systray2).
-  it.each([
-    ['running', base],
-    ['stopped', { ...base, port: null }],
-    ['update available', { ...base, update: 'available', latestVersion: '1' } as TrayState],
-    ['failed', { ...base, update: 'failed' } as TrayState],
-  ])('uses ASCII only in titles (%s)', (_name, state) => {
-    for (const entry of buildMenuSnapshot(state).items) {
-      expect(entry.title).toMatch(/^[\x20-\x7e]*$/);
+  it.each(['idle', 'checking', 'up-to-date', 'available', 'updating', 'updated', 'failed'] as const)('uses ASCII only in titles (%s)', (update) => {
+    for (const mode of ['dev', 'prod'] as const) {
+      for (const entry of buildMenuSnapshot({ ...base, mode, update, latestVersion: '1' }).items) {
+        expect(entry.title).toMatch(/^[\x20-\x7e]*$/);
+      }
     }
   });
 });
@@ -131,32 +148,10 @@ describe('staged binary', () => {
   });
 });
 
-describe('readRunningServer', () => {
-  function writePort(configDir: string, content: string): void {
-    fs.writeFileSync(path.join(configDir, 'server.port.json'), content);
-  }
-
-  it('reads the port of a live server', () => {
-    const configDir = tmp();
-    writePort(configDir, JSON.stringify({ pid: process.pid, port: 4850 }));
-    expect(readRunningServer(configDir)).toEqual({ pid: process.pid, port: 4850 });
-  });
-
-  it('says not running when the file is missing, unreadable or has a dead pid', () => {
-    const configDir = tmp();
-    expect(readRunningServer(configDir)).toBeNull();
-    writePort(configDir, 'not json');
-    expect(readRunningServer(configDir)).toBeNull();
-    writePort(configDir, JSON.stringify({ pid: 2 ** 22 + 12345, port: 4850 }));
-    expect(readRunningServer(configDir)).toBeNull();
-    writePort(configDir, JSON.stringify({ pid: process.pid, port: 'x' }));
-    expect(readRunningServer(configDir)).toBeNull();
-  });
-});
-
 class FakeTray {
   sent: Array<{ type: string; menu?: MenuSnapshot }> = [];
   killed = false;
+  process = { pid: 222 };
   private click: (id: string) => void = () => undefined;
   onStderrLine(): void {}
   onClicked(cb: (id: string) => void): void {
@@ -184,17 +179,18 @@ class FakeTray {
 
 describe('TrayCompanion', () => {
   function setup(overrides: Partial<ConstructorParameters<typeof TrayCompanion>[0]> = {}) {
-    const serverDir = tmp();
-    fs.writeFileSync(path.join(serverDir, 'server.port.json'), JSON.stringify({ pid: process.pid, port: 4850 }));
     const fake = new FakeTray();
-    const calls = { open: [] as string[], quit: 0, restart: 0, update: 0 };
+    const cliConfigDir = tmp();
+    const calls = { open: [] as string[], folders: [] as string[], quit: 0, restart: 0, update: 0 };
     const companion = new TrayCompanion({
-      serverConfigDir: serverDir,
-      cliConfigDir: tmp(),
+      mode: 'prod',
       version: '2026.10.23-10',
-      mode: 'serve',
+      cliConfigDir,
+      serverConfigDir: tmp(),
       binaryPath: 'unused',
+      getUrl: () => 'http://127.0.0.1:4850/',
       openUrl: (url) => calls.open.push(url),
+      openFolder: (dir) => calls.folders.push(dir),
       fetchLatestVersion: async () => '2026.10.24-1',
       runUpdate: async () => {
         calls.update++;
@@ -205,52 +201,61 @@ describe('TrayCompanion', () => {
       onRestart: () => {
         calls.restart++;
       },
-      pollMs: 20,
       createProcess: () => fake as unknown as TrayProcess,
       ...overrides,
     });
-    return { companion, fake, calls, serverDir };
+    return { companion, fake, calls, cliConfigDir };
   }
-  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 30));
+  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 20));
 
-  it('sends the init menu with the running server, opens it and quits on click', async () => {
-    const { companion, fake, calls } = setup();
+  it('sends the init menu once and never refreshes it on its own', async () => {
+    const { companion, fake } = setup();
     await companion.start();
-    expect(fake.sent[0]?.type).toBe('init');
-    expect(fake.lastMenu().items.find((entry) => entry.id === 'status')?.title).toContain('4850');
-    fake.press('open');
-    fake.press('quit');
-    expect(calls.open).toEqual(['http://127.0.0.1:4850/']);
-    expect(calls.quit).toBe(1);
+    await settle();
+    await settle();
+    expect(fake.sent.map((msg) => msg.type)).toEqual(['init']);
+    expect(item(fake.lastMenu(), 'header')?.title).toBe('app-core (prod) [node:' + process.pid + ' tray:222]');
     await companion.stop();
     expect(fake.killed).toBe(true);
   });
 
-  it('follows the server going away and coming back', async () => {
-    const { companion, fake, serverDir } = setup();
+  it('opens the address asked at click time, the logs folder, and quits', async () => {
+    let url = 'http://127.0.0.1:4850/';
+    const { companion, fake, calls, cliConfigDir } = setup({ getUrl: () => url });
     await companion.start();
-    fs.rmSync(path.join(serverDir, 'server.port.json'));
-    await settle();
-    expect(fake.lastMenu().items.find((entry) => entry.id === 'status')?.title).toBe('app-core is not running');
-    fs.writeFileSync(path.join(serverDir, 'server.port.json'), JSON.stringify({ pid: process.pid, port: 4851 }));
-    await settle();
-    expect(fake.lastMenu().items.find((entry) => entry.id === 'status')?.title).toContain('4851');
+    url = 'http://127.0.0.1:4851/';
+    fake.press('open');
+    fake.press('open-logs');
+    fake.press('quit');
+    expect(calls.open).toEqual(['http://127.0.0.1:4851/']);
+    expect(calls.folders).toEqual([path.join(cliConfigDir, 'logs')]);
+    expect(calls.quit).toBe(1);
     await companion.stop();
   });
 
-  it('checks for an update, then installs it when asked, then offers a restart', async () => {
+  it('checks for an update, then installs it and restarts when asked', async () => {
     const { companion, fake, calls } = setup();
     await companion.start();
     fake.press('check-update');
     await settle();
     expect(companion.snapshotState().update).toBe('available');
-    expect(fake.lastMenu().items.find((entry) => entry.id === 'update-install')?.title).toBe('Update to v2026.10.24-1');
+    expect(item(fake.lastMenu(), 'update-install')?.title).toBe('Update to v2026.10.24-1 and restart');
     fake.press('update-install');
     await settle();
     expect(calls.update).toBe(1);
-    expect(companion.snapshotState().update).toBe('updated');
-    fake.press('restart');
     expect(calls.restart).toBe(1);
+    await companion.stop();
+  });
+
+  it('says a restart is needed when the owner cannot restart by itself', async () => {
+    const { companion, fake, calls } = setup({ onRestart: undefined });
+    await companion.start();
+    fake.press('check-update');
+    await settle();
+    fake.press('update-install');
+    await settle();
+    expect(calls.update).toBe(1);
+    expect(item(fake.lastMenu(), 'status')?.title).toBe('Updated to v2026.10.24-1: restart app-core to apply');
     await companion.stop();
   });
 
@@ -270,10 +275,36 @@ describe('TrayCompanion', () => {
     fake.press('check-update');
     await settle();
     expect(companion.snapshotState().update).toBe('failed');
-    expect(fake.lastMenu().items.find((entry) => entry.id === 'check-update')?.enabled).toBe(true);
+    expect(item(fake.lastMenu(), 'check-update')?.enabled).toBe(true);
     fake.press('check-update');
     await settle();
     expect(companion.snapshotState().update).toBe('available');
+    await companion.stop();
+  });
+
+  it('keeps the old version running and says so when the install fails', async () => {
+    const { companion, fake, calls } = setup({
+      runUpdate: async () => {
+        throw new Error('npm exploded');
+      },
+    });
+    await companion.start();
+    fake.press('check-update');
+    await settle();
+    fake.press('update-install');
+    await settle();
+    expect(companion.snapshotState().update).toBe('failed');
+    expect(calls.restart).toBe(0);
+    await companion.stop();
+  });
+
+  it('never checks for updates in dev', async () => {
+    const fetchLatestVersion = vi.fn().mockResolvedValue('2026.10.24-1');
+    const { companion, fake } = setup({ mode: 'dev', onRestart: undefined, fetchLatestVersion });
+    await companion.start();
+    fake.press('check-update');
+    await settle();
+    expect(fetchLatestVersion).not.toHaveBeenCalled();
     await companion.stop();
   });
 

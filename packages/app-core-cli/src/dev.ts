@@ -20,7 +20,7 @@ export const DEV_VERSION = '0.0.0-dev';
 export const DEBOUNCE_MS = 200;
 // Where dev keeps the registry, data/ and state/ of the modules it runs, inside the module folder (gitignore it).
 export const DEV_CONFIG_DIR = '.app-core-dev';
-export const DEV_USAGE = `app-core-cli dev <module-dir> [--port <n>] [--watch [--poll]] [--reset] [--previous-version <v>] [${LINK_USAGE}]... [--id <module-id>]`;
+export const DEV_USAGE = `app-core-cli dev <module-dir> [--port <n>] [--watch [--poll]] [--reset] [--no-tray] [--previous-version <v>] [${LINK_USAGE}]... [--id <module-id>]`;
 
 export type RebuildResult =
   | { ok: true; durationMs: number; version: string; warnings: string[] }
@@ -79,13 +79,15 @@ export interface DevArgs {
   watch: boolean;
   poll: boolean;
   reset: boolean;
+  /** No tray icon next to the dev server. */
+  noTray: boolean;
   previousVersion?: string;
   links: Links;
 }
 
 // `--id`, `--port`, `--watch`, `--poll`, `--reset`, `--previous-version` and `--link` (repeatable); anything else is an error (no silently ignored typo).
 export function parseDevArgs(args: string[]): DevArgs {
-  const parsed: DevArgs = { watch: false, poll: false, reset: false, links: {} };
+  const parsed: DevArgs = { watch: false, poll: false, reset: false, noTray: false, links: {} };
   for (let i = 0; i < args.length; i += 1) {
     const flag = args[i];
     const value = args[i + 1];
@@ -98,6 +100,9 @@ export function parseDevArgs(args: string[]): DevArgs {
         break;
       case '--reset':
         parsed.reset = true;
+        break;
+      case '--no-tray':
+        parsed.noTray = true;
         break;
       case '--previous-version':
         if (value === undefined || value.startsWith('--')) {

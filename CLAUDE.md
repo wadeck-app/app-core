@@ -19,3 +19,4 @@
 - `packages/app-core-cli/tray-go`, `src/tray/trayProcess.ts`, `src/tray/trayBinary.ts` and `ci/scripts/*-platform-packages.sh` are copies of the orchestrator's (wdrive has its own `tray-go` too). A third copy is not acceptable: when another project needs a tray, or one of these files needs a fix, extract them into a shared package first. Details: `packages/app-core-cli/docs/tray.md`.
 - The tray binary ships in `@wadeck-app/app-core-cli-<platform>` packages published by CI only when its hash changes; `optionalDependencies` pins them exactly. Never ship the binary in the main package.
 - Titles in the tray menu are ASCII only (the Go pipe corrupts anything else); `tray.test.ts` enforces it.
+- The tray lives and dies with its server (`serve` green, `dev` and `dev:all` blue, amber when there is something to look at) and never polls: its menu changes only after a click.

@@ -172,17 +172,27 @@ async function main(): Promise<void> {
       if (handle.watch !== undefined) {
         console.log(`  ${handle.watch.description}; dependencies are not watched. Ctrl+C to stop.`);
       }
+      let tray: Awaited<ReturnType<typeof startTray>> | null = null;
       const shutdown = (): void => {
-        handle.close().then(
-          () => process.exit(0),
-          (err: unknown) => {
-            console.error(`app-core-cli dev: shutdown failed: ${getErrorMessage(err)}`);
-            process.exit(1);
-          },
-        );
+        void (tray?.ok ? tray.companion.stop() : Promise.resolve())
+          .then(() => handle.close())
+          .then(
+            () => process.exit(0),
+            (err: unknown) => {
+              console.error(`app-core-cli dev: shutdown failed: ${getErrorMessage(err)}`);
+              process.exit(1);
+            },
+          );
       };
       process.on('SIGINT', shutdown);
       process.on('SIGTERM', shutdown);
+      // Blue icon: a dev server. No update or restart entries, a module author restarts it from the terminal.
+      if (!args.noTray) {
+        tray = await startTray({ mode: 'dev', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: '', getUrl: () => handle.url, onQuit: shutdown });
+        if (!tray.ok) {
+          console.warn(`app-core-cli dev: no tray icon: ${tray.reason}. Hide this warning with --no-tray.`);
+        }
+      }
     } catch (err) {
       console.error(`app-core-cli dev failed: ${getErrorMessage(err)}`);
       process.exitCode = 1;
@@ -200,7 +210,7 @@ async function main(): Promise<void> {
       const shutdown = (): void => {
         void (tray?.ok ? tray.companion.stop() : Promise.resolve()).then(stop).finally(() => process.exit(0));
       };
-      // Starts a new serve once this one is down, for "Restart to apply the update" in the tray.
+      // Starts a new serve once this one is down: the tray's Restart, and the end of "Update to vX and restart".
       const restart = (): void => {
         void (tray?.ok ? tray.companion.stop() : Promise.resolve())
           .then(stop)
@@ -214,7 +224,8 @@ async function main(): Promise<void> {
       if (args.includes('--no-tray')) {
         console.log('app-core-cli serve: no tray icon (--no-tray)');
       } else {
-        tray = await startTray({ mode: 'serve', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: join(dirname(bundlePath), 'app-core-cli-updater.cjs'), onQuit: shutdown, onRestart: restart });
+        // Green icon: the installed server.
+        tray = await startTray({ mode: 'prod', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: join(dirname(bundlePath), 'app-core-cli-updater.cjs'), getUrl: () => `http://127.0.0.1:${port}/`, onQuit: shutdown, onRestart: restart });
         if (!tray.ok) {
           // The server keeps running; the icon is the part that is missing, and the reason says how to get it back.
           console.warn(`app-core-cli serve: no tray icon: ${tray.reason}. Hide this warning with --no-tray.`);
@@ -228,11 +239,17 @@ async function main(): Promise<void> {
   }
 
   if (command === 'tray') {
-    // A tray for a server started some other way (an orchestrator job, another terminal): it follows the port file.
-    const args = [target, ...rest].filter((arg): arg is string => arg !== undefined);
-    warnUnknownArgs(args, [], 'tray');
+    // Not for users: `npm run dev:all` (scripts/dev-all.mjs) starts it next to the server it runs from sources, which has
+    // no `app-core-cli` process of its own to hold the icon. It lives and dies with dev-all.
+    const urlIndex = [target, ...rest].indexOf('--url');
+    const url = urlIndex === -1 ? undefined : [target, ...rest][urlIndex + 1];
+    if (url === undefined) {
+      console.error('Usage: app-core-cli tray --url <address "Open app-core" goes to> (started by scripts/dev-all.mjs, not meant to be run by hand)');
+      process.exitCode = 1;
+      return;
+    }
     const quit = (): void => process.exit(0);
-    const tray = await startTray({ mode: 'watch', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: join(dirname(bundlePath), 'app-core-cli-updater.cjs'), onQuit: quit });
+    const tray = await startTray({ mode: 'dev', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: '', getUrl: () => url, onQuit: quit });
     if (!tray.ok) {
       console.error(`app-core-cli tray failed: ${tray.reason}`);
       process.exitCode = 1;

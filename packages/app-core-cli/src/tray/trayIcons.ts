@@ -1,81 +1,11 @@
-// Tray icons, drawn at runtime: a ring around a disc, one color per state. No image dependency and no generated asset
-// to keep in sync (orchestrator generates its icons from Lucide with a script; app-core only needs four colors).
-import * as zlib from 'node:zlib';
+// AUTO-GENERATED - do not edit manually.
+// Re-run: SHARP_MODULE=<path to a sharp install> node scripts/gen-tray-icons.mjs  (see that script)
+// Lucide server-plus, 64x64 PNG base64: white server, plus colored per state.
 
-export type IconState = 'running' | 'stopped' | 'update' | 'busy';
+export type IconState = 'dev' | 'prod' | 'info';
 
-const COLORS: Record<IconState, [number, number, number]> = {
-  running: [74, 222, 128],
-  stopped: [156, 163, 175],
-  update: [251, 191, 36],
-  busy: [96, 165, 250],
+export const TRAY_ICONS: Record<IconState, string> = {
+  dev: 'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAACjElEQVR4nO2bP2/TQBiHb+CPyIRU8REgjEiobXCGCkaowAteOtLCp6hC/CEqFpailsLUb8HYhQ9BuyAh7FKWB51ipMh97ThxnLuz75FuO0f3/nK+9+69n5XyeEoBesATIAReO9L0WAfAnTqBPwROgBR3SYBj4MG8wb8F/tIeroC9qsG/o72UiwD0W/bPSzOhXybACe3nc9lqnwoP/ABeADeVI+ixAtvAecHC2JMeGhQo9lw5SiaCxIbUOSzofEs5CnC7IKZQ6hxJPZXjFAgQSR0jL4BAyQ8/Ag6AD8BjZSmNCMAk+Mtcfl1XHRLgQOj6UVmIFwAuhLE+7dIrsJ8L6Qy40ZlFUAPsAIfACLirJGhpGqwMXgCc3QoH79OdIE4OgzgdbY1+ylN8FhQfhraVxQzjdH8Yp0y1s62RsMjNgslxWB8V85xnpyorZ0IwTi9yAhCML6+nuSowKSCa4A9wCtybd8z54LMWLSpAP8vppjg1KoBGFw4NCpAo0wJMiWBiJnxXNggw9TocFyyMTfALeKZsEeA/+noJ2AReNXiV9RJYUyV5fjhOPgVx+jXfJAGCOP12re84+VJrn2BRnq/bFtsn2JTn67aF9wkm6LwAQ9OvAKvxB9i3CLJ6f4A9aRBz/gDzGyHM+gPMboUx7w8wexjCnD/A/HEYR/0BSyuI4Kg/YJklsbBAACtLYU0URSMpetUV8ALgr8aoKEDnL0fx1+O4JICEt8ioriyCNCWAK3gB5hAgdHUrvCyr7MBFf0AZWa2xslm656I/QEKPNQtessv/LvyYCnP+gFVyZLM/oGl0bPdt9gc0za7t/oCm0LG8qRS8QX9AE+ixH82c9hb4A5bd9Fg3an0661Hd4B+aCbvl7kmEagAAAABJRU5ErkJggg==',
+  prod: 'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAClUlEQVR4nO2bPW/UMBjHPfAibkJCzHBBcIxIiHJMFYxQQRayVEkH3j5F1W9RsbAUtRSmfoMO5NSxCx+CdkS0vCw/ZF0Q5c7O5S7ns534J3lzTn7+5/ixH/8jRCBQCtABHgAx8NyTJsfaBy7VCfw2sAuc4i8nwA5wa9rgXwO/aQ6/gFdVg39DcykXAeg17J9XzYRemQC7NJ8PZav9qeKBr8AT4LzwBDlWYAU40iyMHdVDfY1ij4WnFCKoWFJ1jjWdLwhPAS5qYopVnRNVT+E5GgESVcckCKCg5IfvAJvAW+CucBQjAjAM/sdIfr0nWiTApqLrO+EgQQA4Voz1YZtegfWRkA6Bc61ZBCXAKrAFbACXhQoamgYrQxAAb7fC3XxtNcqzrSjPNq7tr6mn+CTQH4ZWhMNEg3Q9GmT8a+nh8v7y+CI3CYbHYXlUHOWoOFU5ORO6g/T4fwEybuTZeJqrAsMCog1+AnvA1WnHPBq8bNc/Z8msAvSKnG6LPasCSGTh0KIAJ8K2AGdEsDETvggXBDjzOuxoFkYTfAMeCVcE+Iu8XgLuA88MXmU9Ba6Isjw/SN9HefZprCkE6ObZwXi/9GOtfYI7eb5um3Gf4FKer9tm3ifYoPUCRLZfARbjD3BvEWTx/gB30iD2/AH2N0LY9QfY3Qpj3x9g9zCEPX+A/eMwnvoD5lYQwVN/wDxLYrFGACdLYSaKookqetEWCAIQrsaoKEDrL0cJ1+P4JICKYJERbVkEMSWALwQBphAg9nUrPC+rbN9Hf0AZRa2xslm646M/QIUcaxG8yi7/XfsxFfb8AYtk22V/gGlkbDdd9geY5qXr/gBTyFheVAreoj/ABHLs2xOnvQP+gHk3OdalWp/OBkQ7+APDZVzv0t2WDwAAAABJRU5ErkJggg==',
+  info: 'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAACkUlEQVR4nO2bu27UQBSGT8FF2AWREI8AS4mESJYSSohgG9yk5PYU0b5FRBEbKSghUOUtKNPwECQNUmIvl+ZDozUo2R17vev1zow9nzTdeDXn3/GcmTO/RTyeUoAAeAQMgJeONDXWPnCjTuD3gENghLtkwAFwd97g3wJ/aA+/gTdVg39HeykXAei17J/XzYRemQCHtJ9PZav9SPPAd+AZcFUcQY0V2AROChbGQPdQv0Cxp+IouQg61nWdBwWdr4mjANcLYhroOke6nuI4BQJEuo6RF0BDyQ/fB3aA98ADsZRGBGAc/M+J/PpQOiTAjqZrLBbiBYBTzVgfd+kV2J4I6Ri40plFUAFsAXvAEFgTHbQ0DVYGLwDOboXPd8OtLA730iQY/vhwUz/FZ0HxYWhTLCaNg+0sCfnf4vCYoUwvcrNgfBxWR8VJTvJTlZUzIUuC00sCJCHnu+F0mqsC4wKiCX4BR8Dt+QW4HLxqoziMFhWgl+d0UxwZFUChCocGBcjEtAAXRDAxE76JDQJceB0OChbGJjgDnogtAvxDXS8BG8CLBq+yngO3pCzPJ8HHNA6+TDadAGkcfp3qmwSfa+0TrMnzddui+wSb8nzdtvA+wQSdFyA1/QqwGn+AfYsgq/cH2JMGMecPML8Rwqw/wOxWGPP+ALOHIcz5A8wfh3HUH7C0ggiO+gOWWRIbFAhgZSmsiaJopIteugJeAPzVGBUF6PzlKP56HJcE0OEtMtKVRZCmBHAFL8AcAgxc3Qovyyrbd9EfUEZea6xslg5c9AfoUGPNg9fZ5dPCj6kw5w9YJfs2+wOaRsV2x2Z/QNO8tt0f0BQqlleVgjfoD2gCNfb9mdPeAn/Aspsa63qtT2c90g3+AiW0qQWxw0GWAAAAAElFTkSuQmCC',
 };
-
-const SIZE = 64;
-
-const CRC_TABLE = (() => {
-  const table: number[] = [];
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) {
-      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    }
-    table.push(c >>> 0);
-  }
-  return table;
-})();
-
-function crc32(buf: Buffer): number {
-  let c = 0xffffffff;
-  for (const byte of buf) {
-    c = CRC_TABLE[(c ^ byte) & 0xff]! ^ (c >>> 8);
-  }
-  return (c ^ 0xffffffff) >>> 0;
-}
-
-function chunk(type: string, data: Buffer): Buffer {
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(data.length);
-  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(body));
-  return Buffer.concat([length, body, crc]);
-}
-
-/** A 64x64 RGBA PNG: a ring of the state's color around a smaller disc, transparent elsewhere. */
-export function iconPng(state: IconState): Buffer {
-  const [r, g, b] = COLORS[state];
-  const center = (SIZE - 1) / 2;
-  // Row = filter byte (0) + RGBA pixels.
-  const raw = Buffer.alloc(SIZE * (1 + SIZE * 4));
-  for (let y = 0; y < SIZE; y++) {
-    const row = y * (1 + SIZE * 4);
-    for (let x = 0; x < SIZE; x++) {
-      const distance = Math.hypot(x - center, y - center);
-      const inRing = distance <= 30 && distance >= 24;
-      const inDisc = distance <= 14;
-      if (inRing || inDisc) {
-        const offset = row + 1 + x * 4;
-        raw[offset] = r;
-        raw[offset + 1] = g;
-        raw[offset + 2] = b;
-        raw[offset + 3] = 255;
-      }
-    }
-  }
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(SIZE, 0);
-  header.writeUInt32BE(SIZE, 4);
-  header[8] = 8; // bit depth
-  header[9] = 6; // RGBA
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', header),
-    chunk('IDAT', zlib.deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
-export function iconBase64(state: IconState): string {
-  return iconPng(state).toString('base64');
-}

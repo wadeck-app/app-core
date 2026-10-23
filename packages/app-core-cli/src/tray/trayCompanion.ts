@@ -1,63 +1,36 @@
-// The tray icon that goes with the app-core server: shows whether it runs, opens it, shows the version and updates it.
+// The tray icon that lives and dies with an app-core server: opens it, shows the version and updates it.
 // Modeled on the orchestrator's TrayManager (packages/orchestrator-cli/src/tray-manager.ts), without its job logic.
+// Nothing here polls: the menu changes only when the user acts (check, update), because the tray exists exactly as long
+// as its server does.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
-import { portFilePath } from '@wadeck-app/app-core-server/portFile';
 import { TrayProcess } from './trayProcess.js';
 import { buildMenuSnapshot, type TrayActionId, type TrayState } from './trayMenu.js';
 
 const MAX_RESTARTS = 5;
-const DEFAULT_POLL_MS = 3_000;
-
-export interface RunningServer {
-  pid: number;
-  port: number;
-}
-
-/** The server described by its port file, or null when it is not running (no file, unreadable, or its pid is gone). */
-export function readRunningServer(configDir: string): RunningServer | null {
-  let parsed: { pid?: unknown; port?: unknown };
-  try {
-    parsed = JSON.parse(fs.readFileSync(portFilePath(configDir), 'utf8')) as { pid?: unknown; port?: unknown };
-  } catch {
-    return null;
-  }
-  const { pid, port } = parsed;
-  if (typeof pid !== 'number' || typeof port !== 'number' || !Number.isInteger(port) || port <= 0 || port > 65535) {
-    return null;
-  }
-  try {
-    // Signal 0 only checks that the process exists.
-    process.kill(pid, 0);
-  } catch (err) {
-    // EPERM: it exists but belongs to someone else, which still means a server is there.
-    if ((err as NodeJS.ErrnoException).code !== 'EPERM') {
-      return null;
-    }
-  }
-  return { pid, port };
-}
 
 export interface TrayCompanionOptions {
-  /** Where the server publishes server.port.json. */
-  serverConfigDir: string;
+  mode: TrayState['mode'];
+  version: string;
   /** Where this CLI keeps its state: the staged binary and the tray log. */
   cliConfigDir: string;
-  version: string;
-  mode: TrayState['mode'];
+  /** The server's config dir, only shown in the menu. */
+  serverConfigDir: string;
   /** Path of the tray binary to spawn (already staged out of node_modules). */
   binaryPath: string;
+  /** Address "Open app-core" goes to; asked at click time, so a server that moved is followed. */
+  getUrl: () => string;
   openUrl: (url: string) => void;
+  openFolder: (dir: string) => void;
   /** Latest published version, or throws. */
   fetchLatestVersion: () => Promise<string>;
   /** Installs the latest version (forced), or throws. */
   runUpdate: () => Promise<void>;
   /** The user chose Quit. */
   onQuit: () => void;
-  /** The user chose "Restart to apply the update" (serve mode only). */
+  /** Restarts the server. When given, the menu has Restart and an update restarts by itself. */
   onRestart?: () => void;
-  pollMs?: number;
   /** Test seam. */
   createProcess?: (binaryPath: string) => TrayProcess;
 }
@@ -73,30 +46,28 @@ export class TrayCompanion {
   private stopping = false;
   private restartAttempt = 0;
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly state: TrayState;
 
   constructor(private readonly opts: TrayCompanionOptions) {
-    this.state = { port: null, version: opts.version, update: 'idle', latestVersion: null, mode: opts.mode };
+    this.state = {
+      mode: opts.mode,
+      version: opts.version,
+      update: 'idle',
+      latestVersion: null,
+      configDir: opts.serverConfigDir,
+      nodePid: process.pid,
+      trayPid: null,
+      canRestart: opts.onRestart !== undefined,
+    };
   }
 
-  /** Spawns the tray and starts following the server. Rejects when the tray cannot start. */
+  /** Spawns the tray. Rejects when it cannot start. */
   async start(): Promise<void> {
-    this.refreshServer();
     await this.spawn();
-    this.pollTimer = setInterval(() => {
-      if (this.refreshServer()) {
-        this.pushMenu();
-      }
-    }, this.opts.pollMs ?? DEFAULT_POLL_MS);
   }
 
   async stop(): Promise<void> {
     this.stopping = true;
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-    }
     if (this.restartTimer) {
       clearTimeout(this.restartTimer);
       this.restartTimer = null;
@@ -113,22 +84,17 @@ export class TrayCompanion {
     return this.state;
   }
 
-  /** Re-reads the port file. True when what the menu shows changed. */
-  private refreshServer(): boolean {
-    const port = readRunningServer(this.opts.serverConfigDir)?.port ?? null;
-    const changed = port !== this.state.port;
-    this.state.port = port;
-    return changed;
+  private get logFile(): string {
+    return path.join(this.opts.cliConfigDir, 'logs', 'tray.log');
   }
 
   private log(line: string): void {
-    const file = path.join(this.opts.cliConfigDir, 'logs', 'tray.log');
     try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.appendFileSync(file, `${new Date().toISOString()} ${line}\n`);
+      fs.mkdirSync(path.dirname(this.logFile), { recursive: true });
+      fs.appendFileSync(this.logFile, `${new Date().toISOString()} ${line}\n`);
     } catch (err) {
-      // The log is a convenience; a read-only config dir must not take the tray down, but it is said once on stderr.
-      process.stderr.write(`[tray] cannot write ${file}: ${getErrorMessage(err)}\n`);
+      // The log is a convenience; a read-only config dir must not take the tray down, but it is said on stderr.
+      process.stderr.write(`[tray] cannot write ${this.logFile}: ${getErrorMessage(err)}\n`);
     }
   }
 
@@ -145,6 +111,7 @@ export class TrayCompanion {
   private async spawn(): Promise<void> {
     const tp = this.opts.createProcess?.(this.opts.binaryPath) ?? new TrayProcess(this.opts.binaryPath);
     this.tp = tp;
+    this.state.trayPid = tp.process.pid ?? null;
     tp.onStderrLine((line) => this.log(line));
     tp.onClicked((id) => this.handleClick(id));
     tp.onExit((code) => {
@@ -176,7 +143,7 @@ export class TrayCompanion {
     }
     if (this.restartAttempt >= MAX_RESTARTS) {
       this.log(`tray gave up after ${MAX_RESTARTS} restarts`);
-      process.stderr.write(`[tray] the tray icon stopped ${MAX_RESTARTS} times in a row and is not restarted again; see ${path.join(this.opts.cliConfigDir, 'logs', 'tray.log')}\n`);
+      process.stderr.write(`[tray] the tray icon stopped ${MAX_RESTARTS} times in a row and is not restarted again; see ${this.logFile}\n`);
       return;
     }
     const delay = Math.min(1000 * 2 ** this.restartAttempt, 30_000);
@@ -194,12 +161,13 @@ export class TrayCompanion {
     this.log(`click ${id}`);
     switch (id as TrayActionId) {
       case 'open':
-        if (this.state.port !== null) {
-          this.opts.openUrl(`http://127.0.0.1:${this.state.port}/`);
-        }
+        this.opts.openUrl(this.opts.getUrl());
+        break;
+      case 'open-logs':
+        this.opts.openFolder(path.dirname(this.logFile));
         break;
       case 'check-update':
-        if (this.state.update !== 'checking' && this.state.update !== 'updating') {
+        if (this.state.mode === 'prod' && this.state.update !== 'checking' && this.state.update !== 'updating') {
           void this.checkForUpdate();
         }
         break;
@@ -239,12 +207,16 @@ export class TrayCompanion {
     this.pushMenu();
     try {
       await this.opts.runUpdate();
-      this.state.update = 'updated';
       this.log(`update to ${this.state.latestVersion ?? '?'} installed`);
     } catch (err) {
       this.log(`update failed: ${getErrorMessage(err)}`);
       this.state.update = 'failed';
+      this.pushMenu();
+      return;
     }
+    this.state.update = 'updated';
     this.pushMenu();
+    // "Update to vX and restart": the new version only runs once the server is started again.
+    this.opts.onRestart?.();
   }
 }
