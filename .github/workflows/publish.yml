@@ -118,7 +118,8 @@ jobs:
       # app-core-cli's optionalDependencies: updating app-core-cli updates the tray iff the pin moved.
       - name: Publish platform packages (only if the tray binary changed) and pin them
         run: |
-          bash packages/app-core-cli/ci/scripts/publish-platform-packages.sh \n            "${{ steps.version.outputs.version }}" "${{ steps.version.outputs.dist_tag }}"
+          bash packages/app-core-cli/ci/scripts/publish-platform-packages.sh \
+            "${{ steps.version.outputs.version }}" "${{ steps.version.outputs.dist_tag }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
