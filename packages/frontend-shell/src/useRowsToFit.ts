@@ -13,7 +13,7 @@ export function rowsToFit(contentPx: number, cellPx: number, gapPx: number): num
 // this computes), so its size says nothing about the content; what is measured is the widget's own content (the article
 // in the tile) plus what the tile adds around it (header, border, padding), and again whenever that content changes size
 // (a list loads or grows, a chart redraws) or the grid is laid out.
-export function useRowsToFit(cell: RefObject<HTMLElement | null>, enabled: boolean, gapPx: number): number {
+export function useRowsToFit(cell: RefObject<HTMLElement | null>, gapPx: number): number {
   const [needed, setNeeded] = useState(1);
 
   useLayoutEffect(() => {
@@ -21,7 +21,7 @@ export function useRowsToFit(cell: RefObject<HTMLElement | null>, enabled: boole
     const frame = element?.firstElementChild;
     const article = frame?.querySelector('[role="article"]');
     const grid = element?.parentElement;
-    if (!enabled || !element || !grid || !(frame instanceof HTMLElement) || !(article instanceof HTMLElement)) {
+    if (!element || !grid || !(frame instanceof HTMLElement) || !(article instanceof HTMLElement)) {
       return undefined;
     }
     const body = article.parentElement;
@@ -53,7 +53,7 @@ export function useRowsToFit(cell: RefObject<HTMLElement | null>, enabled: boole
     // And the grid: at mount it can still have no layout, and nothing in the content changes when it gets one.
     observer.observe(grid);
     return () => observer.disconnect();
-  }, [cell, enabled, gapPx]);
+  }, [cell, gapPx]);
 
   return needed;
 }

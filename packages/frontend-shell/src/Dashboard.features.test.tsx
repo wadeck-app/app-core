@@ -41,13 +41,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// jsdom has no layout: the width the grid is measured at is given here. 1100px with columns of at least 260px and gaps of
-// 16px makes 4 columns; 500px makes 1.
+// jsdom has no layout: the width the grid is measured at is given here. Cells are 100px with gaps of 16px: 1100px makes 9
+// columns, 150px makes 1.
 function measuredWidth(width: number): void {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width, height: 0, x: 0, y: 0, top: 0, left: 0, right: width, bottom: 0, toJSON: () => ({}) });
 }
 
-describe('Dashboard: widget size from the manifest', () => {
+describe('Dashboard: widget size from the manifest, in cells of 100px', () => {
   it('spans the columns the manifest asks for', () => {
     measuredWidth(1100);
     renderDashboard();
@@ -55,25 +55,33 @@ describe('Dashboard: widget size from the manifest', () => {
     expect(cellOf('Queue depth').style.gridColumn).toBe('span 4');
   });
 
-  it('keeps the minimum height the manifest asks for: its cells and the gaps between them', () => {
+  it('takes at least the rows the manifest asks for', () => {
     measuredWidth(1100);
     renderDashboard();
-    // 2 cells of 9rem and one gap of 16px (jsdom writes the sum as calc(16px + 18rem)).
-    expect(cellOf('Flow health').style.minHeight).toBe('calc(16px + 18rem)');
+    expect(cellOf('Flow health').style.gridRow).toBe('span 2');
   });
 
-  it('gives a widget without a size one column and the height of its content', () => {
+  it('gives a widget without a size 2 columns and 1 row (it grows with its content)', () => {
     measuredWidth(1100);
     renderDashboard();
-    expect(cellOf('Active flows').style.gridColumn).toBe('span 1');
-    expect(cellOf('Active flows').style.minHeight).toBe('');
+    expect(cellOf('Active flows').style.gridColumn).toBe('span 2');
+    expect(cellOf('Active flows').style.gridRow).toBe('span 1');
   });
 
   it('limits a widget to the columns that exist when the grid is narrow', () => {
-    measuredWidth(500);
+    measuredWidth(150);
     renderDashboard();
     expect(cellOf('Queue depth').style.gridColumn).toBe('span 1');
     expect(cellOf('Flow health').style.gridColumn).toBe('span 1');
+    expect(cellOf('Active flows').style.gridColumn).toBe('span 1');
+  });
+
+  it('lays the cells out as a lattice of 100px squares', () => {
+    measuredWidth(1100);
+    const { container } = renderDashboard();
+    const grid = container.querySelector('.grid-flow-dense') as HTMLElement;
+    expect(grid.style.gridTemplateColumns).toBe('repeat(9, 100px)');
+    expect(grid.style.gridAutoRows).toBe('100px');
   });
 });
 

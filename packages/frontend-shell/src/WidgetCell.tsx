@@ -22,15 +22,10 @@ export interface DashboardWidget {
 export interface CellLayout {
   // Columns the cell takes (already limited to the columns that exist).
   span: number;
-  // A widget N cells high is at least N cells and the gaps between them, and grows when its content needs more room.
-  // Undefined: as tall as its content.
-  minHeight: string | undefined;
-  // Cell grid only: the rows (cells) the cell takes, and what happens to a content that needs more. 'scroll': it scrolls inside;
-  // 'grow': the cell takes the rows it needs. Undefined: the cell is not on a lattice (rows follow the content).
-  rows?: number;
-  overflow?: 'scroll' | 'grow';
+  // Rows the cell takes at least; it takes more whole rows when its content needs more room.
+  rows: number;
   // Space between two rows, to compute how many rows a content needs.
-  gapPx?: number;
+  gapPx: number;
 }
 
 // What the dashboard gives each cell to let the user drag it to another place (native HTML drag and drop).
@@ -63,9 +58,7 @@ export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEar
   const [nonce, setNonce] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const title = widget.label ?? widget.moduleTitle;
-  const declaredRows = layout.rows ?? 1;
-  const neededRows = useRowsToFit(cellRef, layout.overflow === 'grow', layout.gapPx ?? 0);
-  const rows = layout.rows === undefined ? undefined : Math.max(declaredRows, layout.overflow === 'grow' ? neededRows : 1);
+  const rows = Math.max(layout.rows, useRowsToFit(cellRef, layout.gapPx));
 
   const handle = (
     <span
@@ -110,7 +103,7 @@ export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEar
     <div
       ref={cellRef}
       className={`rounded-md transition-opacity ${drag.dragging ? 'opacity-40' : ''} ${drag.over ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-      style={{ gridColumn: `span ${layout.span}`, gridRow: rows === undefined ? undefined : `span ${rows}`, minHeight: layout.minHeight }}
+      style={{ gridColumn: `span ${layout.span}`, gridRow: `span ${rows}` }}
       onDragOver={(e) => {
         // Only a dashboard widget being dragged may be dropped here.
         e.preventDefault();
@@ -121,7 +114,7 @@ export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEar
         drag.onDrop();
       }}
     >
-      <WidgetFrame moduleTitle={widget.moduleTitle} label={widget.label} bare scroll={layout.overflow === 'scroll'} handle={handle} toolbar={toolbar}>
+      <WidgetFrame moduleTitle={widget.moduleTitle} label={widget.label} bare handle={handle} toolbar={toolbar}>
         {view}
       </WidgetFrame>
       <Dialog title={title} open={expanded} onOpenChange={setExpanded} size="xl">

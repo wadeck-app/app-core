@@ -30,20 +30,20 @@ function problemsOf(fn: () => unknown): string[] {
 }
 
 describe('widget size (width and height, in dashboard grid cells)', () => {
-  it('accepts 1 to 4 for each, together or alone, and none at all', () => {
-    for (const value of [1, 2, 3, 4]) {
+  it('accepts 1 to 12 for each, together or alone, and none at all', () => {
+    for (const value of [1, 2, 4, 12]) {
       expect(parse([widget({ width: value, height: value })]).extensionPoints[0]).toMatchObject({ width: value, height: value });
     }
     expect(parse([widget({ width: 2 })]).extensionPoints[0]).toMatchObject({ width: 2 });
     expect(parse([widget()]).extensionPoints[0]).not.toHaveProperty('width');
   });
 
-  it('rejects 0, 5, a fraction and a string, naming the field and the range', () => {
-    for (const value of [0, 5, 1.5, '2', null]) {
+  it('rejects 0, 13, a fraction and a string, naming the field and the range', () => {
+    for (const value of [0, 13, 1.5, '2', null]) {
       const problems = problemsOf(() => parse([widget({ width: value })]));
       expect(problems.some((p) => p.startsWith('extensionPoints.0.width:')), String(value)).toBe(true);
     }
-    expect(problemsOf(() => parse([widget({ height: 5 })]))).toEqual(['extensionPoints.0.height: must be between 1 and 4']);
+    expect(problemsOf(() => parse([widget({ height: 13 })]))).toEqual(['extensionPoints.0.height: must be between 1 and 12']);
   });
 
   it('is refused outside a dashboard widget, where it would be silently ignored, with the fix', () => {
@@ -56,7 +56,7 @@ describe('widget size (width and height, in dashboard grid cells)', () => {
   it('is enforced on the packaged manifest too', () => {
     const packaged = (extensionPoints: unknown[]) => parseManifest({ id: 'sized', version: '1.0.0', backendEntryPath: './b.cjs', extensionPoints });
     expect(() => packaged([widget({ width: 3 })])).not.toThrow();
-    expect(problemsOf(() => packaged([widget({ width: 9 })]))).toHaveLength(1);
+    expect(problemsOf(() => packaged([widget({ width: 20 })]))).toHaveLength(1);
   });
 });
 

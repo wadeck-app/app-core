@@ -5,8 +5,6 @@ interface WidgetFrameProps {
   label: string | undefined;
   // Removes the box the widget draws around itself (a StatTile, a Chart, a table), so the frame is the only box.
   bare: boolean;
-  // The widget has a fixed height (a cell of the grid): its content scrolls inside instead of stretching the tile.
-  scroll?: boolean;
   // The grip that drags the widget, and its actions.
   handle: React.ReactNode;
   toolbar: React.ReactNode;
@@ -18,7 +16,7 @@ const BARE = '[&>.border]:border-0 [&>.shadow-sm]:shadow-none [&>.bg-surface]:bg
 
 // The frame around a dashboard widget: a dense Datadog-style tile. A 32px header with the grip to drag the widget, the
 // title and the tools (always visible); the module is named in the tooltip of the tile.
-export function WidgetFrame({ moduleTitle, label, bare, scroll = false, handle, toolbar, children }: WidgetFrameProps): React.ReactElement {
+export function WidgetFrame({ moduleTitle, label, bare, handle, toolbar, children }: WidgetFrameProps): React.ReactElement {
   const title = label ?? moduleTitle;
   return (
     <section
@@ -30,7 +28,7 @@ export function WidgetFrame({ moduleTitle, label, bare, scroll = false, handle, 
         <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-content">{title}</h3>
         {toolbar}
       </header>
-      <div className={scroll ? 'min-h-0 flex-1 overflow-auto p-2' : 'flex-1 p-2'}>
+      <div className="flex-1 p-2">
         <div role="article" aria-label={title} className={bare ? BARE : undefined}>
           {children}
         </div>

@@ -1,6 +1,4 @@
-import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { WidgetFrame } from './WidgetFrame.js';
 import { rowsToFit } from './useRowsToFit.js';
 
 // Cells of 144px with 16px between them: 1 row = 144, 2 rows = 304, 3 rows = 464.
@@ -21,24 +19,5 @@ describe('rowsToFit', () => {
   it('answers one row while the grid has not been measured (no cell height yet)', () => {
     expect(rowsToFit(500, 0, 16)).toBe(1);
     expect(rowsToFit(500, -1, 16)).toBe(1);
-  });
-});
-
-describe('WidgetFrame in a cell of fixed height', () => {
-  const frame = (scroll: boolean) =>
-    render(
-      <WidgetFrame moduleTitle="Queue" label="Top events" bare scroll={scroll} handle={<span>grip</span>} toolbar={<button>tools</button>}>
-        <p>body</p>
-      </WidgetFrame>,
-    );
-
-  it('scrolls its content inside when asked, instead of stretching the tile', () => {
-    frame(true);
-    expect(screen.getByText('body').closest('div[role="article"]')?.parentElement?.className).toContain('overflow-auto');
-  });
-
-  it('lets the content set the height otherwise', () => {
-    frame(false);
-    expect(screen.getByText('body').closest('div[role="article"]')?.parentElement?.className).not.toContain('overflow-auto');
   });
 });
