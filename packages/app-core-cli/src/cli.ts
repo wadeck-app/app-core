@@ -26,6 +26,10 @@ const VERSION = typeof __APP_CORE_CLI_VERSION__ !== 'undefined' ? __APP_CORE_CLI
 const PKG_NAME = '@wadeck-app/app-core-cli';
 const configDir = process.env['APP_CORE_CLI_CONFIG_DIR'] ?? ConfigDir.get('app-core-cli');
 const bundlePath = process.env['LAUNCHER_BUNDLE_OVERRIDE'] ?? fileURLToPath(import.meta.url);
+// Where this very file is. Not `dirname(bundlePath)`: a job started by the orchestrator inherits the orchestrator's own
+// LAUNCHER_BUNDLE_OVERRIDE, which names the orchestrator's bundle, and the files next to it are not ours (the tray looked
+// for build-info.json there).
+const ownDir = dirname(fileURLToPath(import.meta.url));
 
 async function main(): Promise<void> {
   const [command, target, ...rest] = process.argv.slice(2);
@@ -189,7 +193,7 @@ async function main(): Promise<void> {
       process.on('SIGTERM', shutdown);
       // Blue icon: a dev server. No update or restart entries, a module author restarts it from the terminal.
       if (!args.noTray) {
-        tray = await startTray({ mode: 'dev', version: readTrayBuildInfo(dirname(bundlePath)).builtLabel, dslVersion: readTrayBuildInfo(dirname(bundlePath)).dslLabel, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: '', getUrl: () => handle.url, onQuit: shutdown });
+        tray = await startTray({ mode: 'dev', version: readTrayBuildInfo(ownDir).builtLabel, dslVersion: readTrayBuildInfo(ownDir).dslLabel, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: '', getUrl: () => handle.url, onQuit: shutdown });
         if (!tray.ok) {
           console.warn(`app-core-cli dev: no tray icon: ${tray.reason}. Hide this warning with --no-tray.`);
         }
@@ -226,7 +230,7 @@ async function main(): Promise<void> {
         console.log('app-core-cli serve: no tray icon (--no-tray)');
       } else {
         // Green icon: the installed server.
-        tray = await startTray({ mode: 'prod', version: VERSION, dslVersion: readTrayBuildInfo(dirname(bundlePath)).dslLabel, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: join(dirname(bundlePath), 'app-core-cli-updater.cjs'), getUrl: () => `http://127.0.0.1:${port}/`, onQuit: shutdown, onRestart: restart });
+        tray = await startTray({ mode: 'prod', version: VERSION, dslVersion: readTrayBuildInfo(ownDir).dslLabel, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: join(ownDir, 'app-core-cli-updater.cjs'), getUrl: () => `http://127.0.0.1:${port}/`, onQuit: shutdown, onRestart: restart });
         if (!tray.ok) {
           // The server keeps running; the icon is the part that is missing, and the reason says how to get it back.
           console.warn(`app-core-cli serve: no tray icon: ${tray.reason}. Hide this warning with --no-tray.`);
@@ -245,7 +249,7 @@ async function main(): Promise<void> {
     const trayArgs = [target, ...rest];
     const valueOf = (flag: string): string | undefined => (trayArgs.includes(flag) ? trayArgs[trayArgs.indexOf(flag) + 1] : undefined);
     const url = valueOf('--url');
-    const build = readTrayBuildInfo(dirname(bundlePath));
+    const build = readTrayBuildInfo(ownDir);
     if (url === undefined) {
       console.error('Usage: app-core-cli tray --url <address "Open app-core" goes to> (started by scripts/dev-all.mjs, not meant to be run by hand)');
       process.exitCode = 1;
