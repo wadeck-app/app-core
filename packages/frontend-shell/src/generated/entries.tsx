@@ -245,6 +245,7 @@ function FieldAsyncSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['error']
 		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['disabled']
 		const loadOptions = (resolveExpressionValue(node['loadOptions'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['loadOptions']
+		const loadSelected = (resolveExpressionValue(node['loadSelected'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['loadSelected']
 		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['placeholder']
 		const debounceMs = (resolveExpressionValue(node['debounceMs'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['debounceMs']
 		const noOptionsMessage = (resolveExpressionValue(node['noOptionsMessage'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['noOptionsMessage']
@@ -252,7 +253,7 @@ function FieldAsyncSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
 		return (
-			<FieldAsyncSelect name={name} label={label} description={description} required={required} error={error} disabled={disabled} loadOptions={loadOptions} placeholder={placeholder} debounceMs={debounceMs} noOptionsMessage={noOptionsMessage} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<FieldAsyncSelect name={name} label={label} description={description} required={required} error={error} disabled={disabled} loadOptions={loadOptions} loadSelected={loadSelected} placeholder={placeholder} debounceMs={debounceMs} noOptionsMessage={noOptionsMessage} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -382,13 +383,14 @@ function FieldSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['description']
 		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['options']
 		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['placeholder']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['disabled']
 		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['required']
 		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['error']
 		const formCtx = useFormContext()
 		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
 		return (
-			<FieldSelect label={label} description={description} options={options} placeholder={placeholder} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<FieldSelect label={label} description={description} options={options} placeholder={placeholder} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -431,11 +433,16 @@ function FieldTextareaWithContext({ node, ctx }: RegistryRenderProps) {
 		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['label']
 		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['description']
 		const rows = (resolveExpressionValue(node['rows'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['rows']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['placeholder']
+		const readOnly = (resolveExpressionValue(node['readOnly'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['readOnly']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['disabled']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['error']
 		const formCtx = useFormContext()
 		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
 		return (
-			<FieldTextarea label={label} description={description} rows={rows} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<FieldTextarea label={label} description={description} rows={rows} placeholder={placeholder} readOnly={readOnly} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -1748,7 +1755,7 @@ ButtonSaveEntry.requiresContext = ["FormContext"];
 CronBuilderEntry.knownKeys = ["onChange","onClose","value"];
 DatePickerEntry.knownKeys = ["bind","dateFormat","disabled","isDateDisabled","maxDate","minDate","onSelect","placeholder"];
 DateRangePickerEntry.knownKeys = ["bind","dateFormat","disabled","isDisabled","maxDate","minDate","onOpenChange","open","placeholder"];
-FieldAsyncSelectEntry.knownKeys = ["bind","debounceMs","description","disabled","error","label","loadOptions","name","noOptionsMessage","placeholder","required"];
+FieldAsyncSelectEntry.knownKeys = ["bind","debounceMs","description","disabled","error","label","loadOptions","loadSelected","name","noOptionsMessage","placeholder","required"];
 FieldAutocompleteEntry.knownKeys = ["bind","description","disabled","label","options","placeholder"];
 FieldDateEntry.knownKeys = ["bind","dateFormat","description","disabled","error","isDateDisabled","label","maxDate","minDate","placeholder","required"];
 FieldDateRangeEntry.knownKeys = ["bind","dateFormat","description","disabled","error","isDisabled","label","maxDate","minDate","placeholder","required"];
@@ -1757,10 +1764,10 @@ FieldMultiSelectEntry.knownKeys = ["bind","description","disabled","error","labe
 FieldNumberEntry.knownKeys = ["bind","description","disabled","error","label","max","min","onUnlimitedChange","required","suffix","unlimited","unlimitedValue"];
 FieldReadOnlyEntry.knownKeys = ["copyable","description","label","mono","value"];
 FieldReadOnlyEntry.requiresContext = ["ToastContext"];
-FieldSelectEntry.knownKeys = ["bind","description","error","label","options","placeholder","required"];
+FieldSelectEntry.knownKeys = ["bind","description","disabled","error","label","options","placeholder","required"];
 FieldTagsEntry.knownKeys = ["allowDuplicates","bind","description","disabled","error","label","maxTags","name","placeholder","required"];
 FieldTextEntry.knownKeys = ["bind","description","error","label","readOnly","required"];
-FieldTextareaEntry.knownKeys = ["bind","description","label","rows"];
+FieldTextareaEntry.knownKeys = ["bind","description","disabled","error","label","placeholder","readOnly","required","rows"];
 FieldTimeEntry.knownKeys = ["bind","description","disabled","error","is12Hour","label","minuteStep","placeholder","required"];
 FieldWrapperEntry.allowedChildren = {"items":["atomic"]};
 FieldWrapperEntry.knownKeys = ["description","error","items","label","required"];
@@ -1826,7 +1833,7 @@ TooltipEntry.allowedChildren = {"items":["atomic","composite"]};
 TooltipEntry.knownKeys = ["content","items"];
 BulkActionsToolbarEntry.knownKeys = ["items","onClearSelection","selectedCount"];
 DataTableEntry.allowedChildren = {"filtersTop":["filter"],"filters":["filter"]};
-DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","badge","href","external"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition"]}}},"link":{"keys":["type","to","label","icon","position","external","width"]}}}};
+DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","badge","href","external","title"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition","icon"]}}},"link":{"keys":["type","to","label","icon","position","external","width"]}}}};
 DataTableEntry.knownKeys = ["actionPending","actionPendingRows","batchActions","batchActionsPosition","columns","defaultFilters","emptyMessage","expansion","expansionCondition","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onPageChange","onRowClick","onSortColChange","onSortDirChange","page","refreshing","rows","selectable","sortCol","sortDir"];
 DataTableEntry.providesContext = ["DataTableSelectionCtx","DataTableFilterCtx"];
 DataTableEntry.requiresContext = ["RouterContext"];
