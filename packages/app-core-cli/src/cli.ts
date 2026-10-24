@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { validateManifestFile } from './validate.js';
 import { DEV_USAGE, parseDevArgs, runDev } from './dev.js';
 import { runServe } from './serve.js';
@@ -25,6 +25,16 @@ const VERSION = typeof __APP_CORE_CLI_VERSION__ !== 'undefined' ? __APP_CORE_CLI
 const PKG_NAME = '@wadeck-app/app-core-cli';
 const configDir = process.env['APP_CORE_CLI_CONFIG_DIR'] ?? ConfigDir.get('app-core-cli');
 const bundlePath = process.env['LAUNCHER_BUNDLE_OVERRIDE'] ?? fileURLToPath(import.meta.url);
+
+// A dev server has no published version (a checkout builds as 0.0.1): name the commit it was built from instead.
+function devVersionLabel(): string {
+  try {
+    const info = JSON.parse(readFileSync(join(dirname(bundlePath), 'public', 'build-info.json'), 'utf8')) as { commit?: string };
+    return info.commit ? `dev ${info.commit}` : 'dev (commit unknown)';
+  } catch {
+    return 'dev (build unknown)';
+  }
+}
 
 async function main(): Promise<void> {
   const [command, target, ...rest] = process.argv.slice(2);
@@ -188,7 +198,7 @@ async function main(): Promise<void> {
       process.on('SIGTERM', shutdown);
       // Blue icon: a dev server. No update or restart entries, a module author restarts it from the terminal.
       if (!args.noTray) {
-        tray = await startTray({ mode: 'dev', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: '', getUrl: () => handle.url, onQuit: shutdown });
+        tray = await startTray({ mode: 'dev', version: devVersionLabel(), cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: '', getUrl: () => handle.url, onQuit: shutdown });
         if (!tray.ok) {
           console.warn(`app-core-cli dev: no tray icon: ${tray.reason}. Hide this warning with --no-tray.`);
         }
@@ -241,15 +251,18 @@ async function main(): Promise<void> {
   if (command === 'tray') {
     // Not for users: `npm run dev:all` (scripts/dev-all.mjs) starts it next to the server it runs from sources, which has
     // no `app-core-cli` process of its own to hold the icon. It lives and dies with dev-all.
-    const urlIndex = [target, ...rest].indexOf('--url');
-    const url = urlIndex === -1 ? undefined : [target, ...rest][urlIndex + 1];
+    const trayArgs = [target, ...rest];
+    const valueOf = (flag: string): string | undefined => (trayArgs.includes(flag) ? trayArgs[trayArgs.indexOf(flag) + 1] : undefined);
+    const url = valueOf('--url');
+    // The checkout's commit as dev-all knows it, which is the source the server runs; the bundle's own commit can be older.
+    const label = valueOf('--label') ?? devVersionLabel();
     if (url === undefined) {
-      console.error('Usage: app-core-cli tray --url <address "Open app-core" goes to> (started by scripts/dev-all.mjs, not meant to be run by hand)');
+      console.error('Usage: app-core-cli tray --url <address "Open app-core" goes to> [--label <version text>] (started by scripts/dev-all.mjs, not meant to be run by hand)');
       process.exitCode = 1;
       return;
     }
     const quit = (): void => process.exit(0);
-    const tray = await startTray({ mode: 'dev', version: VERSION, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: '', getUrl: () => url, onQuit: quit });
+    const tray = await startTray({ mode: 'dev', version: label, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: '', getUrl: () => url, onQuit: quit });
     if (!tray.ok) {
       console.error(`app-core-cli tray failed: ${tray.reason}`);
       process.exitCode = 1;

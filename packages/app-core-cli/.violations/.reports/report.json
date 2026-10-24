@@ -1,0 +1,189 @@
+{
+  "generatedAt": "2026-10-23T21:12:58.836Z",
+  "totalViolations": 4,
+  "rules": [
+    {
+      "id": "violations-meta/no-rule-without-test",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/no-barrel-index",
+      "severity": "warning",
+      "violations": []
+    },
+    {
+      "id": "ts/no-inline-subcomponent",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/manifest-exists-and-valid",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/backend-entry-location",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/naming-convention",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/no-raw-timers",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/no-react",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/source-layout",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/view-location",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/no-raw-color-in-views",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/import-boundaries",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "app-module/publishing",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/no-single-file-folder",
+      "severity": "warning",
+      "violations": [
+        {
+          "file": "C:/Workspace_Tooling/app-core/packages/app-core-cli/src/test-helpers",
+          "line": 1,
+          "message": "Folder contains only one source file (makeModule.ts) - move it to the parent and delete the folder"
+        }
+      ]
+    },
+    {
+      "id": "shared/readme-system-length",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "shared/no-workspace-shadow",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/no-err-message-direct",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/no-export-star",
+      "severity": "warning",
+      "violations": []
+    },
+    {
+      "id": "ts/no-inline-if-body",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/no-union-with-string",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/no-deep-relative",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "shared/no-dead-suppress",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/no-cross-package-relative",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/no-switch-default-break",
+      "severity": "error",
+      "violations": [
+        {
+          "file": "C:/Workspace_Tooling/app-core/packages/app-core-cli/src/tray/trayMenu.ts",
+          "line": 38,
+          "message": "Switch default must throw an error - silent break/return is a hidden fallback."
+        },
+        {
+          "file": "C:/Workspace_Tooling/app-core/packages/app-core-cli/src/tray/trayMenu.ts",
+          "line": 53,
+          "message": "Switch default must throw an error - silent break/return is a hidden fallback."
+        }
+      ]
+    },
+    {
+      "id": "shared/partial-impl-flag",
+      "severity": "info",
+      "violations": []
+    },
+    {
+      "id": "ts/no-locale-date",
+      "severity": "warning",
+      "violations": []
+    },
+    {
+      "id": "ts/no-unsafe-type-cast",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "ts/node-builtin-prefix",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "shared/no-em-dash",
+      "severity": "warning",
+      "violations": []
+    },
+    {
+      "id": "shared/no-out-of-repo-path",
+      "severity": "error",
+      "violations": [
+        {
+          "file": "C:/Workspace_Tooling/app-core/packages/app-core-cli/src/tray/trayCompanion.ts",
+          "line": 46,
+          "message": "os.homedir() constructs a path outside the repository - use __dirname-relative paths or inject via a dedicated env var at startup. Hardcoded home paths silently fail in CI."
+        }
+      ]
+    },
+    {
+      "id": "shared/no-french",
+      "severity": "error",
+      "violations": []
+    },
+    {
+      "id": "shared/no-emoji",
+      "severity": "error",
+      "violations": []
+    }
+  ]
+}

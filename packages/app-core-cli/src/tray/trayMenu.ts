@@ -11,8 +11,11 @@ export type UpdateStatus = 'idle' | 'checking' | 'up-to-date' | 'available' | 'u
 export interface TrayState {
   /** `dev`: a server run from sources or by `app-core-cli dev` (blue). `prod`: `app-core-cli serve` (green). */
   mode: 'dev' | 'prod';
+  /** The published version (prod), or a label such as "dev 3474ba9c" (dev). */
   version: string;
   update: UpdateStatus;
+  /** Why `update` is 'failed': which step, and the (ASCII, short) message. */
+  failure: { step: 'check' | 'install'; message: string } | null;
   latestVersion: string | null;
   /** Config dir, as shown in the menu (home already shortened). */
   configDir: string;
@@ -25,13 +28,14 @@ export interface TrayState {
 const VERSION_TITLES: Partial<Record<UpdateStatus, (state: TrayState) => string>> = {
   checking: () => 'Checking...',
   'up-to-date': (state) => `v${state.version} (up to date)`,
-  failed: (state) => `v${state.version} (check failed, see the log)`,
+  failed: (state) => (state.failure?.step === 'install' ? `v${state.version}` : `v${state.version} (check failed)`),
   idle: (state) => `v${state.version} (click to check)`,
 };
 
 function versionTitle(state: TrayState): string {
   if (state.mode === 'dev') {
-    return `v${state.version} (dev)`;
+    // `version` is already a label here ("dev <commit>"): a dev server has no published version to prefix with v.
+    return state.version;
   }
   return VERSION_TITLES[state.update]?.(state) ?? `v${state.version}`;
 }
@@ -40,7 +44,8 @@ const STATUS_TITLES: Partial<Record<UpdateStatus, (state: TrayState) => string>>
   available: (state) => `Update available: v${state.latestVersion ?? '?'}`,
   updating: () => 'Updating...',
   updated: (state) => `Updated to v${state.latestVersion ?? '?'}: restart app-core to apply`,
-  failed: () => '[fail] Update check or install failed',
+  checking: () => 'Checking for an update...',
+  failed: (state) => `[fail] Update ${state.failure?.step ?? 'check'} failed: ${state.failure?.message ?? 'see the log'}`,
 };
 
 function statusTitle(state: TrayState): string {

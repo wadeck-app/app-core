@@ -4,29 +4,16 @@
  *   prod -> green  (#22C55E, orchestrator's "success" green)
  *   info -> amber  (#F59E0B, orchestrator's "checking" amber): an update is available, being checked or installed
  *
- * Not part of the build: the output is committed, like orchestrator's tray-icons.ts. Needs `sharp`, which app-core does not
- * depend on; point SHARP_MODULE at an existing install, e.g.
- *   SHARP_MODULE=C:/Workspace_Tooling/orchestrator/node_modules/sharp node scripts/gen-tray-icons.mjs
+ * Not part of the build: the output is committed, like orchestrator's tray-icons.ts. Run: npm run gen-tray-icons
+ * (sharp is a devDependency, as in orchestrator).
  */
-import { createRequire } from 'node:module';
+import sharp from 'sharp';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, '..', 'src', 'tray', 'trayIcons.ts');
-
-function loadSharp() {
-  const from = process.env['SHARP_MODULE'] ?? 'sharp';
-  try {
-    return createRequire(import.meta.url)(from);
-  } catch (err) {
-    throw new Error(
-      `Cannot load sharp from "${from}" (${err instanceof Error ? err.message : String(err)}). ` +
-        'Set SHARP_MODULE to a sharp install, e.g. C:/Workspace_Tooling/orchestrator/node_modules/sharp',
-    );
-  }
-}
 
 const BODY = '#FFFFFF';
 const COLORS = { dev: '#3B82F6', prod: '#22C55E', info: '#F59E0B' };
@@ -47,7 +34,6 @@ function svg(plus) {
 </svg>`;
 }
 
-const sharp = loadSharp();
 const entries = [];
 for (const [state, color] of Object.entries(COLORS)) {
   const png = await sharp(Buffer.from(svg(color))).resize(64, 64).png().toBuffer();
@@ -57,7 +43,7 @@ for (const [state, color] of Object.entries(COLORS)) {
 fs.writeFileSync(
   OUT,
   `// AUTO-GENERATED - do not edit manually.
-// Re-run: SHARP_MODULE=<path to a sharp install> node scripts/gen-tray-icons.mjs  (see that script)
+// Re-run: npm run gen-tray-icons --workspace=packages/app-core-cli
 // Lucide server-plus, 64x64 PNG base64: white server, plus colored per state.
 
 export type IconState = 'dev' | 'prod' | 'info';

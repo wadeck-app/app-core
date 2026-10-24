@@ -53,6 +53,7 @@ export class TrayCompanion {
       mode: opts.mode,
       version: opts.version,
       update: 'idle',
+      failure: null,
       latestVersion: null,
       configDir: opts.serverConfigDir,
       nodePid: process.pid,
@@ -187,8 +188,16 @@ export class TrayCompanion {
     }
   }
 
+  // The menu line says why the icon is amber; the full text is in the log. ASCII only: the Go pipe corrupts anything else.
+  private fail(step: 'check' | 'install', err: unknown): void {
+    const message = getErrorMessage(err).replace(/[^\x20-\x7e]/g, '?').replace(/\s+/g, ' ').trim();
+    this.state.failure = { step, message: message.length > 80 ? `${message.slice(0, 77)}...` : message };
+    this.state.update = 'failed';
+  }
+
   private async checkForUpdate(): Promise<void> {
     this.state.update = 'checking';
+    this.state.failure = null;
     this.pushMenu();
     try {
       const latest = await this.opts.fetchLatestVersion();
@@ -197,20 +206,21 @@ export class TrayCompanion {
       this.log(`check-update: latest=${latest} current=${this.state.version} -> ${this.state.update}`);
     } catch (err) {
       this.log(`check-update failed: ${getErrorMessage(err)}`);
-      this.state.update = 'failed';
+      this.fail('check', err);
     }
     this.pushMenu();
   }
 
   private async installUpdate(): Promise<void> {
     this.state.update = 'updating';
+    this.state.failure = null;
     this.pushMenu();
     try {
       await this.opts.runUpdate();
       this.log(`update to ${this.state.latestVersion ?? '?'} installed`);
     } catch (err) {
       this.log(`update failed: ${getErrorMessage(err)}`);
-      this.state.update = 'failed';
+      this.fail('install', err);
       this.pushMenu();
       return;
     }

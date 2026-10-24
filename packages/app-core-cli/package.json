@@ -21,7 +21,8 @@
     "build": "tsc --build tsconfig.json && node scripts/bundle.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build-tray": "node scripts/build-tray-binary.mjs"
+    "build-tray": "node scripts/build-tray-binary.mjs",
+    "gen-tray-icons": "node scripts/gen-tray-icons.mjs"
   },
   "dependencies": {
     "@fastify/static": "^8.0.0",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@wadeck-app/app-core-server": "*",
+    "sharp": "^0.33.5",
     "typescript": "^5.3.3",
     "vitest": "^4.0.14"
   },

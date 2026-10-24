@@ -24,6 +24,7 @@ const base: TrayState = {
   mode: 'prod',
   version: '2026.10.23-10',
   update: 'idle',
+  failure: null,
   latestVersion: null,
   configDir: '/home/u/.config/app-core',
   nodePid: 111,
@@ -79,6 +80,22 @@ describe('tray menu', () => {
     expect(item(menu, 'status')?.title).toBe('Update available: v2026.10.24-1');
   });
 
+  it('says in the menu why the icon is amber, for every amber state', () => {
+    const failure = { step: 'install' as const, message: 'npm exploded' };
+    const expected: Array<[TrayState['update'], RegExp]> = [
+      ['checking', /Checking for an update/],
+      ['available', /Update available: v1/],
+      ['updating', /Updating/],
+      ['updated', /Updated to v1: restart/],
+      ['failed', /\[fail\] Update install failed: npm exploded/],
+    ];
+    for (const [update, pattern] of expected) {
+      const menu = buildMenuSnapshot({ ...base, update, latestVersion: '1', failure: update === 'failed' ? failure : null });
+      expect(menu.icon).toBe(TRAY_ICONS.info);
+      expect(item(menu, 'status')?.title).toMatch(pattern);
+    }
+  });
+
   it('blocks the version item while checking or updating', () => {
     expect(item(buildMenuSnapshot({ ...base, update: 'checking' }), 'check-update')?.enabled).toBe(false);
     const updating = buildMenuSnapshot({ ...base, update: 'updating' });
@@ -87,8 +104,8 @@ describe('tray menu', () => {
   });
 
   it('has no update check in dev: a dev build has nothing to update to', () => {
-    const menu = buildMenuSnapshot({ ...base, mode: 'dev' });
-    expect(item(menu, 'check-update')).toMatchObject({ title: 'v2026.10.23-10 (dev)', enabled: false });
+    const menu = buildMenuSnapshot({ ...base, mode: 'dev', version: 'dev 3474ba9c' });
+    expect(item(menu, 'check-update')).toMatchObject({ title: 'dev 3474ba9c', enabled: false });
   });
 
   it('shows Restart only where the owner can restart the server', () => {
@@ -275,6 +292,7 @@ describe('TrayCompanion', () => {
     fake.press('check-update');
     await settle();
     expect(companion.snapshotState().update).toBe('failed');
+    expect(item(fake.lastMenu(), 'status')?.title).toBe('[fail] Update check failed: offline');
     expect(item(fake.lastMenu(), 'check-update')?.enabled).toBe(true);
     fake.press('check-update');
     await settle();
@@ -294,6 +312,7 @@ describe('TrayCompanion', () => {
     fake.press('update-install');
     await settle();
     expect(companion.snapshotState().update).toBe('failed');
+    expect(item(fake.lastMenu(), 'status')?.title).toBe('[fail] Update install failed: npm exploded');
     expect(calls.restart).toBe(0);
     await companion.stop();
   });

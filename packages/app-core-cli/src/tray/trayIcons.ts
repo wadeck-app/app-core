@@ -1,5 +1,5 @@
 // AUTO-GENERATED - do not edit manually.
-// Re-run: SHARP_MODULE=<path to a sharp install> node scripts/gen-tray-icons.mjs  (see that script)
+// Re-run: npm run gen-tray-icons --workspace=packages/app-core-cli
 // Lucide server-plus, 64x64 PNG base64: white server, plus colored per state.
 
 export type IconState = 'dev' | 'prod' | 'info';
