@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Runs the server watcher and the frontend dev server together (one command, one Orchestrator job).
 // Children are spawned as plain `node <bin>` (no npm/cmd.exe layer) and stopped by killing their whole tree.
-import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import net from 'node:net';
 import { dirname, resolve } from 'node:path';
@@ -106,19 +106,7 @@ const cliBundle = resolve(root, 'packages/app-core-cli/dist/cli.bundle.js');
 if (!existsSync(cliBundle)) {
   console.warn(`[dev-all] WARNING: no tray icon: ${cliBundle} not found. Build it with: npm run build --workspace=packages/app-core-cli`);
 } else {
-  // The commit the servers run from (not the bundle's, which is only as fresh as the last CLI build).
-  let label = 'dev (commit unknown)';
-  try {
-    const git = (...args) => execFileSync('git', args, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-    // "dev 5409290 Take dsl 2026.10.24-137 (+changes)": the commit the servers run from, what it says, and whether the
-    // working tree has edits on top. ASCII only (the tray's pipe corrupts anything else) and short enough for a menu.
-    const subject = git('log', '-1', '--format=%s').replace(/[^\x20-\x7e]/g, '?');
-    const dirty = git('status', '--porcelain', '-uno') === '' ? '' : ' (+changes)';
-    label = `dev ${git('rev-parse', '--short=7', 'HEAD')} ${subject.length > 45 ? `${subject.slice(0, 42)}...` : subject}${dirty}`;
-  } catch {
-    console.warn('[dev-all] WARNING: git rev-parse failed; the tray shows "dev (commit unknown)" as its version.');
-  }
-  const tray = spawn(process.execPath, [cliBundle, 'tray', '--url', `http://localhost:${services.find((s) => s.name === 'frontend').port}/`, '--label', label], {
+  const tray = spawn(process.execPath, [cliBundle, 'tray', '--url', `http://localhost:${services.find((s) => s.name === 'frontend').port}/`], {
     cwd: root,
     env: childEnv,
     stdio: ['ignore', 'pipe', 'pipe'],

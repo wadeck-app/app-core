@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { PageContent, PageSection } from '@wadeck-app/dsl-ui';
+import { PageContent, PageSection, useAbTest } from '@wadeck-app/dsl-ui';
 import { DashboardBar } from './DashboardBar.js';
 import { WidgetCell, type DashboardWidget } from './WidgetCell.js';
 import { navModulesFor, titleFromId } from './layout/navModel.js';
 import { useHiddenWidgets, useRefreshTick, useWidgetOrder, type RefreshInterval } from './useDashboardState.js';
+import { useDockTests } from './useDockTests.js';
 import { useGridColumns } from './useGridColumns.js';
 import type { LoadedModuleSummary } from './types.js';
 
@@ -23,7 +24,22 @@ const CELL_REM = 9;
 // Widgets use the same GenericPageRunner + fetcher path as pages (ModulePage.tsx)
 // -- widget/page is a placement distinction only, not a capability tier, so a
 // widget's view can declare $sources just like a page's.
+type GridMode = 'flow' | 'cells' | 'grow';
+
 export function Dashboard({ modules }: DashboardProps): React.ReactElement {
+  // Open A/B test: how a widget's size is asked for and kept.
+  const gridTest = useAbTest<GridMode>({
+    id: 'dashboard-grid',
+    label: 'Dashboard grid',
+    initial: 'flow',
+    options: {
+      flow: { label: 'Flow', hint: 'Today: width in columns, height is a minimum, rows follow the tallest widget.' },
+      cells: { label: 'Cells', hint: 'A lattice of 9rem cells: a widget takes exactly width x height cells (1 x 1 when it says nothing); a longer content scrolls inside.' },
+      grow: { label: 'Cells, grow', hint: 'The same lattice, but a widget whose content needs more room than its cells takes more whole cells.' },
+    },
+  });
+  useDockTests([gridTest]);
+  const gridMode = gridTest.value;
   const widgets: DashboardWidget[] = modules.flatMap((m) =>
     m.extensionPoints
       .filter((ep) => ep.kind === 'widget' && ep.slot === 'dashboard')
@@ -57,10 +73,13 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
   };
 
   // A widget N columns wide takes at most the columns that exist; N cells high is N rows of the cell height and the gaps.
-  const layoutOf = (w: DashboardWidget) => ({
-    span: Math.min(w.width ?? 1, columnCount),
-    minHeight: w.height === undefined ? undefined : `calc(${w.height} * ${CELL_REM}rem + ${w.height - 1} * ${GAP_PX}px)`,
-  });
+  const layoutOf = (w: DashboardWidget) => {
+    const span = Math.min(w.width ?? 1, columnCount);
+    if (gridMode !== 'flow') {
+      return { span, minHeight: undefined, rows: w.height ?? 1, overflow: gridMode === 'grow' ? ('grow' as const) : ('scroll' as const), gapPx: GAP_PX };
+    }
+    return { span, minHeight: w.height === undefined ? undefined : `calc(${w.height} * ${CELL_REM}rem + ${w.height - 1} * ${GAP_PX}px)` };
+  };
 
   const cell = (w: DashboardWidget): React.ReactElement => (
     <WidgetCell
@@ -116,7 +135,10 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
                 {visible.length === 0 ? (
                   <p className="text-muted">Every widget is hidden or filtered out.</p>
                 ) : (
-                  <div className="grid grid-flow-dense" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`, gap: GAP_PX }}>
+                  <div
+                    className="grid grid-flow-dense"
+                    style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`, gridAutoRows: gridMode === 'flow' ? undefined : `${CELL_REM}rem`, gap: GAP_PX }}
+                  >
                     {visible.map(cell)}
                   </div>
                 )}

@@ -13,6 +13,8 @@ const MAX_RESTARTS = 5;
 export interface TrayCompanionOptions {
   mode: TrayState['mode'];
   version: string;
+  /** Shown under the version; null when the build did not say. */
+  dslVersion: string | null;
   /** Where this CLI keeps its state: the staged binary and the tray log. */
   cliConfigDir: string;
   /** The server's config dir, only shown in the menu. */
@@ -52,6 +54,7 @@ export class TrayCompanion {
     this.state = {
       mode: opts.mode,
       version: opts.version,
+      dslVersion: opts.dslVersion,
       update: 'idle',
       failure: null,
       latestVersion: null,

@@ -9,6 +9,8 @@ import { trayToRun, trayUnavailableMessage } from './trayBinary.js';
 export interface StartTrayOptions {
   mode: TrayCompanionOptions['mode'];
   version: string;
+  /** "dsl-ui 2026.10.24-137": the dsl packages the shell was built with, shown under the version. */
+  dslVersion: string | null;
   cliConfigDir: string;
   pkgName: string;
   /** app-core-cli-updater.cjs next to the bundle. */
@@ -102,6 +104,7 @@ export async function startTray(options: StartTrayOptions): Promise<StartTrayRes
     serverConfigDir: resolveConfigDir(),
     cliConfigDir: options.cliConfigDir,
     version: options.version,
+    dslVersion: options.dslVersion,
     mode: options.mode,
     binaryPath,
     getUrl: options.getUrl,

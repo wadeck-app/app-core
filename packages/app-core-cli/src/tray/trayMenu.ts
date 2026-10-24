@@ -11,8 +11,10 @@ export type UpdateStatus = 'idle' | 'checking' | 'up-to-date' | 'available' | 'u
 export interface TrayState {
   /** `dev`: a server run from sources or by `app-core-cli dev` (blue). `prod`: `app-core-cli serve` (green). */
   mode: 'dev' | 'prod';
-  /** The published version (prod), or a label such as "dev 3474ba9c" (dev). */
+  /** The published version (prod), or "dev build <date>" (dev: a checkout builds as 0.0.1, the date tells which build it is). */
   version: string;
+  /** The dsl packages of the build, on a line of their own under the version. */
+  dslVersion: string | null;
   update: UpdateStatus;
   /** Why `update` is 'failed': which step, and the (ASCII, short) message. */
   failure: { step: 'check' | 'install'; message: string } | null;
@@ -63,6 +65,7 @@ export function buildMenuSnapshot(state: TrayState): MenuSnapshot {
   const items: MenuItemSnapshot[] = [
     { id: 'header', type: 'normal', title: `app-core (${state.mode}) [${pids}]`, enabled: false },
     { id: 'check-update', type: 'normal', title: versionTitle(state), enabled: state.mode === 'prod' && !busy },
+    ...(state.dslVersion === null ? [] : [{ id: 'dsl-version', type: 'normal' as const, title: state.dslVersion, enabled: false }]),
     { id: 'config-dir', type: 'normal', title: `Config: ${state.configDir}`, enabled: false },
   ];
   if (state.update === 'available') {

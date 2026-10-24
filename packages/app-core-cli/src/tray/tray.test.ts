@@ -23,6 +23,7 @@ afterEach(() => {
 const base: TrayState = {
   mode: 'prod',
   version: '2026.10.23-10',
+  dslVersion: 'dsl-ui 2026.10.24-137',
   update: 'idle',
   failure: null,
   latestVersion: null,
@@ -53,7 +54,7 @@ describe('tray menu', () => {
   it('is laid out like orchestrator: header with PIDs, version, config, status, then actions', () => {
     const menu = buildMenuSnapshot(base);
     expect(menu.items.map((entry) => entry.id)).toEqual([
-      'header', 'check-update', 'config-dir', 'sep1', 'status', 'sep2', 'open', 'open-logs', 'sep3', 'restart', 'quit',
+      'header', 'check-update', 'dsl-version', 'config-dir', 'sep1', 'status', 'sep2', 'open', 'open-logs', 'sep3', 'restart', 'quit',
     ]);
     expect(item(menu, 'header')).toMatchObject({ title: 'app-core (prod) [node:111 tray:222]', enabled: false });
     expect(item(menu, 'config-dir')?.title).toBe('Config: /home/u/.config/app-core');
@@ -104,8 +105,9 @@ describe('tray menu', () => {
   });
 
   it('has no update check in dev: a dev build has nothing to update to', () => {
-    const menu = buildMenuSnapshot({ ...base, mode: 'dev', version: 'dev 3474ba9c' });
-    expect(item(menu, 'check-update')).toMatchObject({ title: 'dev 3474ba9c', enabled: false });
+    const menu = buildMenuSnapshot({ ...base, mode: 'dev', version: 'dev build 2026-10-24 11:34' });
+    expect(item(menu, 'check-update')).toMatchObject({ title: 'dev build 2026-10-24 11:34', enabled: false });
+    expect(item(menu, 'dsl-version')).toMatchObject({ title: 'dsl-ui 2026.10.24-137', enabled: false });
   });
 
   it('shows Restart only where the owner can restart the server', () => {
@@ -202,6 +204,7 @@ describe('TrayCompanion', () => {
     const companion = new TrayCompanion({
       mode: 'prod',
       version: '2026.10.23-10',
+      dslVersion: null,
       cliConfigDir,
       serverConfigDir: tmp(),
       binaryPath: 'unused',
