@@ -15,7 +15,7 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 - `dsl-view` (`@wadeck-app/dsl-renderer` + `@wadeck-app/dsl-ui`) defines views as plain JSON/YAML objects with a `$type` discriminator, rendered at runtime by `DslRenderer`/`GenericPageRunner` (which parses YAML text at runtime, not build time) -- so DSL views already support dynamic/runtime loading. Already consumed by `orch-ui`.
 - `orchestrator` (`@wadeck-app/orchestrator-cli`) is a real daemon (`orch start/stop/restart`) with a Fastify-based `orch-server` (API routes for jobs/events/heartbeat/logs) and an existing dashboard (`orch-ui`) already built on dsl-renderer/dsl-ui.
 - `queue` (`@wadeck-app/queue-cli`) is a local event-queue daemon/CLI (push/retry/dlq/etc.).
-- `flow`/`task` CLIs are published from `agent-fleet`'s `flow-cli` package (`@wadeck-app/flow-cli`); `agent-fleet` itself is a larger multi-agent orchestration system.
+- The `flow` CLI is published from `agent-fleet`'s `flow-cli` package (`@wadeck-app/flow-cli`); `agent-fleet` itself is a larger multi-agent orchestration system. The `task` CLI is not part of it: it has its own repository (`task/`: `task-core`, `task-service`, `task-cli` published as `@wadeck-app/task-cli`, `app-module-task`).
 - `@wadeck-app/singleton-daemon-kit` is a shared library (port file, takeover, health HTTP, CLI dispatch) already used by orchestrator, queue, and flow-cli -- an existing daemon convention, not something to invent from scratch.
 
 ## Decision Log
@@ -23,7 +23,7 @@ Evolves app-core (originally designed by Gemini as a "Modular Manager Dashboard"
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 1 | "Q" refers to the `queue` tool (`@wadeck-app/queue-cli`, local event-queue daemon with push/retry/dlq). | Decided | 2026-10-10 | User confirmation after verified workspace research. |
-| 2 | "Flow" refers to the `flow`/`task` CLIs published from `agent-fleet`'s `flow-cli` package (`@wadeck-app/flow-cli`), not a separate standalone project. | Decided | 2026-10-10 | User confirmation after verified workspace research. |
+| 2 | "Flow" refers to the `flow` CLI published from `agent-fleet`'s `flow-cli` package (`@wadeck-app/flow-cli`), not a separate standalone project. Corrected 2026-10-24: the original text also put the `task` CLI in `flow-cli`, which is wrong (`task` has its own repository, `@wadeck-app/task-cli`, and `flow-cli` only has the `flow` bin). | Decided | 2026-10-10 | User confirmation after verified workspace research; `task` correction reported by project-owner, checked against `task/packages` and the registry. |
 
 ## Decision Log (cont.)
 
