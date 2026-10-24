@@ -530,9 +530,9 @@ export const CompactSelectEntry: ComponentRegistryEntry = {
 export const DeleteButtonEntry: ComponentRegistryEntry = {
 	name: 'DeleteButton', category: 'atomic', tags: [],
 	nodeSchema: null as never,
-	render: ({ node, registry }: RegistryRenderProps) => {
+	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
-		return <DeleteButton>{items ? renderChildren(items, registry, {}) : null}</DeleteButton>
+		return <DeleteButton>{items ? renderChildren(items, registry, ctx) : null}</DeleteButton>
 	},
 }
 
@@ -660,7 +660,9 @@ export const BadgeEntry: ComponentRegistryEntry = {
 		const variant = (resolveExpressionValue(node['variant'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['variant']
 		const tone = (resolveExpressionValue(node['tone'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['tone']
 		const size = (resolveExpressionValue(node['size'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['size']
-		return <Badge label={label} variant={variant} tone={tone} size={size} />
+		const href = (resolveExpressionValue(node['href'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['href']
+		const external = (resolveExpressionValue(node['external'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['external']
+		return <Badge label={label} variant={variant} tone={tone} size={size} href={href} external={external} />
 	},
 }
 
@@ -1162,7 +1164,9 @@ export const StatTileEntry: ComponentRegistryEntry = {
 		const trend = (resolveExpressionValue(node['trend'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['trend']
 		const icon = node['icon'] as unknown[] | undefined
 		const loading = (resolveExpressionValue(node['loading'], ctx) ?? ctx['$initialLoading']) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['loading']
-		return <StatTile label={label} value={value} trend={trend} icon={icon ? renderChildren(icon, registry, ctx) : null} loading={loading} />
+		const href = (resolveExpressionValue(node['href'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['href']
+		const external = (resolveExpressionValue(node['external'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['external']
+		return <StatTile label={label} value={value} trend={trend} icon={icon ? renderChildren(icon, registry, ctx) : null} loading={loading} href={href} external={external} />
 	},
 }
 
@@ -1268,9 +1272,9 @@ export const PageTabsEntry: ComponentRegistryEntry = {
 export const RouterProviderEntry: ComponentRegistryEntry = {
 	name: 'RouterProvider', category: 'disposition', tags: ["router","navigation"],
 	nodeSchema: null as never,
-	render: ({ node, registry }: RegistryRenderProps) => {
+	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
-		return <RouterProvider>{items ? renderChildren(items, registry, {}) : null}</RouterProvider>
+		return <RouterProvider>{items ? renderChildren(items, registry, ctx) : null}</RouterProvider>
 	},
 }
 
@@ -1708,7 +1712,7 @@ AbTestEntry.mapSlots = {"variants":{"keys":["label","hint","view"],"nodeKey":"vi
 AbTestEntry.knownKeys = ["id","initial","label","variants"];
 AbTestEntry.requiresContext = ["AbExperimentsContext"];
 AvatarEntry.knownKeys = ["alt","fallback","size","src"];
-BadgeEntry.knownKeys = ["label","size","tone","variant"];
+BadgeEntry.knownKeys = ["external","href","label","size","tone","variant"];
 ChartEntry.knownKeys = ["data","height","series","showLegend","variant","xAxisKey","xAxisType","xFormat","yFormat","yUnit"];
 FetchSpinnerEntry.knownKeys = ["loading"];
 HttpMethodBadgeEntry.knownKeys = ["method"];
@@ -1772,7 +1776,7 @@ PageSectionEntry.knownKeys = ["actions","items","title"];
 ScrollAreaEntry.knownKeys = ["axis","items","scheme"];
 SectionEntry.allowedChildren = {"items":["layout","table","form","display","composite"]};
 SectionEntry.knownKeys = ["items","title"];
-StatTileEntry.knownKeys = ["icon","label","loading","trend","value"];
+StatTileEntry.knownKeys = ["external","href","icon","label","loading","trend","value"];
 TableRowActionsEntry.knownKeys = ["items"];
 TableRowActionsEntry.providesContext = ["ButtonContext"];
 ThemeScopeEntry.knownKeys = ["items","surface","theme","tokens"];
@@ -1806,7 +1810,7 @@ TooltipEntry.allowedChildren = {"items":["atomic","composite"]};
 TooltipEntry.knownKeys = ["content","items"];
 BulkActionsToolbarEntry.knownKeys = ["items","onClearSelection","selectedCount"];
 DataTableEntry.allowedChildren = {"filtersTop":["filter"],"filters":["filter"]};
-DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","badge"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition"]}}}}}};
+DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","badge","href","external"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition"]}}},"link":{"keys":["type","to","label","icon","position","external","width"]}}}};
 DataTableEntry.knownKeys = ["actionPending","actionPendingRows","batchActions","batchActionsPosition","columns","defaultFilters","emptyMessage","expansion","expansionCondition","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onPageChange","onRowClick","onSortColChange","onSortDirChange","page","refreshing","rows","selectable","sortCol","sortDir"];
 DataTableEntry.providesContext = ["DataTableSelectionCtx","DataTableFilterCtx"];
 DataTableEntry.requiresContext = ["RouterContext"];
