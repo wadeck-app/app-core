@@ -109,8 +109,12 @@ function CheckboxGroupWithContext({ node, ctx }: RegistryRenderProps) {
 		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'CheckboxGroup.label', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js').CheckboxGroupProps['label']
 		const orientation = coerceProp(resolveExpressionValue(node['orientation'], ctx), 'CheckboxGroup.orientation', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js').CheckboxGroupProps['orientation']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<CheckboxGroup options={options} label={label} orientation={orientation} value={coerceStringList(formData?.[bind], 'CheckboxGroup.value')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -121,8 +125,12 @@ function ColorPickerWithContext({ node, ctx }: RegistryRenderProps) {
 		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'ColorPicker.label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/controls/ColorPicker.js').ColorPickerProps['label']
 		const options = coerceProp(resolveExpressionValue(node['options'], ctx), 'ColorPicker.options', 'array', true) as import('@wadeck-app/dsl-ui/dist/components/controls/ColorPicker.js').ColorPickerProps['options']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<ColorPicker label={label} options={options} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -137,8 +145,12 @@ function CompactSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const placeholder = coerceProp(resolveExpressionValue(node['placeholder'], ctx), 'CompactSelect.placeholder', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['placeholder']
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'CompactSelect.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['disabled']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -150,8 +162,12 @@ function RadioGroupWithContext({ node, ctx }: RegistryRenderProps) {
 		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'RadioGroup.label', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/RadioGroup.js').RadioGroupProps['label']
 		const orientation = coerceProp(resolveExpressionValue(node['orientation'], ctx), 'RadioGroup.orientation', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/RadioGroup.js').RadioGroupProps['orientation']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<RadioGroup options={options} label={label} orientation={orientation} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -166,8 +182,12 @@ function SliderWithContext({ node, ctx }: RegistryRenderProps) {
 		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'Slider.label', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['label']
 		const showValue = coerceProp(resolveExpressionValue(node['showValue'], ctx), 'Slider.showValue', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['showValue']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<Slider min={min} max={max} step={step} disabled={disabled} label={label} showValue={showValue} value={Number(formData?.[bind] ?? 0)} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -179,8 +199,12 @@ function SwitchWithContext({ node, ctx }: RegistryRenderProps) {
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'Switch.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/Switch.js').SwitchProps['disabled']
 		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'Switch.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/Switch.js').SwitchProps['size']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<Switch label={label} disabled={disabled} size={size} checked={Boolean(formData?.[bind])} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -191,8 +215,12 @@ function ThemePickerWithContext({ node, ctx }: RegistryRenderProps) {
 		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'ThemePicker.label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/controls/ThemePicker.js').ThemePickerProps['label']
 		const options = coerceProp(resolveExpressionValue(node['options'], ctx), 'ThemePicker.options', 'array', true) as import('@wadeck-app/dsl-ui/dist/components/controls/ThemePicker.js').ThemePickerProps['options']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<ThemePicker label={label} options={options} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -208,8 +236,12 @@ function DatePickerWithContext({ node, ctx }: RegistryRenderProps) {
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'DatePicker.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['disabled']
 		const dateFormat = coerceProp(resolveExpressionValue(node['dateFormat'], ctx), 'DatePicker.dateFormat', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['dateFormat']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<DatePicker onSelect={onSelect} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} value={coerceDate(formData?.[bind], 'DatePicker.value')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -226,8 +258,12 @@ function DateRangePickerWithContext({ node, ctx }: RegistryRenderProps) {
 		const open = coerceProp(resolveExpressionValue(node['open'], ctx), 'DateRangePicker.open', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['open']
 		const onOpenChange = coerceProp(resolveExpressionValue(node['onOpenChange'], ctx), 'DateRangePicker.onOpenChange', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['onOpenChange']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<DateRangePicker disabled={disabled} isDisabled={isDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} dateFormat={dateFormat} open={open} onOpenChange={onOpenChange} value={(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -247,8 +283,12 @@ function FieldAsyncSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const debounceMs = coerceProp(resolveExpressionValue(node['debounceMs'], ctx), 'FieldAsyncSelect.debounceMs', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['debounceMs']
 		const noOptionsMessage = coerceProp(resolveExpressionValue(node['noOptionsMessage'], ctx), 'FieldAsyncSelect.noOptionsMessage', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['noOptionsMessage']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldAsyncSelect name={name} label={label} description={description} required={required} error={error} disabled={disabled} loadOptions={loadOptions} loadSelected={loadSelected} placeholder={placeholder} debounceMs={debounceMs} noOptionsMessage={noOptionsMessage} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -262,8 +302,12 @@ function FieldAutocompleteWithContext({ node, ctx }: RegistryRenderProps) {
 		const placeholder = coerceProp(resolveExpressionValue(node['placeholder'], ctx), 'FieldAutocomplete.placeholder', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['placeholder']
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'FieldAutocomplete.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['disabled']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldAutocomplete label={label} description={description} options={options} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -282,8 +326,12 @@ function FieldDateWithContext({ node, ctx }: RegistryRenderProps) {
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldDate.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldDate.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['error']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldDate label={label} description={description} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} required={required} error={error} value={coerceDate(formData?.[bind], 'FieldDate.value')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -302,8 +350,12 @@ function FieldDateRangeWithContext({ node, ctx }: RegistryRenderProps) {
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldDateRange.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldDateRange.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['error']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldDateRange label={label} description={description} isDisabled={isDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} required={required} error={error} value={(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -327,8 +379,12 @@ function FieldDateTimeWithContext({ node, ctx }: RegistryRenderProps) {
 		const open = coerceProp(resolveExpressionValue(node['open'], ctx), 'FieldDateTime.open', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['open']
 		const onOpenChange = coerceProp(resolveExpressionValue(node['onOpenChange'], ctx), 'FieldDateTime.onOpenChange', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['onOpenChange']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldDateTime label={label} description={description} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} datePlaceholder={datePlaceholder} timePlaceholder={timePlaceholder} disabled={disabled} dateFormat={dateFormat} is12Hour={is12Hour} minuteStep={minuteStep} required={required} error={error} open={open} onOpenChange={onOpenChange} value={coerceDate(formData?.[bind], 'FieldDateTime.value')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -346,8 +402,12 @@ function FieldMultiSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const placeholder = coerceProp(resolveExpressionValue(node['placeholder'], ctx), 'FieldMultiSelect.placeholder', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['placeholder']
 		const maxSelected = coerceProp(resolveExpressionValue(node['maxSelected'], ctx), 'FieldMultiSelect.maxSelected', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['maxSelected']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldMultiSelect name={name} label={label} description={description} required={required} error={error} disabled={disabled} options={options} placeholder={placeholder} maxSelected={maxSelected} value={coerceStringList(formData?.[bind], 'FieldMultiSelect.value')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -367,8 +427,12 @@ function FieldNumberWithContext({ node, ctx }: RegistryRenderProps) {
 		const unlimitedValue = coerceProp(resolveExpressionValue(node['unlimitedValue'], ctx), 'FieldNumber.unlimitedValue', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['unlimitedValue']
 		const onUnlimitedChange = coerceProp(resolveExpressionValue(node['onUnlimitedChange'], ctx), 'FieldNumber.onUnlimitedChange', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['onUnlimitedChange']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldNumber label={label} description={description} min={min} max={max} suffix={suffix} disabled={disabled} required={required} error={error} unlimited={unlimited} unlimitedValue={unlimitedValue} onUnlimitedChange={onUnlimitedChange} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -384,8 +448,12 @@ function FieldSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldSelect.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldSelect.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['error']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldSelect label={label} description={description} options={options} placeholder={placeholder} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -403,8 +471,12 @@ function FieldTagsWithContext({ node, ctx }: RegistryRenderProps) {
 		const maxTags = coerceProp(resolveExpressionValue(node['maxTags'], ctx), 'FieldTags.maxTags', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['maxTags']
 		const allowDuplicates = coerceProp(resolveExpressionValue(node['allowDuplicates'], ctx), 'FieldTags.allowDuplicates', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['allowDuplicates']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldTags name={name} label={label} description={description} required={required} error={error} disabled={disabled} placeholder={placeholder} maxTags={maxTags} allowDuplicates={allowDuplicates} value={coerceStringList(formData?.[bind], 'FieldTags.value')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -418,8 +490,12 @@ function FieldTextWithContext({ node, ctx }: RegistryRenderProps) {
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldText.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldText.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['error']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldText label={label} description={description} readOnly={readOnly} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -430,16 +506,21 @@ function FieldTextareaWithContext({ node, ctx }: RegistryRenderProps) {
 		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'FieldTextarea.label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['label']
 		const description = coerceProp(resolveExpressionValue(node['description'], ctx), 'FieldTextarea.description', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['description']
 		const rows = coerceProp(resolveExpressionValue(node['rows'], ctx), 'FieldTextarea.rows', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['rows']
+		const mono = coerceProp(resolveExpressionValue(node['mono'], ctx), 'FieldTextarea.mono', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['mono']
 		const placeholder = coerceProp(resolveExpressionValue(node['placeholder'], ctx), 'FieldTextarea.placeholder', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['placeholder']
 		const readOnly = coerceProp(resolveExpressionValue(node['readOnly'], ctx), 'FieldTextarea.readOnly', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['readOnly']
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'FieldTextarea.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['disabled']
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldTextarea.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldTextarea.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['error']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
-			<FieldTextarea label={label} description={description} rows={rows} placeholder={placeholder} readOnly={readOnly} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<FieldTextarea label={label} description={description} rows={rows} mono={mono} placeholder={placeholder} readOnly={readOnly} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -454,8 +535,12 @@ function FieldTimeWithContext({ node, ctx }: RegistryRenderProps) {
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldTime.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldTime.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['error']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<FieldTime label={label} description={description} is12Hour={is12Hour} minuteStep={minuteStep} placeholder={placeholder} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -470,8 +555,12 @@ function TimePickerWithContext({ node, ctx }: RegistryRenderProps) {
 		const open = coerceProp(resolveExpressionValue(node['open'], ctx), 'TimePicker.open', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['open']
 		const onOpenChange = coerceProp(resolveExpressionValue(node['onOpenChange'], ctx), 'TimePicker.onOpenChange', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['onOpenChange']
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<TimePicker is12Hour={is12Hour} minuteStep={minuteStep} disabled={disabled} placeholder={placeholder} open={open} onOpenChange={onOpenChange} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
@@ -1807,7 +1896,7 @@ FieldReadOnlyEntry.requiresContext = ["ToastContext"];
 FieldSelectEntry.knownKeys = ["bind","description","disabled","error","label","options","placeholder","required"];
 FieldTagsEntry.knownKeys = ["allowDuplicates","bind","description","disabled","error","label","maxTags","name","placeholder","required"];
 FieldTextEntry.knownKeys = ["bind","description","error","label","readOnly","required"];
-FieldTextareaEntry.knownKeys = ["bind","description","disabled","error","label","placeholder","readOnly","required","rows"];
+FieldTextareaEntry.knownKeys = ["bind","description","disabled","error","label","mono","placeholder","readOnly","required","rows"];
 FieldTimeEntry.knownKeys = ["bind","description","disabled","error","is12Hour","label","minuteStep","placeholder","required"];
 FieldWrapperEntry.allowedChildren = {"items":["atomic"]};
 FieldWrapperEntry.knownKeys = ["description","error","items","label","required"];
