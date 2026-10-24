@@ -12,7 +12,7 @@ import { registerModule, unregisterModule, describeRegistration } from '@wadeck-
 | Function | What it does |
 |---|---|
 | `registerModule({ id, manifestPath, env?, timeoutMs?, probeTimeoutMs? })` | `POST /api/modules/register` (also reloads a known module). Resolves to a `RegistrationOutcome`. |
-| `unregisterModule({ id, env?, timeoutMs? })` | `POST /api/modules/unregister`. Resolves to an `UnregistrationOutcome`. |
+| `unregisterModule({ id, env?, timeoutMs?, probeTimeoutMs? })` | `POST /api/modules/unregister`. Resolves to an `UnregistrationOutcome`. |
 | `describeRegistration(outcome, id)` | One log line for either outcome type. |
 | `describeRegistrationFailure(err)` | One log line for an error thrown by the two calls above. |
 | `resolveAppCorePort(env?)` | The port the two calls would use. |
@@ -31,7 +31,8 @@ directory and sent as an absolute path. `env` defaults to `process.env`. `timeou
 | `refused` (`port`, `httpStatus`, `reason`, `code?`, `retained?`) | app-core is running and said no; `reason` is its own `error` text. `retained: true` means the previous version of the module keeps running. `code: 'shared-version-mismatch'` (HTTP 422): the module's components were built for other versions of the shared packages (`dslLib.shared`) than app-core's shell provides; registering the same files again changes nothing, rebuild the module or update the shell. |
 | `deferred` (`file`) | Nothing listens on the port (connection refused / unknown host); the pickup file it reads at its next start was written. |
 | `skipped` (`reason`) | app-core is not installed here; nothing was written. |
-| `unregistered` (`port`) | app-core removed the module, its routes and its registry file. |
+| `unregistered` (`port`, `note?`) | app-core removed the module, its routes and its registry file. `note` is set when its answer was missed but it was then seen no longer serving the module. |
+| `unconfirmed` (`action: 'unregister'`, `port`, `failure`, `timeoutMs?`, `detail?`, `loadedVersion?`) | app-core is reachable, gave no answer and still serves the module (`loadedVersion`). Nothing was cleared; check `GET /api/modules` or unregister again. |
 | `not-registered` (`port`, `reason`) | app-core is running and did not know that id (HTTP 404). |
 | `cleared` (`file`) | app-core is not running; the pending pickup file for that id was removed. |
 
@@ -45,7 +46,7 @@ directory and sent as an absolute path. `env` defaults to `process.env`. `timeou
   `GET /api/modules` (`probeTimeoutMs`): the manifest's version is served -> `registered` with a `note`; otherwise
   `unconfirmed`. `GET /api/modules` does not list a module while it reloads, so a slow load stays `unconfirmed`.
   Only a refused connection or unknown host means app-core is down: `deferred` or `skipped`.
-  `unregisterModule` still reads any missing answer as down.
+  `unregisterModule` does the same: after a missing answer, a module no longer served -> `unregistered` with a `note`; still served -> `unconfirmed` (the pending pickup file is left alone); only an unreachable app-core gives `cleared` or `skipped`.
 - **App-core down is not an error.** The functions reject only for what the caller must fix: an
   invalid id, a malformed `APP_CORE_PORT`, or a manifest that does not exist.
 - **Files:** `<config dir>/modules/<id>.json` is written only when app-core is down AND the config dir already

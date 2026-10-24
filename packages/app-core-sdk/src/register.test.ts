@@ -363,6 +363,47 @@ describe('app-core module registration from a daemon', () => {
     it('rejects an invalid id', async () => {
       await expect(unregisterModule({ id: '../x', env: envFor(4850, path.join(tmp, 'cfg')) })).rejects.toThrow(/Invalid app-core module id/);
     });
+
+    describe('when app-core is running but gives no answer to the removal', () => {
+      // POST hangs (a teardown that takes long) or breaks the connection; GET /api/modules answers with `modules`.
+      const noAnswer = (how: 'hang' | 'reset', modules: Array<{ id: string; version: string }>): Responder => (res, req) => {
+        if (req.method === 'POST') {
+          if (how === 'reset') {
+            res.socket?.destroy();
+          }
+          return;
+        }
+        replyJson(200, { modules, failed: [] })(res, req);
+      };
+
+      it('is unregistered, with a note, when app-core no longer serves the module', async () => {
+        fake = await startFakeAppCore(noAnswer('reset', []));
+        const outcome = await unregisterModule({ id: 'queue', env: envFor(fake.port, path.join(tmp, 'cfg')), timeoutMs: 300 });
+
+        expect(outcome).toMatchObject({ status: 'unregistered', port: fake.port });
+        expect((outcome as { note?: string }).note).toMatch(/no longer serves "queue"/);
+      });
+
+      it('is unconfirmed, and clears nothing, when app-core still serves the module', async () => {
+        const configDir = path.join(tmp, 'cfg');
+        const file = path.join(configDir, 'modules', 'queue.json');
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, '{}');
+        fake = await startFakeAppCore(noAnswer('hang', [{ id: 'queue', version: '1.2.0' }]));
+        const outcome = await unregisterModule({ id: 'queue', env: envFor(fake.port, configDir), timeoutMs: 150 });
+
+        expect(outcome).toMatchObject({ status: 'unconfirmed', action: 'unregister', port: fake.port, failure: 'timeout', timeoutMs: 150, loadedVersion: '1.2.0' });
+        // The pending registration is not touched: app-core is up, so "not running" is not what happened.
+        expect(fs.existsSync(file)).toBe(true);
+        expect(describeRegistration(outcome, 'queue')).toMatch(/removal of module "queue" not confirmed.*still serves "queue" version 1.2.0.*Nothing was cleared/);
+      });
+
+      it('says not running only when nothing listens at all', async () => {
+        const outcome = await unregisterModule({ id: 'queue', env: envFor(await unusedPort(), path.join(tmp, 'cfg')), timeoutMs: 150 });
+
+        expect(outcome.status).toBe('skipped');
+      });
+    });
   });
 
   describe('describeRegistration', () => {

@@ -40,6 +40,7 @@ export function usePolling<T>(options: PollingOptions<T>): PollingState<T> {
   // Refs so a running timer always reads the latest options/data without
   // being torn down and rebuilt (which would reset backoff) every render.
   const lastDataRef = useRef<T | undefined>(undefined);
+  const errorShownRef = useRef(false);
   const currentIntervalRef = useRef(minIntervalMs);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const disposedRef = useRef(false);
@@ -73,8 +74,17 @@ export function usePolling<T>(options: PollingOptions<T>): PollingState<T> {
         }
 
         const changed = lastDataRef.current === undefined || !isEqual(lastDataRef.current, next);
-        lastDataRef.current = next;
-        setState({ data: next, error: undefined });
+        if (changed) {
+          lastDataRef.current = next;
+          errorShownRef.current = false;
+          setState({ data: next, error: undefined });
+        } else if (errorShownRef.current) {
+          // Same content, but an earlier tick left an error to clear.
+          errorShownRef.current = false;
+          setState((prev) => ({ data: prev.data, error: undefined }));
+        }
+        // Same content and nothing to clear: no setState at all. A new identity re-renders everything derived from the
+        // data, and a component defined from it per render is remounted (bound form fields lost focus at every poll).
 
         currentIntervalRef.current = changed
           ? minIntervalMs
@@ -83,6 +93,7 @@ export function usePolling<T>(options: PollingOptions<T>): PollingState<T> {
         if (disposedRef.current) {
           return;
         }
+        errorShownRef.current = true;
         setState((prev) => ({ data: prev.data, error }));
         currentIntervalRef.current = Math.min(currentIntervalRef.current * backoffFactor, maxIntervalMs);
       }

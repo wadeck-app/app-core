@@ -41,8 +41,16 @@ export type RegistrationOutcome =
   | { status: 'skipped'; reason: string };
 
 export type UnregistrationOutcome =
-  /** app-core removed the module, its routes and its registry file. */
-  | { status: 'unregistered'; port: number }
+  /**
+   * app-core removed the module, its routes and its registry file. `note` is set when the answer was missed but
+   * app-core was then seen no longer serving the module.
+   */
+  | { status: 'unregistered'; port: number; note?: string }
+  /**
+   * app-core is reachable but did not confirm (no answer within `timeoutMs`, or the connection broke) and still serves
+   * the module (`loadedVersion`). Nothing was cleared: the removal may still be applying.
+   */
+  | { status: 'unconfirmed'; action: 'unregister'; port: number; failure: 'timeout' | 'reset'; timeoutMs?: number; detail?: string; loadedVersion?: string }
   /** app-core is running and did not know that id. */
   | { status: 'not-registered'; port: number; reason: string }
   | { status: 'refused'; port: number; httpStatus: number; reason: string; code?: string; retained?: boolean }
@@ -68,6 +76,8 @@ export interface UnregisterModuleOptions {
   id: string;
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
+  /** How long the check of what app-core serves may take after a missing answer. Default 2000. */
+  probeTimeoutMs?: number;
 }
 
 /**
@@ -111,12 +121,6 @@ async function request(port: number, endpoint: string, init: RequestInit, timeou
 
 function postRequest(port: number, endpoint: string, body: object, timeoutMs: number): Promise<Response | RequestFailure> {
   return request(port, endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, timeoutMs);
-}
-
-// Unregistration keeps the coarse reading: undefined means no answer, whatever the reason.
-async function postJson(port: number, endpoint: string, body: object, timeoutMs: number): Promise<Response | undefined> {
-  const result = await postRequest(port, `/${endpoint}`, body, timeoutMs);
-  return result instanceof Response ? result : undefined;
 }
 
 // The version of the module as the manifest declares it, undefined when it cannot be read (app-core would refuse it anyway).
@@ -261,7 +265,41 @@ export async function unregisterModule(options: UnregisterModuleOptions): Promis
   assertValidId(id);
 
   const port = resolveAppCorePort(env);
-  const response = await postJson(port, 'unregister', { id }, timeoutMs);
+  const result = await postRequest(port, '/unregister', { id }, timeoutMs);
+  let response: Response | undefined;
+  let failure: RequestFailure | undefined;
+  if (result instanceof Response) {
+    response = result;
+  } else {
+    failure = result;
+  }
+
+  // No answer is not "not running" (see registerModule): look at what app-core serves before saying anything.
+  if (failure !== undefined && failure.kind !== 'unreachable') {
+    const seen = await loadedVersionOf(port, id, options.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS);
+    if ('kind' in seen && seen.kind === 'unreachable') {
+      // app-core went away between the two requests: it is not running after all.
+      failure = seen;
+    } else {
+      const loadedVersion = 'version' in seen ? seen.version : undefined;
+      if ('version' in seen && loadedVersion === undefined) {
+        return {
+          status: 'unregistered',
+          port,
+          note: `app-core did not answer the removal (${failure.kind}: ${failure.detail}), but it no longer serves "${id}"`,
+        };
+      }
+      return {
+        status: 'unconfirmed',
+        action: 'unregister',
+        port,
+        failure: failure.kind,
+        ...(failure.kind === 'timeout' ? { timeoutMs } : {}),
+        detail: failure.detail,
+        ...(loadedVersion !== undefined ? { loadedVersion } : {}),
+      };
+    }
+  }
 
   if (response === undefined) {
     const file = pickupFile(resolveConfigDir(env), id);
@@ -287,6 +325,17 @@ export function describeRegistration(outcome: RegistrationOutcome | Unregistrati
     case 'registered':
       return `app-core: module "${id}" registered (app-core on port ${outcome.port})${outcome.note === undefined ? '' : `. ${outcome.note}`}`;
     case 'unconfirmed': {
+      if ('action' in outcome) {
+        const why =
+          outcome.failure === 'timeout'
+            ? `did not answer within ${outcome.timeoutMs ?? DEFAULT_TIMEOUT_MS} ms`
+            : `broke the connection (${outcome.detail ?? 'no detail'})`;
+        return (
+          `app-core: removal of module "${id}" not confirmed: app-core on port ${outcome.port} ${why}, and it still serves "${id}"` +
+          `${outcome.loadedVersion === undefined ? '' : ` version ${outcome.loadedVersion}`}. It may still be applying the removal. ` +
+          `Nothing was cleared. Check GET http://127.0.0.1:${outcome.port}/api/modules, or unregister again.`
+        );
+      }
       const cause =
         outcome.failure === 'timeout'
           ? `app-core on port ${outcome.port} did not answer within ${outcome.timeoutMs ?? DEFAULT_TIMEOUT_MS} ms`
@@ -313,7 +362,7 @@ export function describeRegistration(outcome: RegistrationOutcome | Unregistrati
       return `app-core: refused module "${id}" (HTTP ${outcome.httpStatus}): ${outcome.reason}.${kept}${fix} app-core was on port ${outcome.port}.`;
     }
     case 'unregistered':
-      return `app-core: module "${id}" removed (app-core on port ${outcome.port})`;
+      return `app-core: module "${id}" removed (app-core on port ${outcome.port})${outcome.note === undefined ? '' : `. ${outcome.note}`}`;
     case 'not-registered':
       return `app-core: module "${id}" was not registered (${outcome.reason})`;
     case 'cleared':

@@ -26,6 +26,59 @@ describe('usePolling (exponential backoff + hibernate on blur)', () => {
     expect(fetchFn).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the same data reference and does not re-render when a poll brings nothing new', async () => {
+    // A fresh object each time, equal by value: what fetch + JSON.parse gives for an unchanged response.
+    const fetchFn = vi.fn().mockImplementation(async () => ({ modules: ['a'] }));
+    let renders = 0;
+    const { result } = renderHook(() => {
+      renders += 1;
+      return usePolling({
+        fetchFn,
+        isEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+        isDocumentHidden: () => hidden,
+        minIntervalMs: 1_000,
+      });
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const first = result.current.data;
+    const rendersAfterFirst = renders;
+    expect(first).toEqual({ modules: ['a'] });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    // A new identity would remount whatever is keyed or defined from it (bound form fields lost focus on every poll).
+    expect(result.current.data).toBe(first);
+    expect(renders).toBe(rendersAfterFirst);
+  });
+
+  it('clears an earlier error when the next poll succeeds, even if the data is the same', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce({ v: 1 })
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue({ v: 1 });
+    const { result } = renderHook(() =>
+      usePolling({ fetchFn, isEqual: (a, b) => a.v === b.v, isDocumentHidden: () => hidden, minIntervalMs: 1_000 }),
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(result.current.error).toBeInstanceOf(Error);
+    const data = result.current.data;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(result.current.error).toBeUndefined();
+    expect(result.current.data).toBe(data);
+  });
+
   it('backs off exponentially while the response is unchanged', async () => {
     const fetchFn = vi.fn().mockResolvedValue('same');
     renderHook(() =>
