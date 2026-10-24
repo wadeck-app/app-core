@@ -24,7 +24,11 @@ export interface CellLayout {
   span: number;
   // Rows the cell takes at least; it takes more whole rows when its content needs more room.
   rows: number;
-  // Space between two rows, to compute how many rows a content needs.
+  // The cell may take more columns when its content is wider than its tile, up to `maxSpan`: only when the manifest did
+  // not say a width (`autoWidth`), since a declared width is the module's choice.
+  autoWidth: boolean;
+  maxSpan: number;
+  // Space between two cells, to compute how many a content needs.
   gapPx: number;
 }
 
@@ -58,7 +62,9 @@ export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEar
   const [nonce, setNonce] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const title = widget.label ?? widget.moduleTitle;
-  const rows = Math.max(layout.rows, useRowsToFit(cellRef, layout.gapPx));
+  const fit = useRowsToFit(cellRef, layout.gapPx);
+  const rows = Math.max(layout.rows, fit.rows);
+  const span = layout.autoWidth ? Math.min(Math.max(layout.span, fit.cols), layout.maxSpan) : layout.span;
 
   const handle = (
     <span
@@ -103,7 +109,7 @@ export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEar
     <div
       ref={cellRef}
       className={`rounded-md transition-opacity ${drag.dragging ? 'opacity-40' : ''} ${drag.over ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-      style={{ gridColumn: `span ${layout.span}`, gridRow: `span ${rows}` }}
+      style={{ gridColumn: `span ${span}`, gridRow: `span ${rows}` }}
       onDragOver={(e) => {
         // Only a dashboard widget being dragged may be dropped here.
         e.preventDefault();

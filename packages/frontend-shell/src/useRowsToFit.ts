@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
 
-// How many grid rows (cells of `cellPx` with `gapPx` between them) it takes to show `contentPx` of content.
+// How many grid rows or columns (cells of `cellPx` with `gapPx` between them) it takes to show `contentPx` of content.
 export function rowsToFit(contentPx: number, cellPx: number, gapPx: number): number {
   if (contentPx <= 0 || cellPx <= 0) {
     return 1;
@@ -13,8 +13,11 @@ export function rowsToFit(contentPx: number, cellPx: number, gapPx: number): num
 // this computes), so its size says nothing about the content; what is measured is the widget's own content (the article
 // in the tile) plus what the tile adds around it (header, border, padding), and again whenever that content changes size
 // (a list loads or grows, a chart redraws) or the grid is laid out.
-export function useRowsToFit(cell: RefObject<HTMLElement | null>, gapPx: number): number {
+export function useRowsToFit(cell: RefObject<HTMLElement | null>, gapPx: number): { rows: number; cols: number } {
   const [needed, setNeeded] = useState(1);
+  // Columns only ever grow: once widened, the content fits and no longer overflows, which would take the demand back and
+  // bring the overflow again.
+  const [neededCols, setNeededCols] = useState(1);
 
   useLayoutEffect(() => {
     const element = cell.current;
@@ -42,6 +45,12 @@ export function useRowsToFit(cell: RefObject<HTMLElement | null>, gapPx: number)
       const borders = frame.offsetHeight - frame.clientHeight;
       const chrome = (header?.offsetHeight ?? 0) + borders + bodyPadding;
       setNeeded(rowsToFit(chrome + article.offsetHeight, cellPx, gapPx));
+      // A content wider than the tile (a row of figures cut at the border, text that cannot wrap): the columns it needs.
+      if (article.scrollWidth > article.clientWidth + 1) {
+        const bodyPaddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        const chromeX = frame.offsetWidth - frame.clientWidth + bodyPaddingX;
+        setNeededCols((was) => Math.max(was, rowsToFit(chromeX + article.scrollWidth, cellPx, gapPx)));
+      }
     };
     measure();
     if (typeof ResizeObserver === 'undefined') {
@@ -55,5 +64,5 @@ export function useRowsToFit(cell: RefObject<HTMLElement | null>, gapPx: number)
     return () => observer.disconnect();
   }, [cell, gapPx]);
 
-  return needed;
+  return { rows: needed, cols: neededCols };
 }

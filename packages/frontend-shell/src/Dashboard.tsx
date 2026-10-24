@@ -13,8 +13,9 @@ export interface DashboardProps {
 
 // The dashboard takes 85% of the space beside the menu, centered (the page layout would cap it at 1152px: it is asked for
 // the full width and the dashboard sets its own). It is a lattice of square cells of 100px, 16px apart, as many columns as
-// fit. A widget asks for its size in cells (width x height in its manifest); without a width it takes 2 cells, and its
-// height is at least what it asks for (1 row by default) and grows by whole rows to fit its content.
+// fit. A widget asks for its size in cells (width x height in its manifest); without a width it takes 2 cells and
+// more when its content is wider, and its height is at least what it asks for (1 row by default) and grows by whole rows to
+// fit its content.
 const SHARE = '85%';
 const CELL_PX = 100;
 const GAP_PX = 16;
@@ -60,6 +61,8 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
   // A widget N cells wide takes at most the columns that exist; M cells high is at least M rows.
   const layoutOf = (w: DashboardWidget) => ({
     span: Math.min(w.width ?? DEFAULT_WIDTH_CELLS, columnCount),
+    autoWidth: w.width === undefined,
+    maxSpan: columnCount,
     rows: w.height ?? 1,
     gapPx: GAP_PX,
   });
