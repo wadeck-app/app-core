@@ -164,7 +164,7 @@ describe('packageModule: output manifest and views', () => {
     });
 
     it('refuses a size outside the range, naming the field', async () => {
-      const manifest = { id: 'tiny', extensionPoints: [{ kind: 'widget', slot: 'dashboard', width: 9, view: { type: 'path', value: './src/dsl-views/home.yaml' } }] };
+      const manifest = { id: 'tiny', extensionPoints: [{ kind: 'widget', slot: 'dashboard', width: 13, view: { type: 'path', value: './src/dsl-views/home.yaml' } }] };
       await expect(packageModule({ moduleDir: module_({ 'manifest.json': JSON.stringify(manifest) }), outDir: outDir(), version: '1.0.0' })).rejects.toThrow(/width/);
     });
   });

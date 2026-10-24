@@ -31,6 +31,8 @@ import { HttpMethodBadge } from '@wadeck-app/dsl-ui/dist/components/display/Http
 import { HttpStatusBadge } from '@wadeck-app/dsl-ui/dist/components/display/HttpStatusBadge.js'
 import { InlineEdit } from '@wadeck-app/dsl-ui/dist/components/display/InlineEdit.js'
 import { JsonViewer } from '@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js'
+const MarkdownLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').then(m => ({ default: m.Markdown })))
+const Markdown = (props: React.ComponentProps<typeof MarkdownLazy>) => <LazyBoundary><MarkdownLazy {...props} /></LazyBoundary>
 import { PageHeader } from '@wadeck-app/dsl-ui/dist/components/display/PageHeader.js'
 import { Progress } from '@wadeck-app/dsl-ui/dist/components/display/Progress.js'
 import { RelativeDate } from '@wadeck-app/dsl-ui/dist/components/display/RelativeDate.js'
@@ -734,6 +736,18 @@ export const JsonViewerEntry: ComponentRegistryEntry = {
 		const field = (resolveExpressionValue(node['field'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js').JsonViewerProps['field']
 		const maxHeight = (resolveExpressionValue(node['maxHeight'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js').JsonViewerProps['maxHeight']
 		return <JsonViewer row={row} field={field} maxHeight={maxHeight} />
+	},
+}
+
+export const MarkdownEntry: ComponentRegistryEntry = {
+	name: 'Markdown', category: 'atomic', tags: ["markdown","text"],
+	nodeSchema: null as never,
+	render: ({ node, ctx }: RegistryRenderProps) => {
+		const text = (resolveExpressionValue(node['text'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').MarkdownProps['text']
+		const maxHeight = (resolveExpressionValue(node['maxHeight'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').MarkdownProps['maxHeight']
+		const collapsed = (resolveExpressionValue(node['collapsed'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').MarkdownProps['collapsed']
+		const allowImages = (resolveExpressionValue(node['allowImages'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').MarkdownProps['allowImages']
+		return <Markdown text={text} maxHeight={maxHeight} collapsed={collapsed} allowImages={allowImages} />
 	},
 }
 
@@ -1615,6 +1629,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 	HttpStatusBadgeEntry,
 	InlineEditEntry,
 	JsonViewerEntry,
+	MarkdownEntry,
 	PageHeaderEntry,
 	ProgressEntry,
 	RelativeDateEntry,
@@ -1719,6 +1734,7 @@ HttpMethodBadgeEntry.knownKeys = ["method"];
 HttpStatusBadgeEntry.knownKeys = ["status"];
 InlineEditEntry.knownKeys = ["disabled","editClassName","multiline","onChange","placeholder","validate","value"];
 JsonViewerEntry.knownKeys = ["field","maxHeight","row"];
+MarkdownEntry.knownKeys = ["allowImages","collapsed","maxHeight","text"];
 PageHeaderEntry.allowedChildren = {"headerActions":["button","action"]};
 PageHeaderEntry.knownKeys = ["headerActions","icon","size","subtitle","title"];
 ProgressEntry.knownKeys = ["label","layout","max","showValue","size","value","valueLabel","variant"];
