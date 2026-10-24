@@ -102,6 +102,375 @@ import { ShownFetchedCounter } from '@wadeck-app/dsl-ui/dist/components/table/Sh
 import { SortableColumn } from '@wadeck-app/dsl-ui/dist/components/table/SortableColumn.js'
 import { StatusFilter } from '@wadeck-app/dsl-ui/dist/components/table/StatusFilter.js'
 
+// ─── Stable wrapper components (module scope: one declared inside render would remount its field on every render) ───
+
+function CheckboxGroupWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js').CheckboxGroupProps['options']
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js').CheckboxGroupProps['label']
+		const orientation = (resolveExpressionValue(node['orientation'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js').CheckboxGroupProps['orientation']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<CheckboxGroup options={options} label={label} orientation={orientation} value={(formData?.[bind] as string[] | undefined) ?? []} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function ColorPickerWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ColorPicker.js').ColorPickerProps['label']
+		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ColorPicker.js').ColorPickerProps['options']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<ColorPicker label={label} options={options} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function CompactSelectWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const urlParam = (resolveExpressionValue(node['urlParam'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['urlParam']
+		const resetUrlParams = (resolveExpressionValue(node['resetUrlParams'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['resetUrlParams']
+		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['options']
+		const ariaLabel = (resolveExpressionValue(node['ariaLabel'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['ariaLabel']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['placeholder']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['disabled']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function RadioGroupWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RadioGroup.js').RadioGroupProps['options']
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RadioGroup.js').RadioGroupProps['label']
+		const orientation = (resolveExpressionValue(node['orientation'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RadioGroup.js').RadioGroupProps['orientation']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<RadioGroup options={options} label={label} orientation={orientation} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function SliderWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const min = (resolveExpressionValue(node['min'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['min']
+		const max = (resolveExpressionValue(node['max'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['max']
+		const step = (resolveExpressionValue(node['step'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['step']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['disabled']
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['label']
+		const showValue = (resolveExpressionValue(node['showValue'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['showValue']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<Slider min={min} max={max} step={step} disabled={disabled} label={label} showValue={showValue} value={Number(formData?.[bind] ?? 0)} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function SwitchWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Switch.js').SwitchProps['label']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Switch.js').SwitchProps['disabled']
+		const size = (resolveExpressionValue(node['size'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Switch.js').SwitchProps['size']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<Switch label={label} disabled={disabled} size={size} checked={Boolean(formData?.[bind])} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function ThemePickerWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ThemePicker.js').ThemePickerProps['label']
+		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ThemePicker.js').ThemePickerProps['options']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<ThemePicker label={label} options={options} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function DatePickerWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const onSelect = (resolveExpressionValue(node['onSelect'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['onSelect']
+		const isDateDisabled = (resolveExpressionValue(node['isDateDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['isDateDisabled']
+		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['minDate']
+		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['maxDate']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['placeholder']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['disabled']
+		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['dateFormat']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<DatePicker onSelect={onSelect} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} value={formData?.[bind] ? new Date(String(formData?.[bind])) : null} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function DateRangePickerWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['disabled']
+		const isDisabled = (resolveExpressionValue(node['isDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['isDisabled']
+		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['minDate']
+		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['maxDate']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['placeholder']
+		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['dateFormat']
+		const open = (resolveExpressionValue(node['open'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['open']
+		const onOpenChange = (resolveExpressionValue(node['onOpenChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['onOpenChange']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<DateRangePicker disabled={disabled} isDisabled={isDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} dateFormat={dateFormat} open={open} onOpenChange={onOpenChange} value={(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldAsyncSelectWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const name = (resolveExpressionValue(node['name'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['name']
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['description']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['error']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['disabled']
+		const loadOptions = (resolveExpressionValue(node['loadOptions'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['loadOptions']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['placeholder']
+		const debounceMs = (resolveExpressionValue(node['debounceMs'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['debounceMs']
+		const noOptionsMessage = (resolveExpressionValue(node['noOptionsMessage'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['noOptionsMessage']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldAsyncSelect name={name} label={label} description={description} required={required} error={error} disabled={disabled} loadOptions={loadOptions} placeholder={placeholder} debounceMs={debounceMs} noOptionsMessage={noOptionsMessage} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldAutocompleteWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['description']
+		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['options']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['placeholder']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['disabled']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldAutocomplete label={label} description={description} options={options} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldDateWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['description']
+		const isDateDisabled = (resolveExpressionValue(node['isDateDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['isDateDisabled']
+		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['minDate']
+		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['maxDate']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['placeholder']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['disabled']
+		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['dateFormat']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['error']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldDate label={label} description={description} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} required={required} error={error} value={formData?.[bind] ? new Date(String(formData?.[bind])) : null} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldDateRangeWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['description']
+		const isDisabled = (resolveExpressionValue(node['isDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['isDisabled']
+		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['minDate']
+		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['maxDate']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['placeholder']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['disabled']
+		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['dateFormat']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['error']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldDateRange label={label} description={description} isDisabled={isDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} required={required} error={error} value={(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldDateTimeWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['description']
+		const isDateDisabled = (resolveExpressionValue(node['isDateDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['isDateDisabled']
+		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['minDate']
+		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['maxDate']
+		const datePlaceholder = (resolveExpressionValue(node['datePlaceholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['datePlaceholder']
+		const timePlaceholder = (resolveExpressionValue(node['timePlaceholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['timePlaceholder']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['disabled']
+		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['dateFormat']
+		const is12Hour = (resolveExpressionValue(node['is12Hour'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['is12Hour']
+		const minuteStep = (resolveExpressionValue(node['minuteStep'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['minuteStep']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['error']
+		const open = (resolveExpressionValue(node['open'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['open']
+		const onOpenChange = (resolveExpressionValue(node['onOpenChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['onOpenChange']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldDateTime label={label} description={description} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} datePlaceholder={datePlaceholder} timePlaceholder={timePlaceholder} disabled={disabled} dateFormat={dateFormat} is12Hour={is12Hour} minuteStep={minuteStep} required={required} error={error} open={open} onOpenChange={onOpenChange} value={formData?.[bind] ? new Date(String(formData?.[bind])) : null} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldMultiSelectWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const name = (resolveExpressionValue(node['name'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['name']
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['description']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['error']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['disabled']
+		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['options']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['placeholder']
+		const maxSelected = (resolveExpressionValue(node['maxSelected'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['maxSelected']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldMultiSelect name={name} label={label} description={description} required={required} error={error} disabled={disabled} options={options} placeholder={placeholder} maxSelected={maxSelected} value={(formData?.[bind] as string[] | undefined) ?? []} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldNumberWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['description']
+		const min = (resolveExpressionValue(node['min'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['min']
+		const max = (resolveExpressionValue(node['max'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['max']
+		const suffix = (resolveExpressionValue(node['suffix'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['suffix']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['disabled']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['error']
+		const unlimited = (resolveExpressionValue(node['unlimited'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['unlimited']
+		const unlimitedValue = (resolveExpressionValue(node['unlimitedValue'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['unlimitedValue']
+		const onUnlimitedChange = (resolveExpressionValue(node['onUnlimitedChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['onUnlimitedChange']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldNumber label={label} description={description} min={min} max={max} suffix={suffix} disabled={disabled} required={required} error={error} unlimited={unlimited} unlimitedValue={unlimitedValue} onUnlimitedChange={onUnlimitedChange} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldSelectWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['description']
+		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['options']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['placeholder']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['error']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldSelect label={label} description={description} options={options} placeholder={placeholder} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldTagsWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const name = (resolveExpressionValue(node['name'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['name']
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['description']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['error']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['disabled']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['placeholder']
+		const maxTags = (resolveExpressionValue(node['maxTags'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['maxTags']
+		const allowDuplicates = (resolveExpressionValue(node['allowDuplicates'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['allowDuplicates']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldTags name={name} label={label} description={description} required={required} error={error} disabled={disabled} placeholder={placeholder} maxTags={maxTags} allowDuplicates={allowDuplicates} value={(formData?.[bind] as string[] | undefined) ?? []} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldTextWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['description']
+		const readOnly = (resolveExpressionValue(node['readOnly'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['readOnly']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['error']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldText label={label} description={description} readOnly={readOnly} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldTextareaWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['description']
+		const rows = (resolveExpressionValue(node['rows'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['rows']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldTextarea label={label} description={description} rows={rows} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function FieldTimeWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['label']
+		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['description']
+		const is12Hour = (resolveExpressionValue(node['is12Hour'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['is12Hour']
+		const minuteStep = (resolveExpressionValue(node['minuteStep'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['minuteStep']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['placeholder']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['disabled']
+		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['required']
+		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['error']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<FieldTime label={label} description={description} is12Hour={is12Hour} minuteStep={minuteStep} placeholder={placeholder} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
+function TimePickerWithContext({ node, ctx }: RegistryRenderProps) {
+		const bind = node['bind'] as string
+		const is12Hour = (resolveExpressionValue(node['is12Hour'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['is12Hour']
+		const minuteStep = (resolveExpressionValue(node['minuteStep'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['minuteStep']
+		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['disabled']
+		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['placeholder']
+		const open = (resolveExpressionValue(node['open'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['open']
+		const onOpenChange = (resolveExpressionValue(node['onOpenChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['onOpenChange']
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<TimePicker is12Hour={is12Hour} minuteStep={minuteStep} disabled={disabled} placeholder={placeholder} open={open} onOpenChange={onOpenChange} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+		)
+}
+
 export const ButtonActionEntry: ComponentRegistryEntry = {
 	name: 'ButtonAction', category: 'atomic', tags: ["button","action"],
 	nodeSchema: null as never,
@@ -122,21 +491,7 @@ export const ButtonActionEntry: ComponentRegistryEntry = {
 export const CheckboxGroupEntry: ComponentRegistryEntry = {
 	name: 'CheckboxGroup', category: 'atomic', tags: ["checkbox","group","field"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js').CheckboxGroupProps['options']
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js').CheckboxGroupProps['label']
-		const orientation = (resolveExpressionValue(node['orientation'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CheckboxGroup.js').CheckboxGroupProps['orientation']
-		function CheckboxGroupWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<CheckboxGroup options={options} label={label} orientation={orientation} value={(formData?.[bind] as string[] | undefined) ?? []} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <CheckboxGroupWithContext />
-	},
+	render: (props: RegistryRenderProps) => <CheckboxGroupWithContext {...props} />,
 }
 
 export const ChipButtonEntry: ComponentRegistryEntry = {
@@ -163,43 +518,13 @@ export const ChipButtonEntry: ComponentRegistryEntry = {
 export const ColorPickerEntry: ComponentRegistryEntry = {
 	name: 'ColorPicker', category: 'atomic', tags: ["field","picker"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ColorPicker.js').ColorPickerProps['label']
-		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ColorPicker.js').ColorPickerProps['options']
-		function ColorPickerWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<ColorPicker label={label} options={options} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <ColorPickerWithContext />
-	},
+	render: (props: RegistryRenderProps) => <ColorPickerWithContext {...props} />,
 }
 
 export const CompactSelectEntry: ComponentRegistryEntry = {
 	name: 'CompactSelect', category: 'atomic', tags: ["select","compact","toolbar"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const urlParam = (resolveExpressionValue(node['urlParam'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['urlParam']
-		const resetUrlParams = (resolveExpressionValue(node['resetUrlParams'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['resetUrlParams']
-		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['options']
-		const ariaLabel = (resolveExpressionValue(node['ariaLabel'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['ariaLabel']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['placeholder']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['disabled']
-		function CompactSelectWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <CompactSelectWithContext />
-	},
+	render: (props: RegistryRenderProps) => <CompactSelectWithContext {...props} />,
 }
 
 export const DeleteButtonEntry: ComponentRegistryEntry = {
@@ -259,21 +584,7 @@ export const PageSizeSelectEntry: ComponentRegistryEntry = {
 export const RadioGroupEntry: ComponentRegistryEntry = {
 	name: 'RadioGroup', category: 'atomic', tags: ["radio","group","field"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RadioGroup.js').RadioGroupProps['options']
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RadioGroup.js').RadioGroupProps['label']
-		const orientation = (resolveExpressionValue(node['orientation'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/RadioGroup.js').RadioGroupProps['orientation']
-		function RadioGroupWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<RadioGroup options={options} label={label} orientation={orientation} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <RadioGroupWithContext />
-	},
+	render: (props: RegistryRenderProps) => <RadioGroupWithContext {...props} />,
 }
 
 export const RefreshButtonEntry: ComponentRegistryEntry = {
@@ -292,44 +603,13 @@ export const RefreshButtonEntry: ComponentRegistryEntry = {
 export const SliderEntry: ComponentRegistryEntry = {
 	name: 'Slider', category: 'atomic', tags: ["slider","range","input","number"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const min = (resolveExpressionValue(node['min'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['min']
-		const max = (resolveExpressionValue(node['max'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['max']
-		const step = (resolveExpressionValue(node['step'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['step']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['disabled']
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['label']
-		const showValue = (resolveExpressionValue(node['showValue'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Slider.js').SliderProps['showValue']
-		function SliderWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<Slider min={min} max={max} step={step} disabled={disabled} label={label} showValue={showValue} value={Number(formData?.[bind] ?? 0)} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <SliderWithContext />
-	},
+	render: (props: RegistryRenderProps) => <SliderWithContext {...props} />,
 }
 
 export const SwitchEntry: ComponentRegistryEntry = {
 	name: 'Switch', category: 'atomic', tags: ["switch","toggle","boolean"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Switch.js').SwitchProps['label']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Switch.js').SwitchProps['disabled']
-		const size = (resolveExpressionValue(node['size'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/Switch.js').SwitchProps['size']
-		function SwitchWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<Switch label={label} disabled={disabled} size={size} checked={Boolean(formData?.[bind])} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <SwitchWithContext />
-	},
+	render: (props: RegistryRenderProps) => <SwitchWithContext {...props} />,
 }
 
 export const TabButtonEntry: ComponentRegistryEntry = {
@@ -344,20 +624,7 @@ export const TabButtonEntry: ComponentRegistryEntry = {
 export const ThemePickerEntry: ComponentRegistryEntry = {
 	name: 'ThemePicker', category: 'composite', tags: ["field","picker"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ThemePicker.js').ThemePickerProps['label']
-		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ThemePicker.js').ThemePickerProps['options']
-		function ThemePickerWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<ThemePicker label={label} options={options} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <ThemePickerWithContext />
-	},
+	render: (props: RegistryRenderProps) => <ThemePickerWithContext {...props} />,
 }
 
 export const AbTestEntry: ComponentRegistryEntry = {
@@ -581,239 +848,55 @@ export const CronBuilderEntry: ComponentRegistryEntry = {
 export const DatePickerEntry: ComponentRegistryEntry = {
 	name: 'DatePicker', category: 'atomic', tags: ["field","date","calendar"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const onSelect = (resolveExpressionValue(node['onSelect'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['onSelect']
-		const isDateDisabled = (resolveExpressionValue(node['isDateDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['isDateDisabled']
-		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['minDate']
-		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['maxDate']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['placeholder']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['disabled']
-		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DatePicker.js').DatePickerProps['dateFormat']
-		function DatePickerWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<DatePicker onSelect={onSelect} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} value={formData?.[bind] ? new Date(String(formData?.[bind])) : null} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <DatePickerWithContext />
-	},
+	render: (props: RegistryRenderProps) => <DatePickerWithContext {...props} />,
 }
 
 export const DateRangePickerEntry: ComponentRegistryEntry = {
 	name: 'DateRangePicker', category: 'atomic', tags: ["field","date","range","calendar"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['disabled']
-		const isDisabled = (resolveExpressionValue(node['isDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['isDisabled']
-		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['minDate']
-		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['maxDate']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['placeholder']
-		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['dateFormat']
-		const open = (resolveExpressionValue(node['open'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['open']
-		const onOpenChange = (resolveExpressionValue(node['onOpenChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/DateRangePicker.js').DateRangePickerProps['onOpenChange']
-		function DateRangePickerWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<DateRangePicker disabled={disabled} isDisabled={isDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} dateFormat={dateFormat} open={open} onOpenChange={onOpenChange} value={(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <DateRangePickerWithContext />
-	},
+	render: (props: RegistryRenderProps) => <DateRangePickerWithContext {...props} />,
 }
 
 export const FieldAsyncSelectEntry: ComponentRegistryEntry = {
 	name: 'FieldAsyncSelect', category: 'atomic', tags: ["field","async","select","search","combobox"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const name = (resolveExpressionValue(node['name'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['name']
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['description']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['error']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['disabled']
-		const loadOptions = (resolveExpressionValue(node['loadOptions'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['loadOptions']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['placeholder']
-		const debounceMs = (resolveExpressionValue(node['debounceMs'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['debounceMs']
-		const noOptionsMessage = (resolveExpressionValue(node['noOptionsMessage'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAsyncSelect.js').FieldAsyncSelectProps['noOptionsMessage']
-		function FieldAsyncSelectWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldAsyncSelect name={name} label={label} description={description} required={required} error={error} disabled={disabled} loadOptions={loadOptions} placeholder={placeholder} debounceMs={debounceMs} noOptionsMessage={noOptionsMessage} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldAsyncSelectWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldAsyncSelectWithContext {...props} />,
 }
 
 export const FieldAutocompleteEntry: ComponentRegistryEntry = {
 	name: 'FieldAutocomplete', category: 'atomic', tags: ["field","autocomplete","search"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['description']
-		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['options']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['placeholder']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldAutocomplete.js').FieldAutocompleteProps['disabled']
-		function FieldAutocompleteWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldAutocomplete label={label} description={description} options={options} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldAutocompleteWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldAutocompleteWithContext {...props} />,
 }
 
 export const FieldDateEntry: ComponentRegistryEntry = {
 	name: 'FieldDate', category: 'atomic', tags: ["field","date"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['description']
-		const isDateDisabled = (resolveExpressionValue(node['isDateDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['isDateDisabled']
-		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['minDate']
-		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['maxDate']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['placeholder']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['disabled']
-		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['dateFormat']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDate.js').FieldDateProps['error']
-		function FieldDateWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldDate label={label} description={description} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} required={required} error={error} value={formData?.[bind] ? new Date(String(formData?.[bind])) : null} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldDateWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldDateWithContext {...props} />,
 }
 
 export const FieldDateRangeEntry: ComponentRegistryEntry = {
 	name: 'FieldDateRange', category: 'atomic', tags: ["field","date","range"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['description']
-		const isDisabled = (resolveExpressionValue(node['isDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['isDisabled']
-		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['minDate']
-		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['maxDate']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['placeholder']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['disabled']
-		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['dateFormat']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateRange.js').FieldDateRangeProps['error']
-		function FieldDateRangeWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldDateRange label={label} description={description} isDisabled={isDisabled} minDate={minDate} maxDate={maxDate} placeholder={placeholder} disabled={disabled} dateFormat={dateFormat} required={required} error={error} value={(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldDateRangeWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldDateRangeWithContext {...props} />,
 }
 
 export const FieldDateTimeEntry: ComponentRegistryEntry = {
 	name: 'FieldDateTime', category: 'atomic', tags: ["field","date","time","datetime"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['description']
-		const isDateDisabled = (resolveExpressionValue(node['isDateDisabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['isDateDisabled']
-		const minDate = (resolveExpressionValue(node['minDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['minDate']
-		const maxDate = (resolveExpressionValue(node['maxDate'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['maxDate']
-		const datePlaceholder = (resolveExpressionValue(node['datePlaceholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['datePlaceholder']
-		const timePlaceholder = (resolveExpressionValue(node['timePlaceholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['timePlaceholder']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['disabled']
-		const dateFormat = (resolveExpressionValue(node['dateFormat'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['dateFormat']
-		const is12Hour = (resolveExpressionValue(node['is12Hour'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['is12Hour']
-		const minuteStep = (resolveExpressionValue(node['minuteStep'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['minuteStep']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['error']
-		const open = (resolveExpressionValue(node['open'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['open']
-		const onOpenChange = (resolveExpressionValue(node['onOpenChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldDateTime.js').FieldDateTimeProps['onOpenChange']
-		function FieldDateTimeWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldDateTime label={label} description={description} isDateDisabled={isDateDisabled} minDate={minDate} maxDate={maxDate} datePlaceholder={datePlaceholder} timePlaceholder={timePlaceholder} disabled={disabled} dateFormat={dateFormat} is12Hour={is12Hour} minuteStep={minuteStep} required={required} error={error} open={open} onOpenChange={onOpenChange} value={formData?.[bind] ? new Date(String(formData?.[bind])) : null} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldDateTimeWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldDateTimeWithContext {...props} />,
 }
 
 export const FieldMultiSelectEntry: ComponentRegistryEntry = {
 	name: 'FieldMultiSelect', category: 'atomic', tags: ["field","multi-select"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const name = (resolveExpressionValue(node['name'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['name']
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['description']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['error']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['disabled']
-		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['options']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['placeholder']
-		const maxSelected = (resolveExpressionValue(node['maxSelected'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldMultiSelect.js').FieldMultiSelectProps['maxSelected']
-		function FieldMultiSelectWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldMultiSelect name={name} label={label} description={description} required={required} error={error} disabled={disabled} options={options} placeholder={placeholder} maxSelected={maxSelected} value={(formData?.[bind] as string[] | undefined) ?? []} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldMultiSelectWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldMultiSelectWithContext {...props} />,
 }
 
 export const FieldNumberEntry: ComponentRegistryEntry = {
 	name: 'FieldNumber', category: 'atomic', tags: ["field"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['description']
-		const min = (resolveExpressionValue(node['min'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['min']
-		const max = (resolveExpressionValue(node['max'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['max']
-		const suffix = (resolveExpressionValue(node['suffix'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['suffix']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['disabled']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['error']
-		const unlimited = (resolveExpressionValue(node['unlimited'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['unlimited']
-		const unlimitedValue = (resolveExpressionValue(node['unlimitedValue'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['unlimitedValue']
-		const onUnlimitedChange = (resolveExpressionValue(node['onUnlimitedChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldNumber.js').FieldNumberProps['onUnlimitedChange']
-		function FieldNumberWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldNumber label={label} description={description} min={min} max={max} suffix={suffix} disabled={disabled} required={required} error={error} unlimited={unlimited} unlimitedValue={unlimitedValue} onUnlimitedChange={onUnlimitedChange} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldNumberWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldNumberWithContext {...props} />,
 }
 
 export const FieldReadOnlyEntry: ComponentRegistryEntry = {
@@ -832,117 +915,31 @@ export const FieldReadOnlyEntry: ComponentRegistryEntry = {
 export const FieldSelectEntry: ComponentRegistryEntry = {
 	name: 'FieldSelect', category: 'atomic', tags: ["field","select"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['description']
-		const options = (resolveExpressionValue(node['options'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['options']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['placeholder']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['error']
-		function FieldSelectWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldSelect label={label} description={description} options={options} placeholder={placeholder} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldSelectWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldSelectWithContext {...props} />,
 }
 
 export const FieldTagsEntry: ComponentRegistryEntry = {
 	name: 'FieldTags', category: 'atomic', tags: ["field","tags","input"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const name = (resolveExpressionValue(node['name'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['name']
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['description']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['error']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['disabled']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['placeholder']
-		const maxTags = (resolveExpressionValue(node['maxTags'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['maxTags']
-		const allowDuplicates = (resolveExpressionValue(node['allowDuplicates'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTags.js').FieldTagsProps['allowDuplicates']
-		function FieldTagsWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldTags name={name} label={label} description={description} required={required} error={error} disabled={disabled} placeholder={placeholder} maxTags={maxTags} allowDuplicates={allowDuplicates} value={(formData?.[bind] as string[] | undefined) ?? []} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldTagsWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldTagsWithContext {...props} />,
 }
 
 export const FieldTextEntry: ComponentRegistryEntry = {
 	name: 'FieldText', category: 'atomic', tags: ["field"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['description']
-		const readOnly = (resolveExpressionValue(node['readOnly'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['readOnly']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['error']
-		function FieldTextWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldText label={label} description={description} readOnly={readOnly} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldTextWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldTextWithContext {...props} />,
 }
 
 export const FieldTextareaEntry: ComponentRegistryEntry = {
 	name: 'FieldTextarea', category: 'atomic', tags: ["field"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['description']
-		const rows = (resolveExpressionValue(node['rows'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTextarea.js').FieldTextareaProps['rows']
-		function FieldTextareaWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldTextarea label={label} description={description} rows={rows} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldTextareaWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldTextareaWithContext {...props} />,
 }
 
 export const FieldTimeEntry: ComponentRegistryEntry = {
 	name: 'FieldTime', category: 'atomic', tags: ["field","time"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const label = (resolveExpressionValue(node['label'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['label']
-		const description = (resolveExpressionValue(node['description'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['description']
-		const is12Hour = (resolveExpressionValue(node['is12Hour'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['is12Hour']
-		const minuteStep = (resolveExpressionValue(node['minuteStep'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['minuteStep']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['placeholder']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['disabled']
-		const required = (resolveExpressionValue(node['required'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['required']
-		const error = (resolveExpressionValue(node['error'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/FieldTime.js').FieldTimeProps['error']
-		function FieldTimeWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<FieldTime label={label} description={description} is12Hour={is12Hour} minuteStep={minuteStep} placeholder={placeholder} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <FieldTimeWithContext />
-	},
+	render: (props: RegistryRenderProps) => <FieldTimeWithContext {...props} />,
 }
 
 export const FieldWrapperEntry: ComponentRegistryEntry = {
@@ -977,24 +974,7 @@ export const FormEntry: ComponentRegistryEntry = {
 export const TimePickerEntry: ComponentRegistryEntry = {
 	name: 'TimePicker', category: 'atomic', tags: ["field","time","clock"],
 	nodeSchema: null as never,
-	render: ({ node, ctx }: RegistryRenderProps) => {
-		const bind = node['bind'] as string
-		const is12Hour = (resolveExpressionValue(node['is12Hour'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['is12Hour']
-		const minuteStep = (resolveExpressionValue(node['minuteStep'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['minuteStep']
-		const disabled = (resolveExpressionValue(node['disabled'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['disabled']
-		const placeholder = (resolveExpressionValue(node['placeholder'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['placeholder']
-		const open = (resolveExpressionValue(node['open'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['open']
-		const onOpenChange = (resolveExpressionValue(node['onOpenChange'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/form/TimePicker.js').TimePickerProps['onOpenChange']
-		function TimePickerWithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<TimePicker is12Hour={is12Hour} minuteStep={minuteStep} disabled={disabled} placeholder={placeholder} open={open} onOpenChange={onOpenChange} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <TimePickerWithContext />
-	},
+	render: (props: RegistryRenderProps) => <TimePickerWithContext {...props} />,
 }
 
 export const UnsavedBadgeEntry: ComponentRegistryEntry = {
