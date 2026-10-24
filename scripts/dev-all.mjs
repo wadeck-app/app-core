@@ -109,7 +109,12 @@ if (!existsSync(cliBundle)) {
   // The commit the servers run from (not the bundle's, which is only as fresh as the last CLI build).
   let label = 'dev (commit unknown)';
   try {
-    label = `dev ${execFileSync('git', ['rev-parse', '--short=8', 'HEAD'], { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()}`;
+    const git = (...args) => execFileSync('git', args, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    // "dev 5409290 Take dsl 2026.10.24-137 (+changes)": the commit the servers run from, what it says, and whether the
+    // working tree has edits on top. ASCII only (the tray's pipe corrupts anything else) and short enough for a menu.
+    const subject = git('log', '-1', '--format=%s').replace(/[^\x20-\x7e]/g, '?');
+    const dirty = git('status', '--porcelain', '-uno') === '' ? '' : ' (+changes)';
+    label = `dev ${git('rev-parse', '--short=7', 'HEAD')} ${subject.length > 45 ? `${subject.slice(0, 42)}...` : subject}${dirty}`;
   } catch {
     console.warn('[dev-all] WARNING: git rev-parse failed; the tray shows "dev (commit unknown)" as its version.');
   }

@@ -30,7 +30,7 @@ const bundlePath = process.env['LAUNCHER_BUNDLE_OVERRIDE'] ?? fileURLToPath(impo
 function devVersionLabel(): string {
   try {
     const info = JSON.parse(readFileSync(join(dirname(bundlePath), 'public', 'build-info.json'), 'utf8')) as { commit?: string };
-    return info.commit ? `dev ${info.commit}` : 'dev (commit unknown)';
+    return info.commit ? `dev ${info.commit.slice(0, 7)}` : 'dev (commit unknown)';
   } catch {
     return 'dev (build unknown)';
   }
