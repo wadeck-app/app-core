@@ -286,7 +286,7 @@ async function main(): Promise<void> {
 
   if (command === 'update') {
     if (!isReleaseVersion(VERSION)) {
-      process.stderr.write(`[fail] ${devBuildRefusalMessage('app-core-cli', VERSION)}\n`);
+      process.stderr.write(`[fail] ${devBuildRefusalMessage('app-core-cli', VERSION, 'app-core-cli update')}\n`);
       process.exitCode = 1;
       return;
     }

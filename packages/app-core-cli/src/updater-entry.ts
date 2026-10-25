@@ -16,7 +16,7 @@ const currentVersion = typeof __APP_CORE_CLI_VERSION__ !== 'undefined' ? __APP_C
 
 // A bundle built from the repository must never touch the global install, whoever started this updater.
 if (!isReleaseVersion(currentVersion)) {
-  process.stderr.write(`[app-core-cli-updater] ${devBuildRefusalMessage('app-core-cli', currentVersion)}\n`);
+  process.stderr.write(`[app-core-cli-updater] ${devBuildRefusalMessage('app-core-cli', currentVersion, 'app-core-cli update')}\n`);
   process.exit(1);
 }
 
