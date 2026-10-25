@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface ServeOptions {
   publicDir?: string;
+  abTests?: boolean;
 }
 
 // Runs the real app-core server in the foreground with the frontend bundled next to this file
@@ -20,5 +21,5 @@ export async function runServe(opts: ServeOptions = {}): Promise<RunningServer> 
         'Reinstall the package (npm install -g @wadeck-app/app-core-cli) or, from the repo, run "npm run build".',
     );
   }
-  return startServer({ publicDir });
+  return startServer({ publicDir, abTests: opts.abTests });
 }

@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import * as http from 'node:http';
 import * as net from 'node:net';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -19,6 +20,19 @@ async function freePort(): Promise<number> {
 
 const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
+
+// Each test starts its own server on the same port: fetch would reuse a connection kept alive by the previous one (reset
+// by now), so this request opens its own.
+const shellSettings = (): Promise<unknown> =>
+  new Promise((resolve, reject) => {
+    http
+      .get(`${BASE}/api/shell-settings`, { agent: false }, (res) => {
+        let body = '';
+        res.on('data', (chunk: Buffer) => (body += chunk.toString()));
+        res.on('end', () => resolve(JSON.parse(body)));
+      })
+      .on('error', reject);
+  });
 
 describe('runServe', () => {
   let configDir: string;
@@ -57,6 +71,18 @@ describe('runServe', () => {
       pid: process.pid,
       port: PORT,
     });
+  });
+
+  it('tells the shell that A/B tests are off by default', async () => {
+    const running = await runServe({ publicDir });
+    stop = running.stop;
+    expect(await shellSettings()).toEqual({ abTests: false });
+  });
+
+  it('tells the shell that A/B tests are on when started with abTests', async () => {
+    const running = await runServe({ publicDir, abTests: true });
+    stop = running.stop;
+    expect(await shellSettings()).toEqual({ abTests: true });
   });
 
   it('removes server.port.json when stopped', async () => {

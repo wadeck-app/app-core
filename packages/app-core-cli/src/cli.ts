@@ -209,10 +209,14 @@ async function main(): Promise<void> {
 
   if (command === 'serve') {
     const args = [target, ...rest].filter((arg): arg is string => arg !== undefined);
-    warnUnknownArgs(args, ['--no-tray'], 'serve');
+    warnUnknownArgs(args, ['--no-tray', '--ab-tests'], 'serve');
     try {
-      const { port, stop } = await runServe();
+      const abTests = args.includes('--ab-tests');
+      const { port, stop } = await runServe({ abTests });
       console.log(`app-core-cli serve: listening on http://127.0.0.1:${port}`);
+      if (abTests) {
+        console.log('app-core-cli serve: A/B test dock enabled (--ab-tests); it is off without the flag');
+      }
       let tray: Awaited<ReturnType<typeof startTray>> | null = null;
       const shutdown = (): void => {
         void (tray?.ok ? tray.companion.stop() : Promise.resolve()).then(stop).finally(() => process.exit(0));

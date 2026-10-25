@@ -17,6 +17,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export interface BuildServerOptions {
   configDir?: string;
   publicDir?: string;
+  // Turns the A/B test dock on in the served shell (it is off outside development). `app-core-cli serve --ab-tests`.
+  abTests?: boolean;
 }
 
 export interface AppCoreServer {
@@ -103,6 +105,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   });
   await server.register(modulesRoutes, { modulesDir, manager });
   await server.register(slotsRoutes, { manager });
+  // What the shell cannot know from its build: settings of this server process, read once per page load.
+  server.get('/api/shell-settings', async () => ({ abTests: opts.abTests === true }));
 
   // Files of a module's dsl-lib folder (runtime-loaded components). Registered before the
   // catch-all below, and `_lib` is reserved so a module cannot register a route under it.

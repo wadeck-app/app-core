@@ -10,6 +10,13 @@ Runs the same server as `packages/server`, with the frontend built into this pac
 
 `server.port.json` (`{"pid": ..., "port": ...}`) is written after the server listens and removed on a clean stop. After a forced kill it stays on disk; consumers must check that `pid` is alive.
 
+## Flags
+
+| Flag | Effect |
+|---|---|
+| `--no-tray` | No tray icon. |
+| `--ab-tests` | Shows the A/B test dock (`AbTest` nodes and the shell's own tests) in this production build. Off without it. The server prints a line at start and answers `GET /api/shell-settings` with `{"abTests": true}`. A tray Restart or an update restart keeps the flag. |
+
 `GET /build-info.json` returns `builtAt`, `dslUi`, `dslRenderer` of the bundled frontend.
 
 If the bundled frontend is missing, `serve` exits 1 with a message instead of serving a blank API-only server.
