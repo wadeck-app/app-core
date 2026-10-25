@@ -105,9 +105,11 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
     }
     const box = lattice.getBoundingClientRect();
     const tracksWidth = columnCount * CELL_PX + (columnCount - 1) * GAP_PX;
+    // The held widget is positioned inside the grid, so it counts in the height of the page: it is kept within the rows of the
+    // grid, or the page would grow under it as the page scrolls under the pointer.
     return {
-      left: held.x - held.grabX - box.left,
-      top: held.y - held.grabY - box.top,
+      left: Math.max(0, Math.min(held.x - held.grabX - box.left, box.width - STRIDE_PX)),
+      top: Math.min(held.y - held.grabY - box.top, (gridRows - 1) * STRIDE_PX),
       trackLeft: Math.max(0, (lattice.clientWidth - tracksWidth) / 2),
       inside: held.x >= box.left && held.x <= box.right && held.y >= box.top - STRIDE_PX && held.y <= box.bottom + SPARE_ROWS * STRIDE_PX,
     };
@@ -118,13 +120,16 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
       return undefined;
     }
     const cell = snapToCell(where.left, where.top, where.trackLeft, CELL_PX, GAP_PX);
-    return { key: held.key, col: cell.col, row: cell.row };
+    return { key: held.key, col: cell.col, row: Math.min(cell.row, gridRows - 1) };
   };
 
   // The places the widgets have now. A widget nobody moved is where an automatic grid puts it, and stays there when another
   // one is dropped: only the widgets in the way move, so every widget is taken where it is before the dropped one is applied.
   const current = resolveLayout(items, columnCount);
   const settled = items.map((item) => ({ ...item, col: current.get(item.key)?.col, row: current.get(item.key)?.row }));
+  // The grid has the rows of the widgets and a few spare ones under them to drop below the last; not more, or the grid would
+  // grow under a widget held low and the page with it.
+  const gridRows = rowsUsed(items, current) + SPARE_ROWS;
   // And, when one is held, the places they would have if it were dropped here.
   const pin = drag === undefined ? undefined : pinOf(drag);
   const dropLayout = pin === undefined ? undefined : resolveLayout(settled, columnCount, pin);
@@ -211,8 +216,6 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
       />
     );
   };
-
-  const gridRows = rowsUsed(items, layout) + SPARE_ROWS;
 
   return (
     <PageContent
