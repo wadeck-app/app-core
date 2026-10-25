@@ -18,7 +18,7 @@ import { readChannelFromConfig } from '@wadeck-app/shared-cli/ChannelConfig';
 import { runSelfCheck } from '@wadeck-app/shared-cli';
 import { startTray } from './tray/trayCommand.js';
 import { readTrayBuildInfo } from './tray/buildInfo.js';
-import { devBuildRefusalMessage, isReleaseBuild } from './devBuildGuard.js';
+import { devBuildRefusalMessage, isReleaseVersion } from '@wadeck-app/shared-cli/ReleaseVersion';
 import { spawn } from 'node:child_process';
 
 // Injected by esbuild at bundle time via define; falls back to dev placeholder.
@@ -39,10 +39,10 @@ async function main(): Promise<void> {
   // `self-check`, to avoid recursing into the just-installed binary
   // mid-verification). In dev mode (no bundled updater file) this is a
   // silent no-op, per UpdateManager's own documented behavior. A bundle built from the repository (not a CalVer release)
-  // has its updater file too, and must never start an `npm install -g`.
-  if (command !== 'self-check' && isReleaseBuild(VERSION)) {
+  // has its updater file too: the version is passed so that it spawns nothing and never starts an `npm install -g`.
+  if (command !== 'self-check') {
     try {
-      new UpdateManager(PKG_NAME).scheduleBackgroundUpdate(bundlePath, 'app-core-cli-updater.cjs');
+      new UpdateManager(PKG_NAME).scheduleBackgroundUpdate(bundlePath, 'app-core-cli-updater.cjs', VERSION);
     } catch {
       // Never let a background-update scheduling failure block the actual command.
     }
@@ -232,7 +232,7 @@ async function main(): Promise<void> {
         console.log('app-core-cli serve: no tray icon (--no-tray)');
       } else {
         // Green icon: the installed server.
-        tray = await startTray({ mode: 'prod', version: VERSION, dslVersion: readTrayBuildInfo(ownDir).dslLabel, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: isReleaseBuild(VERSION) ? join(ownDir, 'app-core-cli-updater.cjs') : '', getUrl: () => `http://127.0.0.1:${port}/`, onQuit: shutdown, onRestart: restart });
+        tray = await startTray({ mode: 'prod', version: VERSION, dslVersion: readTrayBuildInfo(ownDir).dslLabel, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: isReleaseVersion(VERSION) ? join(ownDir, 'app-core-cli-updater.cjs') : '', getUrl: () => `http://127.0.0.1:${port}/`, onQuit: shutdown, onRestart: restart });
         if (!tray.ok) {
           // The server keeps running; the icon is the part that is missing, and the reason says how to get it back.
           console.warn(`app-core-cli serve: no tray icon: ${tray.reason}. Hide this warning with --no-tray.`);
@@ -285,7 +285,7 @@ async function main(): Promise<void> {
   }
 
   if (command === 'update') {
-    if (!isReleaseBuild(VERSION)) {
+    if (!isReleaseVersion(VERSION)) {
       process.stderr.write(`[fail] ${devBuildRefusalMessage('app-core-cli', VERSION)}\n`);
       process.exitCode = 1;
       return;

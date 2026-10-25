@@ -4,6 +4,7 @@
 // convention every other @wadeck-app CLI in this workspace uses.
 import { runUpdater, execNpm } from '@wadeck-app/shared-updater';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
+import { devBuildRefusalMessage, isReleaseVersion } from '@wadeck-app/shared-cli/ReleaseVersion';
 import { join } from 'node:path';
 
 // Injected by esbuild at bundle time via define; falls back to dev placeholder.
@@ -12,6 +13,12 @@ declare const __APP_CORE_CLI_VERSION__: string;
 const PKG_NAME = '@wadeck-app/app-core-cli';
 const configDir = process.env['APP_CORE_CLI_CONFIG_DIR'] ?? ConfigDir.get('app-core-cli');
 const currentVersion = typeof __APP_CORE_CLI_VERSION__ !== 'undefined' ? __APP_CORE_CLI_VERSION__ : '0.0.0-dev';
+
+// A bundle built from the repository must never touch the global install, whoever started this updater.
+if (!isReleaseVersion(currentVersion)) {
+  process.stderr.write(`[app-core-cli-updater] ${devBuildRefusalMessage('app-core-cli', currentVersion)}\n`);
+  process.exit(1);
+}
 
 // Compute self-check command so shared-updater can verify the install after upgrade.
 try {
