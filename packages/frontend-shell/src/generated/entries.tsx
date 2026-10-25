@@ -651,7 +651,6 @@ export const CompactSelectEntry: ComponentRegistryEntry = {
 export const DeleteButtonEntry: ComponentRegistryEntry = {
 	name: 'DeleteButton', category: 'atomic', tags: [],
 	nodeSchema: null as never,
-	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['DeleteButtonNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
 		return <DeleteButton>{items ? renderChildren(items, registry, ctx) : null}</DeleteButton>
@@ -1431,7 +1430,6 @@ export const PageTabsEntry: ComponentRegistryEntry = {
 export const RouterProviderEntry: ComponentRegistryEntry = {
 	name: 'RouterProvider', category: 'disposition', tags: ["router","navigation"],
 	nodeSchema: null as never,
-	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['RouterProviderNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
 		return <RouterProvider>{items ? renderChildren(items, registry, ctx) : null}</RouterProvider>
