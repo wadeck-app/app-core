@@ -15,9 +15,9 @@ export interface DashboardBarProps {
   onRefresh: () => void;
   hiddenCount: number;
   onRestore: () => void;
-  // Whether the user changed the order of the widgets, and the way back to the default one.
-  orderCustomized: boolean;
-  onResetOrder: () => void;
+  // Whether the user changed the layout of the widgets, and the way back to the default one.
+  layoutCustomized: boolean;
+  onResetLayout: () => void;
   modules: ModuleFilterOption[];
   // The module the dashboard is narrowed to; undefined shows every module.
   filter: string | undefined;
@@ -33,9 +33,9 @@ const segmentClass = (active: boolean): string => `${SEGMENT} ${active ? 'bg-pri
 
 // The strip above the widgets, which stays at the top of the page while the widgets scroll under it: the module filter
 // (one connected control, each module with the number of its widgets), when the data is from, an automatic refresh and a
-// refresh button, and the ways back from what the user changed (hidden widgets, a custom order).
+// refresh button, and the ways back from what the user changed (hidden widgets, a custom layout).
 export function DashboardBar(props: DashboardBarProps): React.ReactElement {
-  const { refreshedAt, onRefresh, hiddenCount, onRestore, orderCustomized, onResetOrder, modules, filter, onFilter, interval, onInterval } = props;
+  const { refreshedAt, onRefresh, hiddenCount, onRestore, layoutCustomized, onResetLayout, modules, filter, onFilter, interval, onInterval } = props;
   return (
     <div role="toolbar" aria-label="Dashboard controls" className="sticky top-0 z-10 -mx-2 mb-4 flex flex-wrap items-center gap-2 bg-bg px-2 py-2">
       {modules.length > 1 ? (
@@ -51,10 +51,10 @@ export function DashboardBar(props: DashboardBarProps): React.ReactElement {
         </div>
       ) : null}
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        {orderCustomized ? (
-          <button type="button" className={BUTTON} onClick={onResetOrder}>
+        {layoutCustomized ? (
+          <button type="button" className={BUTTON} onClick={onResetLayout}>
             <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
-            Reset order
+            Reset layout
           </button>
         ) : null}
         {hiddenCount > 0 ? (

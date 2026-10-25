@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GripVertical } from 'lucide-react';
 import { Dialog } from '@wadeck-app/dsl-ui';
@@ -32,20 +32,26 @@ export interface CellLayout {
   gapPx: number;
 }
 
-// What the dashboard gives each cell to let the user drag it to another place (native HTML drag and drop).
+// Where the dashboard puts the cell: its top left cell in the grid.
+export interface CellPlace {
+  col: number;
+  row: number;
+}
+
+// What the dashboard gives each cell to let the user drag it anywhere in the grid (pointer events).
 export interface CellDrag {
-  // This cell is the one being dragged / the one the dragged cell is over.
-  dragging: boolean;
-  over: boolean;
-  onStart: () => void;
-  onEnd: () => void;
-  onOver: () => void;
-  onDrop: () => void;
+  // The cell is held by the pointer: it then floats at `float` (pixels from the top left of the grid), above the others.
+  float: { left: number; top: number; width: number; height: number } | undefined;
+  // The grip took hold of the cell.
+  onStart: (event: React.PointerEvent<HTMLElement>, cell: HTMLElement) => void;
 }
 
 export interface WidgetCellProps {
   widget: DashboardWidget;
   layout: CellLayout;
+  place: CellPlace;
+  // The columns and rows the cell takes, once its content is measured, so the dashboard can place the others around it.
+  onSize: (span: number, rows: number) => void;
   // Bumped by the dashboard to refresh every widget at once.
   tick: number;
   // Where the module's pages start; undefined when it has none.
@@ -56,7 +62,7 @@ export interface WidgetCellProps {
   drag: CellDrag;
 }
 
-export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEarlier, onMoveLater, drag }: WidgetCellProps): React.ReactElement {
+export function WidgetCell({ widget, layout, place, onSize, tick, moduleHref, onHide, onMoveEarlier, onMoveLater, drag }: WidgetCellProps): React.ReactElement {
   const navigate = useNavigate();
   const cellRef = useRef<HTMLDivElement>(null);
   const [nonce, setNonce] = useState(0);
@@ -65,24 +71,21 @@ export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEar
   const fit = useRowsToFit(cellRef, layout.gapPx);
   const rows = Math.max(layout.rows, fit.rows);
   const span = layout.autoWidth ? Math.min(Math.max(layout.span, fit.cols), layout.maxSpan) : layout.span;
+  useEffect(() => onSize(span, rows), [onSize, span, rows]);
 
   const handle = (
     <span
-      draggable
       role="img"
-      aria-label={`Drag ${title} to reorder`}
-      title="Drag to reorder (or use the menu)"
-      className="flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-muted hover:text-content active:cursor-grabbing"
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = 'move';
-        // Firefox starts a drag only when data is set; the whole widget, not just the grip, is the drag image.
-        e.dataTransfer.setData('text/plain', widget.key);
-        if (cellRef.current !== null) {
-          e.dataTransfer.setDragImage(cellRef.current, 16, 16);
+      aria-label={`Drag ${title} to move`}
+      title="Drag to move anywhere in the grid (or use the menu)"
+      // touch-none: a finger on the grip moves the widget instead of scrolling the page.
+      className="flex h-6 w-4 shrink-0 cursor-grab touch-none items-center justify-center text-muted hover:text-content active:cursor-grabbing"
+      onPointerDown={(e) => {
+        // Only the main button (or a finger / pen).
+        if (e.button === 0 && cellRef.current !== null) {
+          drag.onStart(e, cellRef.current);
         }
-        drag.onStart();
       }}
-      onDragEnd={drag.onEnd}
     >
       <GripVertical className="h-4 w-4" aria-hidden="true" />
     </span>
@@ -105,20 +108,18 @@ export function WidgetCell({ widget, layout, tick, moduleHref, onHide, onMoveEar
     </ModuleLibGate>
   );
 
+  const float = drag.float;
   return (
     <div
       ref={cellRef}
-      className={`rounded-md transition-opacity ${drag.dragging ? 'opacity-40' : ''} ${drag.over ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-      style={{ gridColumn: `span ${span}`, gridRow: `span ${rows}` }}
-      onDragOver={(e) => {
-        // Only a dashboard widget being dragged may be dropped here.
-        e.preventDefault();
-        drag.onOver();
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        drag.onDrop();
-      }}
+      // z-[1]: above the guides drawn under the widgets while one is dragged. The held widget floats above everything and
+      // lets the pointer through.
+      className={`relative rounded-md ${float === undefined ? 'z-[1]' : 'pointer-events-none z-30 cursor-grabbing opacity-90 shadow-2xl ring-2 ring-primary'}`}
+      style={
+        float === undefined
+          ? { gridColumn: `${place.col + 1} / span ${span}`, gridRow: `${place.row + 1} / span ${rows}` }
+          : { position: 'absolute', left: float.left, top: float.top, width: float.width, height: float.height }
+      }
     >
       <WidgetFrame moduleTitle={widget.moduleTitle} label={widget.label} bare handle={handle} toolbar={toolbar}>
         {view}
