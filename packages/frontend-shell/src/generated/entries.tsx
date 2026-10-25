@@ -804,8 +804,9 @@ export const ChartEntry: ComponentRegistryEntry = {
 		const variant = coerceProp(resolveExpressionValue(node['variant'], ctx), 'Chart.variant', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['variant']
 		const showLegend = coerceProp(resolveExpressionValue(node['showLegend'], ctx), 'Chart.showLegend', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['showLegend']
 		const height = coerceProp(resolveExpressionValue(node['height'], ctx), 'Chart.height', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['height']
+		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'Chart.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['fill']
 		const series = coerceProp(resolveExpressionValue(node['series'], ctx), 'Chart.series', 'array', true) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['series']
-		return <Chart data={data} xAxisKey={xAxisKey} xAxisType={xAxisType} xFormat={xFormat} yFormat={yFormat} yUnit={yUnit} variant={variant} showLegend={showLegend} height={height} series={series} />
+		return <Chart data={data} xAxisKey={xAxisKey} xAxisType={xAxisType} xFormat={xFormat} yFormat={yFormat} yUnit={yUnit} variant={variant} showLegend={showLegend} height={height} fill={fill} series={series} />
 	},
 }
 
@@ -1149,8 +1150,9 @@ export const CardEntry: ComponentRegistryEntry = {
 		const header = node['header'] as unknown[] | undefined
 		const footer = node['footer'] as unknown[] | undefined
 		const onClick = coerceProp(resolveExpressionValue(node['onClick'], ctx), 'Card.onClick', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/layout/Card.js').CardProps['onClick']
+		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'Card.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/Card.js').CardProps['fill']
 		return (
-			<Card padding={padding} shadow={shadow} border={border} header={header ? renderChildren(header, registry, ctx) : null} footer={footer ? renderChildren(footer, registry, ctx) : null} onClick={onClick}>
+			<Card padding={padding} shadow={shadow} border={border} header={header ? renderChildren(header, registry, ctx) : null} footer={footer ? renderChildren(footer, registry, ctx) : null} onClick={onClick} fill={fill}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</Card>
 		)
@@ -1221,9 +1223,10 @@ export const HorizontalStackEntry: ComponentRegistryEntry = {
 		const gap = coerceProp(resolveExpressionValue(node['gap'], ctx), 'HorizontalStack.gap', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['gap']
 		const align = coerceProp(resolveExpressionValue(node['align'], ctx), 'HorizontalStack.align', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['align']
 		const justify = coerceProp(resolveExpressionValue(node['justify'], ctx), 'HorizontalStack.justify', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['justify']
+		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'HorizontalStack.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['fill']
 		const itemSizes = coerceProp(resolveExpressionValue(node['itemSizes'], ctx), 'HorizontalStack.itemSizes', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['itemSizes']
 		return (
-			<HorizontalStack gap={gap} align={align} justify={justify} itemSizes={itemSizes}>
+			<HorizontalStack gap={gap} align={align} justify={justify} fill={fill} itemSizes={itemSizes}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</HorizontalStack>
 		)
@@ -1279,8 +1282,9 @@ export const ScrollAreaEntry: ComponentRegistryEntry = {
 		const items = node['items'] as unknown[] | undefined
 		const scheme = coerceProp(resolveExpressionValue(node['scheme'], ctx), 'ScrollArea.scheme', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/ScrollArea.js').ScrollAreaProps['scheme']
 		const axis = coerceProp(resolveExpressionValue(node['axis'], ctx), 'ScrollArea.axis', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/ScrollArea.js').ScrollAreaProps['axis']
+		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'ScrollArea.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/ScrollArea.js').ScrollAreaProps['fill']
 		return (
-			<ScrollArea scheme={scheme} axis={axis}>
+			<ScrollArea scheme={scheme} axis={axis} fill={fill}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</ScrollArea>
 		)
@@ -1294,8 +1298,9 @@ export const SectionEntry: ComponentRegistryEntry = {
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
 		const title = coerceProp(resolveExpressionValue(node['title'], ctx), 'Section.title', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/layout/Section.js').SectionProps['title']
+		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'Section.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/Section.js').SectionProps['fill']
 		return (
-			<Section title={title}>
+			<Section title={title} fill={fill}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</Section>
 		)
@@ -1314,7 +1319,10 @@ export const StatTileEntry: ComponentRegistryEntry = {
 		const loading = coerceProp(resolveExpressionValue(node['loading'], ctx) ?? ctx['$initialLoading'], 'StatTile.loading', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['loading']
 		const href = coerceProp(resolveExpressionValue(node['href'], ctx), 'StatTile.href', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['href']
 		const external = coerceProp(resolveExpressionValue(node['external'], ctx), 'StatTile.external', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['external']
-		return <StatTile label={label} value={value} trend={trend} icon={icon ? renderChildren(icon, registry, ctx) : null} loading={loading} href={href} external={external} />
+		const nowrap = coerceProp(resolveExpressionValue(node['nowrap'], ctx), 'StatTile.nowrap', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['nowrap']
+		const compact = coerceProp(resolveExpressionValue(node['compact'], ctx), 'StatTile.compact', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['compact']
+		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'StatTile.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/StatTile.js').StatTileProps['fill']
+		return <StatTile label={label} value={value} trend={trend} icon={icon ? renderChildren(icon, registry, ctx) : null} loading={loading} href={href} external={external} nowrap={nowrap} compact={compact} fill={fill} />
 	},
 }
 
@@ -1356,8 +1364,9 @@ export const VerticalStackEntry: ComponentRegistryEntry = {
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
 		const gap = coerceProp(resolveExpressionValue(node['gap'], ctx), 'VerticalStack.gap', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/VerticalStack.js').VerticalStackProps['gap']
+		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'VerticalStack.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/VerticalStack.js').VerticalStackProps['fill']
 		return (
-			<VerticalStack gap={gap}>
+			<VerticalStack gap={gap} fill={fill}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</VerticalStack>
 		)
@@ -1865,7 +1874,7 @@ AbTestEntry.knownKeys = ["id","initial","label","variants"];
 AbTestEntry.requiresContext = ["AbExperimentsContext"];
 AvatarEntry.knownKeys = ["alt","fallback","size","src"];
 BadgeEntry.knownKeys = ["external","href","label","size","tone","variant"];
-ChartEntry.knownKeys = ["data","height","series","showLegend","variant","xAxisKey","xAxisType","xFormat","yFormat","yUnit"];
+ChartEntry.knownKeys = ["data","fill","height","series","showLegend","variant","xAxisKey","xAxisType","xFormat","yFormat","yUnit"];
 FetchSpinnerEntry.knownKeys = ["loading"];
 JsonViewerEntry.knownKeys = ["field","maxHeight","row"];
 MarkdownEntry.knownKeys = ["allowImages","collapsed","maxHeight","text"];
@@ -1908,7 +1917,7 @@ ActionBarEntry.allowedChildren = {"items":["btn"]};
 ActionBarEntry.knownKeys = ["items"];
 ActionBarEntry.providesContext = ["ButtonContext"];
 CardEntry.allowedChildren = {"items":["layout","display","composite"]};
-CardEntry.knownKeys = ["border","footer","header","items","onClick","padding","shadow"];
+CardEntry.knownKeys = ["border","fill","footer","header","items","onClick","padding","shadow"];
 CardActionsEntry.knownKeys = ["items"];
 CardActionsEntry.providesContext = ["ButtonContext"];
 CollapsibleEntry.allowedChildren = {"items":["field","layout","atomic"]};
@@ -1917,21 +1926,21 @@ DialogFooterEntry.knownKeys = ["items"];
 DialogFooterEntry.providesContext = ["ButtonContext"];
 DividerEntry.knownKeys = ["label","orientation"];
 HorizontalStackEntry.allowedChildren = {"items":["layout","table","form","display","composite","atomic"]};
-HorizontalStackEntry.knownKeys = ["align","gap","itemSizes","items","justify"];
+HorizontalStackEntry.knownKeys = ["align","fill","gap","itemSizes","items","justify"];
 NavBarEntry.knownKeys = ["items"];
 NavBarEntry.providesContext = ["ButtonContext"];
 PageContentEntry.allowedChildren = {"sections":["layout","composite","header","content","chart","table","tabs","navigation","action-bar","form","stepper","wizard","upload","dropzone","file","navigator","browser","keys","security","scopes","admin","management","versions","history"]};
 PageContentEntry.knownKeys = ["maxWidth","sections"];
 PageSectionEntry.knownKeys = ["actions","items","title"];
-ScrollAreaEntry.knownKeys = ["axis","items","scheme"];
+ScrollAreaEntry.knownKeys = ["axis","fill","items","scheme"];
 SectionEntry.allowedChildren = {"items":["layout","table","form","display","composite"]};
-SectionEntry.knownKeys = ["items","title"];
-StatTileEntry.knownKeys = ["external","href","icon","label","loading","trend","value"];
+SectionEntry.knownKeys = ["fill","items","title"];
+StatTileEntry.knownKeys = ["compact","external","fill","href","icon","label","loading","nowrap","trend","value"];
 TableRowActionsEntry.knownKeys = ["items"];
 TableRowActionsEntry.providesContext = ["ButtonContext"];
 ThemeScopeEntry.knownKeys = ["items","surface","theme","tokens"];
 VerticalStackEntry.allowedChildren = {"items":["layout","table","form","display","composite","atomic"]};
-VerticalStackEntry.knownKeys = ["gap","items"];
+VerticalStackEntry.knownKeys = ["fill","gap","items"];
 BackLinkEntry.knownKeys = ["label","to"];
 BreadcrumbEntry.knownKeys = ["currentPath","onNavigate"];
 ButtonLinkEntry.knownKeys = ["icon","label","size","to","variant"];
