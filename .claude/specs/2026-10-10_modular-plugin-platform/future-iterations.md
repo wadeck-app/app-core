@@ -26,6 +26,10 @@ A module (backend + DSL frontend) packaged as a zip/link that app-core can insta
 **Deferred:** 2026-10-11. **Reason:** user wants to focus on getting one real end-to-end thing working first (`queue`'s real module registering with app-core) before taking on new scope.
 **See:** module-packaging.md -- design sketch and the A/B source-type question are captured there, ready to pick up.
 
+### TODO: refactor and extract the dashboard into an app-module
+The dashboard (lattice of 100px cells, free drag-and-drop placement, module filter, refresh, hide, layout kept in the browser) is part of the frontend shell: `Dashboard.tsx`, `dashboardLayout.ts`, `useDashboardState.ts`, `WidgetCell.tsx`, `DragGuides.tsx`. The idea is to make it a module like the others (a page in the nav that collects the `widget`/`dashboard` extension points), so the shell keeps only the slots.
+**Deferred:** 2026-10-25 (user decision: keep it included for now). **Reason:** a module can only render DSL today (Decision #16/#30), and the dashboard needs pointer drag, measured layout and widget hosting, which DSL cannot express; extracting it needs the frontend-plugin system above or new DSL primitives.
+
 ## Upstream asks pending (dsl-view, not app-core's own backlog)
 
 ### `entriesGenerator` lazy/code-split option
