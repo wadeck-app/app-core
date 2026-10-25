@@ -197,11 +197,11 @@ describe('Dashboard: placing the widgets', () => {
     expect(storedLayout()['flow-0']).toEqual({ col: 0, row: 0 });
   });
 
-  it('comes up when dropped far below the last row (the empty rows close)', () => {
+  it('leaves a widget in the empty space where it is dropped, without sticking to the widget above', () => {
     renderDashboard();
-    // Under the 4 wide widget (row 0), not under the 2 high one on the left: it comes up to the row right under it.
     drag('Active flows', 5, 2);
-    expect(storedLayout()['flow-1']).toEqual({ col: 5, row: 1 });
+    expect(storedLayout()['flow-1']).toEqual({ col: 5, row: 2 });
+    expect(cellOf('Active flows').style.gridRow).toMatch(/^3 /);
   });
 
   it('makes room when dropped on another widget: nothing overlaps and the dropped widget is where it was let go', () => {
@@ -253,32 +253,11 @@ describe('Dashboard: placing the widgets', () => {
     expect(screen.queryByTestId('drop-target')).not.toBeInTheDocument();
   });
 
-  describe('variants of the open A/B test', () => {
-    it('draws no cells with "Target only", just the target', () => {
-      window.localStorage.setItem('ab.dashboard-drag', 'ghost');
-      renderDashboard();
-      holdOver('Active flows', 7, 0);
-      expect(screen.queryByTestId('drag-guides')).not.toBeInTheDocument();
-      expect(screen.getByTestId('drop-target')).toBeInTheDocument();
-      release();
-    });
-
-    it('keeps the others where they are while the widget is held with "Cells, still", and moves them on the drop', () => {
-      window.localStorage.setItem('ab.dashboard-drag', 'cells-still');
-      renderDashboard();
-      holdOver('Active flows', 7, 0);
-      expect(screen.getByTestId('drag-guides')).toBeInTheDocument();
-      expect(cellOf('Queue depth').style.gridRow).toMatch(/^1 /);
-      release();
-      expect(cellOf('Queue depth').style.gridRow).toMatch(/^2 /);
-    });
-
-    it('moves the others away while the widget is held with "Cells + push"', () => {
-      renderDashboard();
-      holdOver('Active flows', 7, 0);
-      expect(cellOf('Queue depth').style.gridRow).toMatch(/^2 /);
-      release();
-    });
+  it('moves the widget in the way while the pointer is still held', () => {
+    renderDashboard();
+    holdOver('Active flows', 7, 0);
+    expect(cellOf('Queue depth').style.gridRow).toMatch(/^2 /);
+    release();
   });
 
   it('lets the held widget float above the others, out of the grid flow', () => {

@@ -36,9 +36,15 @@ describe('resolveLayout: widgets the user placed', () => {
     expect(at(layout, 'b')).toEqual([0, 0]);
   });
 
-  it('closes the empty rows above a widget (it comes up as far as it can)', () => {
+  it('keeps a widget where it was put, the empty rows above it included', () => {
     const layout = resolveLayout([item('a', 2, 1, [0, 7])], 9);
+    expect(at(layout, 'a')).toEqual([0, 7]);
+  });
+
+  it('leaves a gap between two widgets of the same column', () => {
+    const layout = resolveLayout([item('a', 2, 1, [0, 0]), item('b', 2, 1, [0, 4])], 9);
     expect(at(layout, 'a')).toEqual([0, 0]);
+    expect(at(layout, 'b')).toEqual([0, 4]);
   });
 
   it('pushes a widget down when another one holds its place', () => {
@@ -76,9 +82,9 @@ describe('resolveLayout: a pinned widget', () => {
     expect(at(layout, 'b')).toEqual([3, 0]);
   });
 
-  it('comes up when dropped below the last row', () => {
+  it('stays where it is dropped, below the last row', () => {
     const layout = resolveLayout(items, 9, { key: 'a', col: 0, row: 9 });
-    expect(at(layout, 'a')).toEqual([0, 1]);
+    expect(at(layout, 'a')).toEqual([0, 9]);
   });
 
   it('is clamped to the columns that exist', () => {

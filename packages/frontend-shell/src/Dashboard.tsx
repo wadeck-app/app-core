@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PageContent, PageSection, useAbTest } from '@wadeck-app/dsl-ui';
+import { PageContent, PageSection } from '@wadeck-app/dsl-ui';
 import { DashboardBar } from './DashboardBar.js';
-import { DragGuides, type GuideStyle } from './DragGuides.js';
+import { DragGuides } from './DragGuides.js';
 import { WidgetCell, type DashboardWidget } from './WidgetCell.js';
 import { readingOrder, resolveLayout, rowsUsed, snapToCell, type LayoutItem, type Pin } from './dashboardLayout.js';
 import { navModulesFor, titleFromId } from './layout/navModel.js';
 import { useHiddenWidgets, useRefreshTick, useWidgetLayout, type RefreshInterval } from './useDashboardState.js';
-import { useDockTests } from './useDockTests.js';
 import { useGridColumns } from './useGridColumns.js';
 import { useWidgetDrag, type WidgetDrag } from './useWidgetDrag.js';
 import type { LoadedModuleSummary } from './types.js';
@@ -19,7 +18,8 @@ export interface DashboardProps {
 // the full width and the dashboard sets its own). It is a lattice of square cells of 100px, 16px apart, as many columns as
 // fit. A widget asks for its size in cells (width x height in its manifest); without a width it takes 2 cells and
 // more when its content is wider, and its height is at least what it asks for (1 row by default) and grows by whole rows to
-// fit its content. The user drops a widget on any cell; the others make room (see dashboardLayout.ts).
+// fit its content. The user drops a widget on any cell, empty cells above it included; only a widget in the way goes down
+// (see dashboardLayout.ts). While one is held, the cells are drawn under the widgets and a target shows where it lands.
 const SHARE = '85%';
 const CELL_PX = 100;
 const GAP_PX = 16;
@@ -27,16 +27,6 @@ const STRIDE_PX = CELL_PX + GAP_PX;
 const DEFAULT_WIDTH_CELLS = 2;
 // Rows drawn under the last widget while one is dragged, to drop below it.
 const SPARE_ROWS = 3;
-
-// What the user sees while dragging a widget (open A/B test): the guides under the widgets, and whether the others move
-// away while the pointer is still held or only on the drop.
-type DragVariant = 'datadog' | 'cells-still' | 'dots' | 'ghost';
-const DRAG_VARIANTS: Record<DragVariant, { guides: GuideStyle; live: boolean }> = {
-  datadog: { guides: 'cells', live: true },
-  'cells-still': { guides: 'cells', live: false },
-  dots: { guides: 'dots', live: true },
-  ghost: { guides: 'none', live: false },
-};
 
 interface Size {
   span: number;
@@ -48,20 +38,6 @@ interface Size {
 // -- widget/page is a placement distinction only, not a capability tier, so a
 // widget's view can declare $sources just like a page's.
 export function Dashboard({ modules }: DashboardProps): React.ReactElement {
-  const dragTest = useAbTest<DragVariant>({
-    id: 'dashboard-drag',
-    label: 'Widget drag',
-    initial: 'datadog',
-    options: {
-      datadog: { label: 'Cells + push', hint: 'The cells appear under the widgets, a target shows where the widget lands and the others move away while you hold it.' },
-      'cells-still': { label: 'Cells, still', hint: 'The cells appear and a target shows where it lands, but the others stay put until you let go.' },
-      dots: { label: 'Dots + push', hint: 'A dot at the center of every cell instead of the cells; the others move away while you hold the widget.' },
-      ghost: { label: 'Target only', hint: 'No guides: only the target where the widget lands; the others stay put until you let go.' },
-    },
-  });
-  useDockTests([dragTest]);
-  const variant = DRAG_VARIANTS[dragTest.value];
-
   const widgets: DashboardWidget[] = modules.flatMap((m) =>
     m.extensionPoints
       .filter((ep) => ep.kind === 'widget' && ep.slot === 'dashboard')
@@ -152,7 +128,7 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
   // And, when one is held, the places they would have if it were dropped here.
   const pin = drag === undefined ? undefined : pinOf(drag);
   const dropLayout = pin === undefined ? undefined : resolveLayout(settled, columnCount, pin);
-  const layout = variant.live && dropLayout !== undefined ? dropLayout : current;
+  const layout = dropLayout ?? current;
   const byKey = new Map(visibleWidgets.map((w) => [w.key, w]));
   const shown = readingOrder(layout).flatMap((key) => byKey.get(key) ?? []);
 
@@ -279,7 +255,7 @@ export function Dashboard({ modules }: DashboardProps): React.ReactElement {
                       minHeight: drag === undefined ? undefined : gridRows * STRIDE_PX,
                     }}
                   >
-                    {drag === undefined ? null : <DragGuides style={variant.guides} columns={columnCount} rows={gridRows} cellPx={CELL_PX} gapPx={GAP_PX} />}
+                    {drag === undefined ? null : <DragGuides columns={columnCount} rows={gridRows} cellPx={CELL_PX} gapPx={GAP_PX} />}
                     {target()}
                     {shown.map(cell)}
                   </div>
