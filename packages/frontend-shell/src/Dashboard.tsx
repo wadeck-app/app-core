@@ -16,7 +16,7 @@ export interface DashboardProps {
 
 // The dashboard takes 85% of the space beside the menu, centered (the page layout would cap it at 1152px: it is asked for
 // the full width and the dashboard sets its own). It is a lattice of square cells of 100px, 16px apart, as many columns as
-// fit. A widget asks for its size in cells (width x height in its manifest); without a width it takes 2 cells and
+// fit. A widget asks for its size in cells (width x height in its manifest); without a width it takes 3 cells and
 // more when its content is wider, and its height is at least what it asks for (1 row by default) and grows by whole rows to
 // fit its content. The user drops a widget on any cell, empty cells above it included; only a widget in the way goes down
 // (see dashboardLayout.ts). While one is held, the cells are drawn under the widgets and a target shows where it lands.
@@ -24,7 +24,7 @@ const SHARE = '85%';
 const CELL_PX = 100;
 const GAP_PX = 16;
 const STRIDE_PX = CELL_PX + GAP_PX;
-const DEFAULT_WIDTH_CELLS = 2;
+const DEFAULT_WIDTH_CELLS = 3;
 // Rows drawn under the last widget while one is dragged, to drop below it.
 const SPARE_ROWS = 3;
 

@@ -16,7 +16,7 @@ const widget = (label: string, extra: Record<string, unknown> = {}) => ({
 const page = { kind: 'page', slot: 'nav', label: 'Home', path: '/', view: {}, rawYaml: '$type: Badge\nlabel: home\n' };
 
 const modules: LoadedModuleSummary[] = [
-  { id: 'flow', version: '1.0.0', extensionPoints: [page, widget('Flow health', { width: 2, height: 2 }), widget('Active flows')] },
+  { id: 'flow', version: '1.0.0', extensionPoints: [page, widget('Flow health', { width: 2, height: 2 }), widget('Active flows', { width: 2 })] },
   { id: 'queue', version: '1.0.0', title: 'Message queue', extensionPoints: [widget('Queue depth', { width: 4 })] },
 ];
 
@@ -61,11 +61,17 @@ describe('Dashboard: widget size from the manifest, in cells of 100px', () => {
     expect(cellOf('Flow health').style.gridRow).toMatch(/span 2$/);
   });
 
-  it('gives a widget without a size 2 columns and 1 row (it grows with its content)', () => {
+  it('gives a widget without a size 3 columns and 1 row (it grows with its content)', () => {
     measuredWidth(1100);
-    renderDashboard();
-    expect(cellOf('Active flows').style.gridColumn).toMatch(/span 2$/);
-    expect(cellOf('Active flows').style.gridRow).toMatch(/span 1$/);
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <Dashboard modules={[{ id: 'solo', version: '1.0.0', extensionPoints: [widget('Unsized')] }]} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(cellOf('Unsized').style.gridColumn).toMatch(/span 3$/);
+    expect(cellOf('Unsized').style.gridRow).toMatch(/span 1$/);
   });
 
   it('limits a widget to the columns that exist when the grid is narrow', () => {

@@ -12,7 +12,7 @@ export interface ResolvedExtensionPoint {
   path?: string;
   // Sort key within a shell slot (navbar and overlay widgets); entries without it come last.
   order?: number;
-  // Size of a dashboard widget in grid cells of 100px, 1 to 12. Absent: 2 wide (more if its content is wider), as tall as its content.
+  // Size of a dashboard widget in grid cells of 100px, 1 to 12. Absent: 3 wide (more if its content is wider), as tall as its content.
   width?: number;
   height?: number;
 }

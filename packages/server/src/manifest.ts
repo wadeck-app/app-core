@@ -14,7 +14,7 @@ const ViewSchema = z.object({
 // parameter that reaches the view as `$route.<name>`. "/" alone is the module home page (/modules/<moduleId>).
 const PAGE_PATH_PATTERN = /^(?:\/|(?:\/(?:[A-Za-z0-9_-]+|:[A-Za-z_][A-Za-z0-9_]*))+)$/;
 
-// How many cells of the dashboard grid (square cells of 100px) a widget takes, in width and in height. Absent: 2 wide, and
+// How many cells of the dashboard grid (square cells of 100px) a widget takes, in width and in height. Absent: 3 wide, and
 // as tall as its content (at least 1 row). The grid has 10 columns or so on a wide screen; a wider widget takes all of them.
 export const WIDGET_MAX_SPAN = 12;
 const SpanSchema = z.number().int().min(1, 'must be between 1 and ' + WIDGET_MAX_SPAN).max(WIDGET_MAX_SPAN, 'must be between 1 and ' + WIDGET_MAX_SPAN).optional();

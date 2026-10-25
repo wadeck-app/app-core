@@ -357,7 +357,7 @@ A `widget` on slot `dashboard` may say how many cells of the dashboard grid it t
 { "kind": "widget", "slot": "dashboard", "label": "Runs per day", "width": 2, "height": 2, "view": { "type": "path", "value": "./src/dsl-views/runs.yaml" } }
 ```
 
-- The dashboard is a lattice of square cells of 100px (16px apart, about 10 columns on a wide screen). `width`: 1 to 12 cells; without it a widget takes 2 and more when its content is wider than its tile (a row of figures that would be cut), up to the columns that exist; a declared width is kept as it is. `height`: 1 to 12 cells, default 1. A height is a minimum: a widget whose content needs more room takes more whole cells, so a widget never scrolls inside or gets cut.
+- The dashboard is a lattice of square cells of 100px (16px apart, about 10 columns on a wide screen). `width`: 1 to 12 cells; without it a widget takes 3 and more when its content is wider than its tile (a row of figures that would be cut), up to the columns that exist; a declared width is kept as it is. `height`: 1 to 12 cells, default 1. A height is a minimum: a widget whose content needs more room takes more whole cells, so a widget never scrolls inside or gets cut.
 - Anything else (0, 5, 1.5, a string) fails `check` and `package`, and so does a size on a widget that is not on the dashboard slot, where it would have no effect.
 
 ### Feedback of user actions (`$actions`)
