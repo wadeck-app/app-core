@@ -28,8 +28,9 @@ export function WidgetFrame({ moduleTitle, label, bare, handle, toolbar, childre
         <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-content">{title}</h3>
         {toolbar}
       </header>
-      <div className="flex-1 p-2">
-        <div role="article" aria-label={title} className={bare ? BARE : undefined}>
+      <div className="flex flex-1 flex-col p-2">
+        {/* The article stretches to the room the tile gives (its height is definite for the widget root, so `fill` in dsl-ui can work) and grows with its content. */}
+        <div role="article" aria-label={title} className={bare ? `flex-1 ${BARE}` : 'flex-1'}>
           {children}
         </div>
       </div>

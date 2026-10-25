@@ -44,7 +44,13 @@ export function useRowsToFit(cell: RefObject<HTMLElement | null>, gapPx: number)
       const header = frame.querySelector('header');
       const borders = frame.offsetHeight - frame.clientHeight;
       const chrome = (header?.offsetHeight ?? 0) + borders + bodyPadding;
-      setNeeded(rowsToFit(chrome + article.offsetHeight, cellPx, gapPx));
+      // The article stretches to the room of the tile (so a widget can fill it): its natural height, the one the content
+      // needs, is read with the stretch released for a moment (no paint in between).
+      const stretch = article.style.flex;
+      article.style.flex = 'none';
+      const naturalHeight = article.offsetHeight;
+      article.style.flex = stretch;
+      setNeeded(rowsToFit(chrome + naturalHeight, cellPx, gapPx));
       // A content wider than the tile (a row of figures cut at the border, text that cannot wrap): the columns it needs.
       if (article.scrollWidth > article.clientWidth + 1) {
         const bodyPaddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
@@ -61,7 +67,14 @@ export function useRowsToFit(cell: RefObject<HTMLElement | null>, gapPx: number)
     observer.observe(article);
     // And the grid: at mount it can still have no layout, and nothing in the content changes when it gets one.
     observer.observe(grid);
-    return () => observer.disconnect();
+    // The article keeps the size of the tile while its content shrinks, so its size says nothing then: a change of the
+    // content itself asks for a new measure.
+    const mutations = typeof MutationObserver === 'undefined' ? undefined : new MutationObserver(measure);
+    mutations?.observe(article, { childList: true, subtree: true, characterData: true });
+    return () => {
+      observer.disconnect();
+      mutations?.disconnect();
+    };
   }, [cell, gapPx]);
 
   return { rows: needed, cols: neededCols };
