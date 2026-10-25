@@ -73,6 +73,10 @@ function fetchLatestVersion(pkgName: string): Promise<string> {
 // Same as `app-core-cli update`: the updater with UPDATER_FORCE, so it installs without waiting for its own schedule.
 function runUpdate(updaterPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (updaterPath === '') {
+      reject(new Error('this is a repo-built bundle, not a release: it never updates the global install (run the installed app-core-cli update)'));
+      return;
+    }
     if (!fs.existsSync(updaterPath)) {
       reject(new Error(`updater not found at ${updaterPath} (a checkout has none: install with npm install -g @wadeck-app/app-core-cli)`));
       return;
