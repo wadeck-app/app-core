@@ -453,6 +453,20 @@ A `page` of the menu (slot `nav`, or `<providerId>:nav`) can set itself apart fr
 - Both fields fail `check` and `package` on anything that is not a page of the menu, and `groupLabel` without `separatorBefore: true`, with the fix in the message.
 - The menu orders entries as before (own pages in manifest order, then contributed pages by `order`), so place the entry that starts a group where you want the rule.
 
+### Dates and times
+
+Never format a date yourself: the shell has one formatter, set by the user (calendar-clock button in the top bar) and applied to every date, so a module that formats its own ignores the user's choices. Settings, kept in the browser: language (English `en-GB` by default, never the browser's language unless the user picks "auto"), ISO 8601 or the language's conventions, 12h/24h, time zone (computer, UTC or a name), first day of the week, weekday names.
+
+| You write | Use |
+|---|---|
+| A DataTable column | `format: datetime` (or `date`, `time`), optional `dateStyle: short \| medium \| long` (default `short`). The exact instant is the cell's tooltip. |
+| A date in a view | `$type: DateText` with `value`, optional `dateStyle` (default `medium`), `part: datetime \| date \| time`, `relative: true` ("5 minutes ago"). Text only; the tooltip is the exact instant. |
+| A component (`dsl-lib`) | `useDateFormat()` from `@wadeck-app/dsl-ui`: `format(value, style?, part?)`, `exact(value)`, `relative(value)`, `weekdays(style?)`, `months(style?)`, `intl(options)`. |
+
+- `value` is a `Date`, epoch milliseconds or ISO 8601 text. An empty `value` shows nothing; any other text that is not a date is shown as it came and reported once in the console.
+- Chart axes: `weekdays('narrow')` gives seven names starting at the user's first day of the week; `intl(options)` is an `Intl.DateTimeFormat` with the user's language, time zone and hour cycle. Do not call `Intl` with an undefined language: that is the browser's, not the user's.
+- `dsl-ui` is a shared singleton, so your bundle and the shell see the same formatter. `dslLib.shared` must ask `@wadeck-app/dsl-ui` at `2026.10.26-290` or later to use these.
+
 ### Providers and dependents
 
 A module that `requires` another follows it:
