@@ -63,6 +63,16 @@ function copyFixtureSources(name: string): string {
   return dest;
 }
 
+describe('dev A/B test dock', () => {
+  it.each([
+    { opts: {}, expected: false },
+    { opts: { abTests: true }, expected: true },
+  ])('tells the shell abTests=$expected for $opts', async ({ opts, expected }) => {
+    const handle = await start(copyFixtureSources('app-module-slot-provider'), opts);
+    expect(await getJson(handle, '/api/shell-settings')).toEqual({ status: 200, body: { abTests: expected } });
+  });
+});
+
 describe('dev with dependencies (real server)', () => {
   it('registers the required provider and fills its slot from a source contributor', async () => {
     const contributor = copyFixtureSources('app-module-slot-contributor-a');

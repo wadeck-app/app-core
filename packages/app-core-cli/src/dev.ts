@@ -20,7 +20,7 @@ export const DEV_VERSION = '0.0.0-dev';
 export const DEBOUNCE_MS = 200;
 // Where dev keeps the registry, data/ and state/ of the modules it runs, inside the module folder (gitignore it).
 export const DEV_CONFIG_DIR = '.app-core-dev';
-export const DEV_USAGE = `app-core-cli dev <module-dir> [--port <n>] [--watch [--poll]] [--reset] [--no-tray] [--previous-version <v>] [${LINK_USAGE}]... [--id <module-id>]`;
+export const DEV_USAGE = `app-core-cli dev <module-dir> [--port <n>] [--watch [--poll]] [--reset] [--no-tray] [--ab-tests] [--previous-version <v>] [${LINK_USAGE}]... [--id <module-id>]`;
 
 export type RebuildResult =
   | { ok: true; durationMs: number; version: string; warnings: string[] }
@@ -39,6 +39,8 @@ export interface DevOptions {
   reset?: boolean;
   // Persist this as the module's last loaded version before starting, so its migrate hook runs with it as previousVersion.
   previousVersion?: string;
+  // Show the A/B test dock in the bundled (production) frontend; off by default.
+  abTests?: boolean;
   // Where the registry, data/ and state/ live instead of <module-dir>/.app-core-dev (mainly for tests that must not write into the repo).
   configDir?: string;
   // Called after every rebuild; required with watch, so no result is ever dropped.
@@ -81,13 +83,15 @@ export interface DevArgs {
   reset: boolean;
   /** No tray icon next to the dev server. */
   noTray: boolean;
+  /** Show the A/B test dock. */
+  abTests: boolean;
   previousVersion?: string;
   links: Links;
 }
 
 // `--id`, `--port`, `--watch`, `--poll`, `--reset`, `--previous-version` and `--link` (repeatable); anything else is an error (no silently ignored typo).
 export function parseDevArgs(args: string[]): DevArgs {
-  const parsed: DevArgs = { watch: false, poll: false, reset: false, noTray: false, links: {} };
+  const parsed: DevArgs = { watch: false, poll: false, reset: false, noTray: false, abTests: false, links: {} };
   for (let i = 0; i < args.length; i += 1) {
     const flag = args[i];
     const value = args[i + 1];
@@ -103,6 +107,9 @@ export function parseDevArgs(args: string[]): DevArgs {
         break;
       case '--no-tray':
         parsed.noTray = true;
+        break;
+      case '--ab-tests':
+        parsed.abTests = true;
         break;
       case '--previous-version':
         if (value === undefined || value.startsWith('--')) {
@@ -311,7 +318,7 @@ export async function runDev(appModuleDir: string, opts: DevOptions = {}): Promi
   let stopped = false;
   let built: Awaited<ReturnType<typeof buildServer>>;
   try {
-    built = await buildServer({ configDir, publicDir });
+    built = await buildServer({ configDir, publicDir, abTests: opts.abTests });
   } catch (err) {
     throw new Error(`${getErrorMessage(err)} (config dir ${configDir}; --reset wipes it)`);
   }

@@ -150,6 +150,7 @@ async function main(): Promise<void> {
         poll: args.poll,
         links: args.links,
         reset: args.reset,
+        abTests: args.abTests,
         previousVersion: args.previousVersion,
         onRebuild: (result) => {
           if (result.ok) {
@@ -164,6 +165,9 @@ async function main(): Promise<void> {
         onWatchError: (message) => console.error(`watch error: ${message}`),
       });
       console.log(`app-core-cli dev: ${handle.url} (config dir ${handle.configDir}, kept between runs; --reset wipes it)`);
+      if (args.abTests) {
+        console.log('  --ab-tests: A/B test dock enabled; it is off without the flag');
+      }
       if (handle.resetPerformed) {
         console.log(`  --reset: wiped ${handle.configDir} before starting`);
       }

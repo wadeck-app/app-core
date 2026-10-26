@@ -187,7 +187,7 @@ Publish `dist-module` as a folder, not a zip: an npm tarball is already an archi
 
 ### `dev`
 
-`app-core-cli dev <module-dir> [--port <n>] [--watch [--poll]] [--reset] [--previous-version <v>] [--link <package>=<folder>]... [--id <id>]` starts a real app-core (config dir `<module-dir>/.app-core-dev`, bundled dashboard) with the module and everything it requires, then prints each module (id, version, origin) and the URL.
+`app-core-cli dev <module-dir> [--port <n>] [--watch [--poll]] [--reset] [--ab-tests] [--previous-version <v>] [--link <package>=<folder>]... [--id <id>]` starts a real app-core (config dir `<module-dir>/.app-core-dev`, bundled dashboard) with the module and everything it requires, then prints each module (id, version, origin) and the URL.
 
 - **Source module** (has `src/`): `check` runs first and fails with its normal messages, then the same pipeline as `package` writes `<module-dir>/dist-module` with version `0.0.0-dev` (always this version, printed) and registers it.
 - **Built module** (a `dist-module` folder or its `manifest.json`): registered as is; `--watch` is refused. A manifest that is neither (no `backendEntryPath`, no `src/`) is an error telling you to run `package`.
@@ -195,6 +195,7 @@ Publish `dist-module` as a folder, not a zip: an npm tarball is already an archi
 - **`--watch`**: `src/` and `manifest.json` of the module under development are watched (`fs.watch` recursive, 200 ms debounce; where recursive watch is unavailable, or with `--poll`, mtimes are polled every 500 ms and the banner says so). Each change runs `check` + `package` and pushes the result through the server's own `POST /api/modules/update`; one line per rebuild: `ok` with its duration, or the full error. A failed rebuild exits nothing: the previous version keeps serving (if the update fails after the old version's teardown, the server message says the module is failed until the next good build). Rebuilds run one at a time; changes during a rebuild queue exactly one more. Dependencies are not watched: rebuild one and restart `dev`.
 - **Config dir**: `<module-dir>/.app-core-dev/` (for a built `dist-module`, the folder that holds it), kept between runs: `data/` (`ctx.dataDir`) and `state/` (the persisted previous version) survive, for the module and its dependencies alike. Only the registry (`modules/`) is rewritten at each start. Add `.app-core-dev` to `.gitignore`; `check` accepts it and `package` never copies it.
 - **`--reset`**: wipes `.app-core-dev` before starting (banner line `--reset: wiped ...`). If the wipe fails, the error names the folder.
+- **`--ab-tests`**: shows the A/B test dock (`AbTest` nodes of your views) in the bundled dashboard, which hides it otherwise.
 - **`--previous-version <v>`**: writes `<v>` as the module's last loaded version before the start, so `migrate` runs with it as `previousVersion`. Without it, a second run is the same version (`0.0.0-dev`) and `migrate` does not run. `<v>` equal to the version dev loads is an error (migrate would not run).
 - **Stop**: SIGINT/SIGTERM close the server, so module teardowns run (reason `shutdown`); the config dir is kept.
 - The id comes from the manifest; `--id` only asserts it. A manifest without `id` is an error. A dependency or (without `--watch`) the module itself that fails to load makes `dev` exit with the reason.

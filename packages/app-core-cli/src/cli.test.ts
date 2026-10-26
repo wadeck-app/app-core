@@ -182,8 +182,9 @@ describe('parseDevArgs', () => {
     expect(parsed.watch).toBe(true);
     expect(parsed.poll).toBe(true);
     expect(Object.keys(parsed.links)).toEqual(['@a/p', '@a/q']);
-    expect(parseDevArgs([])).toEqual({ watch: false, poll: false, reset: false, noTray: false, links: {} });
+    expect(parseDevArgs([])).toEqual({ watch: false, poll: false, reset: false, noTray: false, abTests: false, links: {} });
     expect(parseDevArgs(['--no-tray']).noTray).toBe(true);
+    expect(parseDevArgs(['--ab-tests']).abTests).toBe(true);
   });
 
   it('rejects a missing value, a bad port, an unknown option and --poll without --watch', () => {
