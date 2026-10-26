@@ -36,8 +36,9 @@ const segmentClass = (active: boolean): string => `${SEGMENT} ${active ? 'bg-pri
 // refresh button, and the ways back from what the user changed (hidden widgets, a custom layout).
 export function DashboardBar(props: DashboardBarProps): React.ReactElement {
   const { refreshedAt, onRefresh, hiddenCount, onRestore, layoutCustomized, onResetLayout, modules, filter, onFilter, interval, onInterval } = props;
+  // Sticks below the top bar of the AppShell, whose height follows its `barOnScroll` state (0 outside the shell).
   return (
-    <div role="toolbar" aria-label="Dashboard controls" className="sticky top-0 z-10 -mx-2 mb-4 flex flex-wrap items-center gap-2 bg-bg px-2 py-2">
+    <div role="toolbar" aria-label="Dashboard controls" className="sticky top-[var(--app-shell-bar-height,0px)] z-10 -mx-2 mb-4 flex flex-wrap items-center gap-2 bg-bg px-2 py-2">
       {modules.length > 1 ? (
         <div role="group" aria-label="Show widgets of" className="inline-flex divide-x divide-border overflow-hidden rounded-md border border-border bg-surface">
           <button type="button" aria-pressed={filter === undefined} className={segmentClass(filter === undefined)} onClick={() => onFilter(undefined)}>
