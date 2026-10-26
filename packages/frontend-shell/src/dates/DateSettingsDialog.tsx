@@ -1,9 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { CalendarClock, Undo2 } from 'lucide-react';
-import { Dialog, IconButton } from '@wadeck-app/dsl-ui';
-import { createDateFormatter } from './dateFormatter.js';
+import { AUTO_LOCALE, DEFAULT_DATE_SETTINGS, Dialog, IconButton, LOCAL_TIME_ZONE, createDateFormatter, type DateSettings } from '@wadeck-app/dsl-ui';
 import { useDateSettingsControl } from './DateFormatContext.js';
-import { AUTO_LOCALE, DEFAULT_DATE_SETTINGS, LOCAL_TIME_ZONE, type DateSettings } from './dateSettings.js';
 
 const SELECT = 'rounded border border-border bg-surface px-1.5 py-1 text-xs text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
 const LABEL = 'flex items-center justify-between gap-3 text-sm text-content';

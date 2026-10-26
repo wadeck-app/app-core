@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DateFormatProvider, useDateFormat } from './DateFormatContext.js';
+import { useDateFormat } from '@wadeck-app/dsl-ui';
+import { DateSettingsProvider } from './DateFormatContext.js';
 import { DateSettingsButton } from './DateSettingsDialog.js';
 import { DATE_SETTINGS_KEY } from './dateSettings.js';
 
@@ -12,10 +13,10 @@ function Sample(): React.ReactElement {
 
 function renderDialog() {
   render(
-    <DateFormatProvider>
+    <DateSettingsProvider>
       <DateSettingsButton />
       <Sample />
-    </DateFormatProvider>,
+    </DateSettingsProvider>,
   );
   fireEvent.click(screen.getByRole('button', { name: 'Date and time settings' }));
   return within(screen.getByRole('dialog', { name: 'Date and time' }));
@@ -59,8 +60,9 @@ describe('DateSettingsButton', () => {
   });
 });
 
-describe('useDateFormat', () => {
-  it('throws, saying what to do, outside the provider', () => {
-    expect(() => render(<Sample />)).toThrow(/needs <DateFormatProvider> above it/);
+describe('without the provider', () => {
+  it('shows dates with the documented default (English, 24h), not the language of the browser', () => {
+    render(<Sample />);
+    expect(screen.getByTestId('sample')).toHaveTextContent(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}$/);
   });
 });

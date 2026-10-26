@@ -26,6 +26,7 @@ import { Avatar } from '@wadeck-app/dsl-ui/dist/components/display/Avatar.js'
 import { Badge } from '@wadeck-app/dsl-ui/dist/components/display/Badge.js'
 const ChartLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').then(m => ({ default: m.Chart })))
 const Chart = (props: React.ComponentProps<typeof ChartLazy>) => <LazyBoundary><ChartLazy {...props} /></LazyBoundary>
+import { DateText } from '@wadeck-app/dsl-ui/dist/components/display/DateText.js'
 import { FetchSpinner } from '@wadeck-app/dsl-ui/dist/components/display/FetchSpinner.js'
 import { JsonViewer } from '@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js'
 const MarkdownLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').then(m => ({ default: m.Markdown })))
@@ -807,6 +808,19 @@ export const ChartEntry: ComponentRegistryEntry = {
 		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'Chart.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['fill']
 		const series = coerceProp(resolveExpressionValue(node['series'], ctx), 'Chart.series', 'array', true) as import('@wadeck-app/dsl-ui/dist/components/display/Chart.js').ChartProps['series']
 		return <Chart data={data} xAxisKey={xAxisKey} xAxisType={xAxisType} xFormat={xFormat} yFormat={yFormat} yUnit={yUnit} variant={variant} showLegend={showLegend} height={height} fill={fill} series={series} />
+	},
+}
+
+export const DateTextEntry: ComponentRegistryEntry = {
+	name: 'DateText', category: 'atomic', tags: ["date","time","text"],
+	nodeSchema: null as never,
+	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['DateTextNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
+	render: ({ node, ctx }: RegistryRenderProps) => {
+		const value = (resolveExpressionValue(node['value'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/DateText.js').DateTextProps['value']
+		const dateStyle = (resolveExpressionValue(node['dateStyle'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/DateText.js').DateTextProps['dateStyle']
+		const part = (resolveExpressionValue(node['part'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/DateText.js').DateTextProps['part']
+		const relative = coerceProp(resolveExpressionValue(node['relative'], ctx), 'DateText.relative', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/DateText.js').DateTextProps['relative']
+		return <DateText value={value} dateStyle={dateStyle} part={part} relative={relative} />
 	},
 }
 
@@ -1777,6 +1791,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 	AvatarEntry,
 	BadgeEntry,
 	ChartEntry,
+	DateTextEntry,
 	FetchSpinnerEntry,
 	JsonViewerEntry,
 	MarkdownEntry,
@@ -1876,6 +1891,7 @@ AbTestEntry.requiresContext = ["AbExperimentsContext"];
 AvatarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["alt","fallback","size","src"] : [];
 BadgeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["external","href","label","size","tone","variant"] : [];
 ChartEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["data","fill","height","series","showLegend","variant","xAxisKey","xAxisType","xFormat","yFormat","yUnit"] : [];
+DateTextEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["dateStyle","part","relative","value"] : [];
 FetchSpinnerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["loading"] : [];
 JsonViewerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["field","maxHeight","row"] : [];
 MarkdownEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["allowImages","collapsed","maxHeight","text"] : [];
@@ -1970,7 +1986,7 @@ TooltipEntry.allowedChildren = {"items":["atomic","composite"]};
 TooltipEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["content","items"] : [];
 BulkActionsToolbarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items","onClearSelection","selectedCount"] : [];
 DataTableEntry.allowedChildren = {"filtersTop":["filter"],"filters":["filter"]};
-DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","badge","href","external","title"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition","icon"]}}},"link":{"keys":["type","to","label","icon","position","external","width"]}}}};
+DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","dateStyle","badge","href","external","title"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition","icon"]}}},"link":{"keys":["type","to","label","icon","position","external","width"]}}}};
 DataTableEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["actionPending","actionPendingRows","batchActions","batchActionsPosition","collapseLabel","columns","defaultFilters","emptyMessage","expandLabel","expansion","expansionCondition","fill","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onRowClick","onSortColChange","onSortDirChange","refreshing","rowKey","rows","selectable","sortCol","sortDir"] : [];
 DataTableEntry.providesContext = ["DataTableSelectionCtx","DataTableFilterCtx"];
 DataTableEntry.requiresContext = ["RouterContext"];

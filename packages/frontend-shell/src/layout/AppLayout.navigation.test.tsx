@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { DateFormatProvider } from '../dates/DateFormatContext.js';
+import { DateSettingsProvider } from '../dates/DateFormatContext.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { LoadedModuleSummary } from '../types.js';
 import { AppLayout } from './AppLayout.js';
@@ -17,7 +17,7 @@ const modules: LoadedModuleSummary[] = [
 function renderAt(path: string, nav = navModulesFor(modules)) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <DateFormatProvider>
+      <DateSettingsProvider>
         <Routes>
           <Route
             path="*"
@@ -28,7 +28,7 @@ function renderAt(path: string, nav = navModulesFor(modules)) {
             }
           />
         </Routes>
-      </DateFormatProvider>
+      </DateSettingsProvider>
     </MemoryRouter>,
   );
 }

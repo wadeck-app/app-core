@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { DateFormatProvider } from '../dates/DateFormatContext.js';
+import { DateSettingsProvider } from '../dates/DateFormatContext.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AppLayout } from './AppLayout.js';
 import { moduleColor } from './Logo.js';
@@ -13,11 +13,11 @@ const settings = FIXTURE_NAV[4];
 const renderAt = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
-      <DateFormatProvider>
+      <DateSettingsProvider>
         <AppLayout modules={[]} navModules={FIXTURE_NAV}>
           <p>content</p>
         </AppLayout>
-      </DateFormatProvider>
+      </DateSettingsProvider>
     </MemoryRouter>,
   );
 
@@ -121,11 +121,11 @@ describe('AppLayout: a module that is not listed (showInNav: false)', () => {
   const renderHidden = (path: string) =>
     render(
       <MemoryRouter initialEntries={[path]}>
-        <DateFormatProvider>
+        <DateSettingsProvider>
           <AppLayout modules={[]} navModules={navModules}>
             <p>content</p>
           </AppLayout>
-        </DateFormatProvider>
+        </DateSettingsProvider>
       </MemoryRouter>,
     );
   const tabNames = () => within(screen.getByRole('navigation', { name: 'Modules' })).getAllByRole('link').map((l) => l.textContent);
@@ -270,11 +270,11 @@ describe('AppLayout: a page contributed to another module side menu', () => {
   const renderContrib = (path: string) =>
     render(
       <MemoryRouter initialEntries={[path]}>
-        <DateFormatProvider>
+        <DateSettingsProvider>
           <AppLayout modules={[]} navModules={navModules}>
             <p>content</p>
           </AppLayout>
-        </DateFormatProvider>
+        </DateSettingsProvider>
       </MemoryRouter>,
     );
   const side = () => within(screen.getByRole('navigation', { name: 'Billing pages' }));
@@ -316,11 +316,11 @@ describe('AppLayout: separators in the side menu', () => {
   it('draws a captioned separator above the page that asks for one, and only there', () => {
     render(
       <MemoryRouter initialEntries={['/modules/ops']}>
-        <DateFormatProvider>
+        <DateSettingsProvider>
           <AppLayout modules={[]} navModules={withSeparators}>
             <p>content</p>
           </AppLayout>
-        </DateFormatProvider>
+        </DateSettingsProvider>
       </MemoryRouter>,
     );
     const menu = within(screen.getByTestId('shell-menu'));

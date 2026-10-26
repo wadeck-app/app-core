@@ -5,7 +5,7 @@ import { Dashboard } from './Dashboard.js';
 import { ModuleIndex } from './ModuleIndex.js';
 import { ModulePage } from './ModulePage.js';
 import { useShellSettings } from './useShellSettings.js';
-import { DateFormatProvider } from './dates/DateFormatContext.js';
+import { DateSettingsProvider } from './dates/DateFormatContext.js';
 import { OverlayWidgets } from './OverlayWidgets.js';
 import { ShellNotifier } from './ShellNotifier.js';
 import { modulePagePath } from './modulePaths.js';
@@ -47,7 +47,7 @@ export default function App(): React.ReactElement {
   return (
     <BrowserRouter>
       {/* The one formatter of dates and times, from the user's settings: every date of the app goes through it. */}
-      <DateFormatProvider>
+      <DateSettingsProvider>
       {/* Provides UrlParamContext/RouterContext: module views bind components to URL params (e.g. Pagination `urlParam`). */}
       {/* The one A/B dock (development builds, or `serve --ab-tests`): the shell's own tests and the AbTest nodes of module views share it. */}
       {/* Not `enabled={false}`: that would switch the dock off in development too. */}
@@ -105,7 +105,7 @@ export default function App(): React.ReactElement {
         </ToastProvider>
       </RouterProvider>
       </AbExperiments>
-      </DateFormatProvider>
+      </DateSettingsProvider>
     </BrowserRouter>
   );
 }
