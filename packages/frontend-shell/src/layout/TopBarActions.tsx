@@ -4,8 +4,9 @@ import { IconButton, useTheme } from '@wadeck-app/dsl-ui';
 import { ModuleWidget, widgetsFor } from '../ModuleWidgets.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from '../types.js';
 import { VersionsMenu } from '../VersionsMenu.js';
+import { DateSettingsButton } from '../dates/DateSettingsDialog.js';
 
-// Right-aligned group shared by every top bar: navbar widgets, versions menu, theme toggle.
+// Right-aligned group shared by every top bar: navbar widgets, date settings, versions menu, theme toggle.
 export function TopBarActions({ modules, failed = [] }: { modules: LoadedModuleSummary[]; failed?: FailedModuleSummary[] }): React.ReactElement {
   const { theme, setTheme } = useTheme();
   return (
@@ -15,6 +16,7 @@ export function TopBarActions({ modules, failed = [] }: { modules: LoadedModuleS
           <ModuleWidget moduleId={w.moduleId} rawYaml={w.rawYaml} slot="navbar" />
         </span>
       ))}
+      <DateSettingsButton />
       <VersionsMenu modules={modules} failed={failed} />
       <IconButton
         icon={theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}

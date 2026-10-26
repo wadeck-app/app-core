@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { DateFormatProvider } from '../dates/DateFormatContext.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { LoadedModuleSummary } from '../types.js';
 import { AppLayout } from './AppLayout.js';
@@ -16,16 +17,18 @@ const modules: LoadedModuleSummary[] = [
 function renderAt(path: string, nav = navModulesFor(modules)) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route
-          path="*"
-          element={
-            <AppLayout modules={modules} navModules={nav}>
-              <p>content</p>
-            </AppLayout>
-          }
-        />
-      </Routes>
+      <DateFormatProvider>
+        <Routes>
+          <Route
+            path="*"
+            element={
+              <AppLayout modules={modules} navModules={nav}>
+                <p>content</p>
+              </AppLayout>
+            }
+          />
+        </Routes>
+      </DateFormatProvider>
     </MemoryRouter>,
   );
 }

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { DateFormatProvider } from '../dates/DateFormatContext.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TopBarActions } from './TopBarActions.js';
 
@@ -12,7 +13,9 @@ describe('TopBarActions theme toggle', () => {
   const renderBar = () =>
     render(
       <MemoryRouter>
-        <TopBarActions modules={[]} />
+        <DateFormatProvider>
+          <TopBarActions modules={[]} />
+        </DateFormatProvider>
       </MemoryRouter>,
     );
 
