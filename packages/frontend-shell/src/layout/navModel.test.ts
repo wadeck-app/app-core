@@ -205,3 +205,16 @@ describe('title (the manifest display name)', () => {
     expect(navModulesFor([named, plain]).map((m) => m.title)).toEqual(['Flow Charts', 'Billing reports']);
   });
 });
+
+describe('separators in the side menu', () => {
+  it('passes separatorBefore and groupLabel from the manifest to the page, own and contributed', () => {
+    const flow = mod('flow', page('nav', 'Executions', '/'), { ...page('nav', 'Logs', '/logs'), separatorBefore: true, groupLabel: 'Diagnostics' });
+    const chart = mod('flow-chart', { ...page('flow:nav', 'Charts', '/charts'), separatorBefore: true });
+    const menu = navModulesFor([flow, chart]).find((m) => m.id === 'flow')?.pages;
+    expect(menu?.map((p) => [p.label, p.separatorBefore, p.groupLabel])).toEqual([
+      ['Executions', undefined, undefined],
+      ['Logs', true, 'Diagnostics'],
+      ['Charts', true, undefined],
+    ]);
+  });
+});

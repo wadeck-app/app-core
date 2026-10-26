@@ -293,6 +293,8 @@ export class ModuleManager {
       path: ep.path,
       width: ep.width,
       height: ep.height,
+      separatorBefore: ep.separatorBefore,
+      groupLabel: ep.groupLabel,
     }));
 
     const problems = this.findProblems(entry.id, manifest, resolvedViews);

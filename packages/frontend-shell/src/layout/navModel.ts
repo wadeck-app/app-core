@@ -7,6 +7,9 @@ export interface NavPage {
   label: string;
   // A module home page ("/") must not stay highlighted on the module's other pages.
   exact: boolean;
+  // A rule above the entry in the side menu, and the caption of the group that follows (from the manifest).
+  separatorBefore?: boolean;
+  groupLabel?: string;
 }
 
 // Base slot: page/nav -> a navigation entry routing to a full-page render (frontend-shell.md "Base slots").
@@ -20,6 +23,8 @@ export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
         routePath: ep.path !== undefined && !ep.path.includes(':') ? modulePagePath(m.id, ep.path) : `/modules/${m.id}/${i}`,
         label: ep.label ?? `${m.id} #${i}`,
         exact: ep.path === '/',
+        separatorBefore: ep.separatorBefore,
+        groupLabel: ep.groupLabel,
       })),
   );
 }
@@ -50,7 +55,7 @@ function contributedPagesFor(modules: LoadedModuleSummary[]): ContributedPage[] 
         if (provider === undefined || provider === m.id || !loaded.has(provider) || ep.kind !== 'page' || ep.path === undefined) {
           return [];
         }
-        return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), label: ep.label ?? ep.path, exact: ep.path === '/' } }];
+        return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), label: ep.label ?? ep.path, exact: ep.path === '/', separatorBefore: ep.separatorBefore, groupLabel: ep.groupLabel } }];
       }),
     )
     .map((entry, seq) => ({ entry, seq }))

@@ -291,3 +291,32 @@ describe('AppLayout: a page contributed to another module side menu', () => {
     expect(rootAccent()).toBe(moduleColor('billing'));
   });
 });
+
+describe('AppLayout: separators in the side menu', () => {
+  const withSeparators = navModulesFor([
+    {
+      id: 'ops',
+      version: '1.0.0',
+      extensionPoints: [
+        { kind: 'page', slot: 'nav', label: 'Overview', path: '/', view: {}, rawYaml: '' },
+        { kind: 'page', slot: 'nav', label: 'Jobs', path: '/jobs', view: {}, rawYaml: '', separatorBefore: true, groupLabel: 'Automation' },
+        { kind: 'page', slot: 'nav', label: 'Logs', path: '/logs', view: {}, rawYaml: '' },
+      ],
+    },
+  ]);
+
+  it('draws a captioned separator above the page that asks for one, and only there', () => {
+    render(
+      <MemoryRouter initialEntries={['/modules/ops']}>
+        <AppLayout modules={[]} navModules={withSeparators}>
+          <p>content</p>
+        </AppLayout>
+      </MemoryRouter>,
+    );
+    const menu = within(screen.getByTestId('shell-menu'));
+    const separators = menu.getAllByRole('separator');
+    expect(separators).toHaveLength(1);
+    expect(separators[0]).toHaveAccessibleName('Automation');
+    expect(menu.getAllByRole('link').map((l) => l.textContent)).toEqual(['Overview', 'Jobs', 'Logs']);
+  });
+});

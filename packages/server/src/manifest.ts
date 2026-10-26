@@ -34,6 +34,9 @@ const ExtensionPointSchema = z
     // Size of a dashboard widget, in grid cells (see WIDGET_MAX_SPAN).
     width: SpanSchema,
     height: SpanSchema,
+    // A rule above this entry of the side menu, to set groups of pages apart; `groupLabel` is the caption of the group that follows.
+    separatorBefore: z.boolean().optional(),
+    groupLabel: z.string().trim().min(1, 'groupLabel must not be empty').optional(),
     path: z
       .string()
       .regex(PAGE_PATH_PATTERN, 'path must look like "/jobs/:id": segments of letters, digits, "_" or "-", or ":param"')
@@ -51,6 +54,18 @@ const ExtensionPointSchema = z
       if (ep[field] !== undefined && (ep.kind !== 'widget' || ep.slot !== 'dashboard')) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `"${field}" only sizes a widget on the dashboard (kind "widget", slot "dashboard"); this is kind "${ep.kind}" on slot "${ep.slot}". Remove it, or move the widget to the dashboard slot.` });
       }
+    }
+  })
+  // `separatorBefore` and `groupLabel` shape the side menu: on a page of the menu (slot `nav` or `<providerId>:nav`) only.
+  .superRefine((ep, ctx) => {
+    const inMenu = ep.kind === 'page' && (ep.slot === MENU_SLOT_LOCAL || menuSlotProvider(ep.slot) !== undefined);
+    for (const field of ['separatorBefore', 'groupLabel'] as const) {
+      if (ep[field] !== undefined && !inMenu) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `"${field}" only shapes the side menu (kind "page", slot "nav" or "<module>:nav"); this is kind "${ep.kind}" on slot "${ep.slot}". Remove it, or make this a page of the menu.` });
+      }
+    }
+    if (ep.groupLabel !== undefined && ep.separatorBefore !== true) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['groupLabel'], message: '"groupLabel" is the caption of the separator: add "separatorBefore": true, or remove "groupLabel".' });
     }
   })
   // A contribution to `<providerId>:nav` is an entry in that module's side menu: it needs what a menu entry needs.

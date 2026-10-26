@@ -440,6 +440,19 @@ Every module's side menu is the slot `<id>:nav`, with nothing to declare. A modu
 - A module cannot use `<own id>:nav`: use `nav` for your own pages. A module with only such pages gets no tab; the provider's tab carries them.
 - When the provider is unregistered, the entry goes with it (dependents rules below).
 
+### Separating groups in the side menu (`separatorBefore`, `groupLabel`)
+
+A `page` of the menu (slot `nav`, or `<providerId>:nav`) can set itself apart from the entry above it:
+
+```json
+{ "kind": "page", "slot": "nav", "label": "Jobs", "path": "/jobs", "separatorBefore": true, "groupLabel": "Automation", "view": { "type": "path", "value": "./src/dsl-views/jobs.yaml" } }
+```
+
+- `separatorBefore: true` draws a rule above the entry; `groupLabel` is the caption of the group that starts there (only with `separatorBefore: true`, not empty).
+- A separator that would be first or last in the menu is not drawn. In a folded or icon-only menu a caption is not shown, the rule stays.
+- Both fields fail `check` and `package` on anything that is not a page of the menu, and `groupLabel` without `separatorBefore: true`, with the fix in the message.
+- The menu orders entries as before (own pages in manifest order, then contributed pages by `order`), so place the entry that starts a group where you want the rule.
+
 ### Providers and dependents
 
 A module that `requires` another follows it:

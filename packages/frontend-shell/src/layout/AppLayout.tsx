@@ -53,15 +53,19 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   const menu: ShellMenu = {
     title: menuModule.title,
     label: `${menuModule.title} pages`,
-    items: menuModule.pages.map((p) => ({
-      id: p.routePath,
-      // The tab already says the module: its pages are named without it.
-      label: onDashboard ? p.label : trimModulePrefix(p.label, menuModule.title),
-      href: p.routePath,
-      // The dashboard menu lists modules: each gets its logo.
-      icon: onDashboard ? <Logo title={p.label} moduleId={p.moduleId} /> : undefined,
-      current: isPageCurrent(pathname, p) ? ('page' as const) : undefined,
-    })),
+    // A page that asks for a separator gets a rule (and a caption) above its entry; the shell drops one that leads or trails.
+    items: menuModule.pages.flatMap((p): ShellMenu['items'] => [
+      ...(p.separatorBefore === true ? [{ kind: 'separator' as const, id: `separator:${p.routePath}`, label: p.groupLabel }] : []),
+      {
+        id: p.routePath,
+        // The tab already says the module: its pages are named without it.
+        label: onDashboard ? p.label : trimModulePrefix(p.label, menuModule.title),
+        href: p.routePath,
+        // The dashboard menu lists modules: each gets its logo.
+        icon: onDashboard ? <Logo title={p.label} moduleId={p.moduleId} /> : undefined,
+        current: isPageCurrent(pathname, p) ? ('page' as const) : undefined,
+      },
+    ]),
   };
 
   const actions = (

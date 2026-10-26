@@ -15,6 +15,9 @@ export interface ResolvedExtensionPoint {
   // Size of a dashboard widget in grid cells of 100px, 1 to 12. Absent: 3 wide (more if its content is wider), as tall as its content.
   width?: number;
   height?: number;
+  // A page of the side menu: a rule above its entry, with `groupLabel` as the caption of the group that follows.
+  separatorBefore?: boolean;
+  groupLabel?: string;
 }
 
 // Runtime-loaded components of a module (its dsl-lib folder), cache-busted URLs served by app-core.
