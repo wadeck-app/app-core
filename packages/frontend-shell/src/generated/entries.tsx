@@ -67,7 +67,7 @@ import { Divider } from '@wadeck-app/dsl-ui/dist/components/layout/Divider.js'
 import { HorizontalStack } from '@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js'
 import { NavBar } from '@wadeck-app/dsl-ui/dist/components/layout/NavBar.js'
 import { PageContent } from '@wadeck-app/dsl-ui/dist/components/layout/PageContent.js'
-import { PageSection } from '@wadeck-app/dsl-ui/dist/components/layout/PageHeader.js'
+import { PageSection } from '@wadeck-app/dsl-ui/dist/components/layout/PageSection.js'
 import { ScrollArea } from '@wadeck-app/dsl-ui/dist/components/layout/ScrollArea.js'
 import { Section } from '@wadeck-app/dsl-ui/dist/components/layout/Section.js'
 import { StatTile } from '@wadeck-app/dsl-ui/dist/components/layout/StatTile.js'
@@ -1264,7 +1264,7 @@ export const PageSectionEntry: ComponentRegistryEntry = {
 	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['PageSectionNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
-		const title = coerceProp(resolveExpressionValue(node['title'], ctx), 'PageSection.title', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/layout/PageHeader.js').PageSectionProps['title']
+		const title = coerceProp(resolveExpressionValue(node['title'], ctx), 'PageSection.title', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/layout/PageSection.js').PageSectionProps['title']
 		const actions = node['actions'] as unknown[] | undefined
 		return (
 			<PageSection title={title} actions={actions ? renderChildren(actions, registry, ctx) : null}>
