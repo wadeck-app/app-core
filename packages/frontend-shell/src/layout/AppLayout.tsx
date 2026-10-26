@@ -88,6 +88,8 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       moreLabel="More modules"
       barOnScroll={barOnScroll}
       menuVariant={menuVariant}
+      // The name of the drag handle of the `resizable` menu.
+      resizeLabel="Resize the side menu"
     >
       <Breadcrumb crumbs={trimmedTrail(breadcrumbFor(pathname, navModules, modules))} />
       {children}

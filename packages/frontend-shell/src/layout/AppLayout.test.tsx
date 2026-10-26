@@ -98,9 +98,10 @@ describe('AppLayout: sidebar, always visible', () => {
     expect(side.querySelector('[data-initials]')).toBeNull();
     const heading = within(side).getByRole('heading', { name: 'Billing' });
     expect(heading.className).toContain('sr-only');
-    // The pages start right at the top of the sidebar.
-    expect(side.firstElementChild).toBe(heading);
-    expect(side.children[1]).toBe(within(side).getByRole('navigation', { name: 'Billing pages' }));
+    // The pages start right at the top of the sidebar (inside the part of the menu that scrolls on its own).
+    const scroller = side.querySelector('[data-menu-scroller]');
+    expect(scroller?.firstElementChild).toBe(heading);
+    expect(scroller?.children[1]).toBe(within(side).getByRole('navigation', { name: 'Billing pages' }));
   });
 
   it('uses the theme tokens only, so it follows light and dark (no hard-coded dark classes)', () => {
