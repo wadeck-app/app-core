@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { AbExperiments } from '@wadeck-app/dsl-ui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VersionsMenu } from './VersionsMenu.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
@@ -65,5 +66,29 @@ describe('VersionsMenu', () => {
     render(<VersionsMenu modules={[]} failed={[]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
     expect(await screen.findByText('No module installed.')).toBeInTheDocument();
+  });
+
+  // Tests run with NODE_ENV=test (not development): the host decides, as with `serve --ab-tests`.
+  it.each([
+    { enabled: true, shown: true },
+    { enabled: false, shown: false },
+  ])('says whether the A/B tests are on (host enabled: $enabled)', async ({ enabled, shown }) => {
+    stubBuildInfo(new Response(JSON.stringify(buildInfo), { status: 200 }));
+    render(
+      <AbExperiments enabled={enabled}>
+        <VersionsMenu modules={modules} failed={[]} />
+      </AbExperiments>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText(/A\/B tests are on/) !== null).toBe(shown);
+  });
+
+  it('says nothing about A/B tests without a host', async () => {
+    stubBuildInfo(new Response(JSON.stringify(buildInfo), { status: 200 }));
+    render(<VersionsMenu modules={modules} failed={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText(/A\/B tests/)).not.toBeInTheDocument();
   });
 });

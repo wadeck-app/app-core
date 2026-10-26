@@ -1,6 +1,6 @@
 import React from 'react';
 import { Info } from 'lucide-react';
-import { IconButton, Popover } from '@wadeck-app/dsl-ui';
+import { IconButton, Popover, useAbExperiments } from '@wadeck-app/dsl-ui';
 import { AppCoreVersionRow } from './AppCoreVersionRow.js';
 import { VersionRow } from './VersionRow.js';
 import { useBuildInfo } from './useBuildInfo.js';
@@ -10,6 +10,8 @@ import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 // load, and the libraries the shell was built with (the ones module bundles share).
 export function VersionsMenu({ modules, failed }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[] }): React.ReactElement {
   const build = useBuildInfo();
+  // On in development and with `app-core-cli serve --ab-tests`: the host of the dock says so, whatever the reason.
+  const abTests = useAbExperiments()?.enabled === true;
   const failedOnly = failed.filter((f) => !modules.some((m) => m.id === f.id));
 
   return (
@@ -38,6 +40,10 @@ export function VersionsMenu({ modules, failed }: { modules: LoadedModuleSummary
             </VersionRow>
           ))}
         </dl>
+
+        {abTests ? (
+          <p className="mt-3 text-muted">A/B tests are on: the dock is at the bottom of the page.</p>
+        ) : null}
 
         {build.state === 'ready' ? (
           <>
