@@ -324,9 +324,19 @@ describe('AppLayout: separators in the side menu', () => {
       </MemoryRouter>,
     );
     const menu = within(screen.getByTestId('shell-menu'));
-    const separators = menu.getAllByRole('separator');
+    // The drag handle of the menu is a separator too (the resizable menu): only the ones between the pages are looked at.
+    const separators = menu.getAllByRole('separator').filter((s) => s.getAttribute('aria-label') !== 'Resize the side menu');
     expect(separators).toHaveLength(1);
     expect(separators[0]).toHaveAccessibleName('Automation');
     expect(menu.getAllByRole('link').map((l) => l.textContent)).toEqual(['Overview', 'Jobs', 'Logs']);
+  });
+});
+
+describe('AppLayout: resizable side menu', () => {
+  it('has a drag handle named in English, which the user can also move with the keyboard', () => {
+    renderAt(billing.basePath);
+    const handle = within(screen.getByTestId('shell-menu')).getByRole('separator', { name: 'Resize the side menu' });
+    expect(handle).toHaveAttribute('aria-valuenow');
+    expect(handle).toHaveAttribute('tabindex', '0');
   });
 });

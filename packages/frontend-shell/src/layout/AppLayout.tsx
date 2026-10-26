@@ -31,7 +31,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   const { pathname } = useLocation();
   const active = activeNavModule(pathname, navModules);
   const tabOrder = useTabOrder();
-  const { barOnScroll, menuVariant } = useShellTests();
+  const { barOnScroll } = useShellTests();
   // On the document, not on a subtree: the popovers and dialogs of the pages are rendered in portals and must follow the accent too.
   useRootAccent(active ? moduleColor(active.id) : undefined);
 
@@ -87,7 +87,8 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       // Lists the tabs that do not fit, so a module is never unreachable when there are many.
       moreLabel="More modules"
       barOnScroll={barOnScroll}
-      menuVariant={menuVariant}
+      // Decided: the user drags the edge of the menu to the width they want (kept in this browser).
+      menuVariant="resizable"
       // The name of the drag handle of the `resizable` menu.
       resizeLabel="Resize the side menu"
     >

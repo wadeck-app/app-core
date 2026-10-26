@@ -45,8 +45,7 @@ describe('App (A/B test dock outside development)', () => {
     render(<App />);
     expect(screen.getByTestId('ab-dock')).toBeInTheDocument();
     expect(screen.getByText('Demo test')).toBeInTheDocument();
-    // The shell's own tests (how dsl-ui's AppShell draws the top bar and the side menu) share the dock.
+    // The shell's own test (how dsl-ui's AppShell draws the top bar) shares the dock.
     expect(screen.getByText('Top bar on scroll')).toBeInTheDocument();
-    expect(screen.getByText('Side menu')).toBeInTheDocument();
   });
 });
