@@ -7,7 +7,6 @@ import { NavSettings } from './NavSettings.js';
 import { breadcrumbFor, trimModulePrefix, type Crumb } from './navHelpers.js';
 import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent, listedNavModules } from './navModel.js';
 import { TopBarActions } from './TopBarActions.js';
-import { useShellTests } from './useShellTests.js';
 import { applyTabOrder, useTabOrder } from './useTabOrder.js';
 import type { LayoutProps } from './types.js';
 
@@ -31,7 +30,6 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   const { pathname } = useLocation();
   const active = activeNavModule(pathname, navModules);
   const tabOrder = useTabOrder();
-  const { barOnScroll } = useShellTests();
   // On the document, not on a subtree: the popovers and dialogs of the pages are rendered in portals and must follow the accent too.
   useRootAccent(active ? moduleColor(active.id) : undefined);
 
@@ -86,7 +84,8 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       skipLabel="Skip to content"
       // Lists the tabs that do not fit, so a module is never unreachable when there are many.
       moreLabel="More modules"
-      barOnScroll={barOnScroll}
+      // Decided: about half the height once the page is scrolled, full again at the top.
+      barOnScroll="shrink"
       // Decided: the user drags the edge of the menu to the width they want (kept in this browser).
       menuVariant="resizable"
       // The name of the drag handle of the `resizable` menu.

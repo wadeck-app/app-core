@@ -45,7 +45,7 @@ describe('App (A/B test dock outside development)', () => {
     render(<App />);
     expect(screen.getByTestId('ab-dock')).toBeInTheDocument();
     expect(screen.getByText('Demo test')).toBeInTheDocument();
-    // The shell's own test (how dsl-ui's AppShell draws the top bar) shares the dock.
-    expect(screen.getByText('Top bar on scroll')).toBeInTheDocument();
+    // No test of the shell's own is open: the dock holds the one of the module view and nothing else.
+    expect(screen.queryByText('Top bar on scroll')).not.toBeInTheDocument();
   });
 });
