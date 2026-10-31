@@ -372,35 +372,37 @@ describe('failure handling', () => {
   });
 
   describe('timeouts', () => {
+    // The import of the hook or backend file runs under the same timeout as the step that hangs: at 50 ms a busy machine made
+    // the import expire first ("cannot import the backend ... timed out" instead of the expected setup message).
     const hang = 'export default function () { return new Promise(() => {}); }\n';
 
     it('a hanging teardown is reported with the module id and hook, and the unload still completes', async () => {
       const warnings: string[] = [];
-      const manager = new ModuleManager({ configDir, hookTimeoutMs: 50, onWarning: (m) => warnings.push(m) });
+      const manager = new ModuleManager({ configDir, hookTimeoutMs: 300, onWarning: (m) => warnings.push(m) });
       await manager.loadFromEntry(writeModule({ teardown: hang }));
 
       await manager.unload('hooked');
 
       expect(manager.get('hooked')).toBeUndefined();
       expect(routeAnswers(manager)).toBe(false);
-      expect(warnings[0]).toMatch(/module "hooked": teardown of version 1\.0\.0 failed.*timed out after 50 ms.*cannot be cancelled.*APP_CORE_HOOK_TIMEOUT_MS/);
+      expect(warnings[0]).toMatch(/module "hooked": teardown of version 1\.0\.0 failed.*timed out after 300 ms.*cannot be cancelled.*APP_CORE_HOOK_TIMEOUT_MS/);
     });
 
     it('a hanging migrate fails the module with the hook name and the timeout', async () => {
-      const manager = new ModuleManager({ configDir, hookTimeoutMs: 50 });
+      const manager = new ModuleManager({ configDir, hookTimeoutMs: 300 });
       await manager.loadFromEntry(writeModule({}));
 
-      await expect(manager.loadFromEntry(writeModule({ version: '2.0.0', migrate: hang }))).rejects.toThrow(/module "hooked": migrate .*failed: timed out after 50 ms/);
+      await expect(manager.loadFromEntry(writeModule({ version: '2.0.0', migrate: hang }))).rejects.toThrow(/module "hooked": migrate .*failed: timed out after 300 ms/);
 
       expect(manager.get('hooked')).toBeUndefined();
       expect(stateOf()).toEqual({ version: '1.0.0' });
     });
 
     it('a hanging setup fails the module, disposes its context and records nothing', async () => {
-      const manager = new ModuleManager({ configDir, hookTimeoutMs: 50 });
+      const manager = new ModuleManager({ configDir, hookTimeoutMs: 300 });
       const entry = writeModule({ backend: "export default function (ctx) { ctx.registerRoute('GET', '/ping', (req, reply) => reply.send({})); return new Promise(() => {}); }\n" });
 
-      await expect(manager.loadFromEntry(entry)).rejects.toThrow(/module "hooked": setup .*failed: timed out after 50 ms/);
+      await expect(manager.loadFromEntry(entry)).rejects.toThrow(/module "hooked": setup .*failed: timed out after 300 ms/);
 
       expect(routeAnswers(manager)).toBe(false);
       expect(fs.existsSync(path.join(configDir, 'state', 'hooked.json'))).toBe(false);
