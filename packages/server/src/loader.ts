@@ -21,6 +21,7 @@ import type { RegistryEntry } from './registry.js';
 import { ModuleRouteRegistry } from './moduleRoutes.js';
 import { formatContributionProblems, rootTypeOf, validateContributions, type ContributionProblem, type ProviderLookup } from './contributions.js';
 import { orderByRequires, readRequiredIds } from './loadOrder.js';
+import { isUnloadable, loadCommonJs } from './commonJsBackend.js';
 
 const nodeRequire = createRequire(import.meta.url);
 
@@ -63,6 +64,14 @@ export interface BackendEntryExports {
 
 type ImportedFunction = (ctx: never) => unknown;
 
+// A backend or hook file once loaded: its function, how to let go of that copy (a CommonJS file only), and what an ES module
+// keeps in memory that cannot be let go.
+interface ImportedFile {
+  fn: ImportedFunction;
+  release?: () => void;
+  held?: string;
+}
+
 export interface LoadedModule {
   id: string;
   manifest: Manifest;
@@ -80,6 +89,10 @@ export interface LoadedModule {
   // What the backend's default export (setup) returned, handed to teardown as `instance`.
   instance: unknown;
   teardown?: ModuleTeardownHook;
+  // Lets go of the loaded copies of the backend and hooks (CommonJS files), once the instance is torn down.
+  release: () => void;
+  // What this load keeps in memory for good (ES module files), said in the answer of the update that caused it.
+  held: string[];
 }
 
 export interface ModuleManagerOptions {
@@ -305,72 +318,104 @@ export class ModuleManager {
     // Read before anything is replaced: a corrupt state file must not cost the running instance.
     const previousVersion = readPreviousVersion(this.options.configDir, entry.id);
     const lifecycle = manifest.lifecycle;
-    const setup = await this.importFunction(entry.id, manifest.version, manifestPath, 'backendEntryPath', manifest.backendEntryPath, 'the backend');
-    const migrate =
-      lifecycle?.migrate === undefined ? undefined : await this.importFunction(entry.id, manifest.version, manifestPath, 'lifecycle.migrate', lifecycle.migrate, 'the migrate hook');
-    const teardown =
-      lifecycle?.teardown === undefined ? undefined : await this.importFunction(entry.id, manifest.version, manifestPath, 'lifecycle.teardown', lifecycle.teardown, 'the teardown hook');
-
-    const dataDir = resolveDataDir(this.options.configDir, entry.id);
-    fs.mkdirSync(dataDir, { recursive: true });
-    const hookContext: ModuleHookContext = { id: entry.id, version: manifest.version, previousVersion, dataDir };
-
-    progress.applied = true;
-    const existing = this.loaded.get(entry.id);
-    if (existing) {
-      await this.stopInstance(existing, 'update');
-    }
-    const afterTeardown = existing === undefined ? '' : ` The previous version (${existing.manifest.version}) was already torn down and is not restored.`;
-
-    if (migrate !== undefined && previousVersion !== null && previousVersion !== manifest.version) {
-      try {
-        await runWithTimeout(`module "${entry.id}": migrate`, this.hookTimeoutMs, () => (migrate as ModuleLifecycleHook)(hookContext));
-      } catch (err) {
-        throw new Error(
-          `module "${entry.id}": migrate (${lifecycle?.migrate}) from ${previousVersion} to ${manifest.version} failed: ${sentence(err)}${afterTeardown} ` +
-            'The module is failed. Fix the hook (it runs again on every load until it succeeds, so it must be safe to run twice), then register the module again.',
-        );
+    // Every copy loaded below is let go of if this load fails, and when the instance is torn down: an update must not add a
+    // copy of the module to the memory of the server.
+    const releases: Array<() => void> = [];
+    const releaseAll = (): void => {
+      for (const release of releases) {
+        release();
       }
-    }
-
-    const moduleContext = createModuleContext(entry.id, this.routeRegistry, dataDir);
-    let instance: unknown;
+    };
+    const held: string[] = [];
+    const importOne = async (field: string, declared: string, what: string): Promise<ImportedFunction> => {
+      const file = await this.importFunction(entry.id, manifest.version, manifestPath, field, declared, what);
+      if (file.release !== undefined) {
+        releases.push(file.release);
+      }
+      if (file.held !== undefined) {
+        held.push(file.held);
+      }
+      return file.fn;
+    };
+    let setup: ImportedFunction;
+    let migrate: ImportedFunction | undefined;
+    let teardown: ImportedFunction | undefined;
     try {
-      instance = await runWithTimeout(`module "${entry.id}": setup`, this.hookTimeoutMs, () => (setup as (ctx: ModuleContext) => unknown)(moduleContext));
+      setup = await importOne('backendEntryPath', manifest.backendEntryPath, 'the backend');
+      migrate = lifecycle?.migrate === undefined ? undefined : await importOne('lifecycle.migrate', lifecycle.migrate, 'the migrate hook');
+      teardown = lifecycle?.teardown === undefined ? undefined : await importOne('lifecycle.teardown', lifecycle.teardown, 'the teardown hook');
     } catch (err) {
-      // Routes, timers and listeners registered before the failure must not outlive it.
-      moduleContext.dispose();
-      throw new Error(
-        `module "${entry.id}": setup (default export of ${manifest.backendEntryPath}) failed: ${sentence(err)}${afterTeardown} ` +
-          'The module is failed and nothing it registered is left behind. Fix the backend, then register the module again.',
-      );
-    }
-    try {
-      writeLoadedVersion(this.options.configDir, entry.id, manifest.version);
-    } catch (err) {
-      moduleContext.dispose();
+      releaseAll();
       throw err;
     }
 
-    const loadedModule: LoadedModule = {
-      id: entry.id,
-      manifest,
-      manifestDir,
-      source: manifestPath,
-      moduleContext,
-      resolvedViews,
-      dslLib,
-      dataDir,
-      hookContext,
-      instance,
-      teardown: teardown as ModuleTeardownHook | undefined,
-    };
-    this.loaded.set(entry.id, loadedModule);
-    return loadedModule;
+    try {
+      const dataDir = resolveDataDir(this.options.configDir, entry.id);
+      fs.mkdirSync(dataDir, { recursive: true });
+      const hookContext: ModuleHookContext = { id: entry.id, version: manifest.version, previousVersion, dataDir };
+
+      progress.applied = true;
+      const existing = this.loaded.get(entry.id);
+      if (existing) {
+        await this.stopInstance(existing, 'update');
+      }
+      const afterTeardown = existing === undefined ? '' : ` The previous version (${existing.manifest.version}) was already torn down and is not restored.`;
+
+      if (migrate !== undefined && previousVersion !== null && previousVersion !== manifest.version) {
+        try {
+          await runWithTimeout(`module "${entry.id}": migrate`, this.hookTimeoutMs, () => (migrate as ModuleLifecycleHook)(hookContext));
+        } catch (err) {
+          throw new Error(
+            `module "${entry.id}": migrate (${lifecycle?.migrate}) from ${previousVersion} to ${manifest.version} failed: ${sentence(err)}${afterTeardown} ` +
+              'The module is failed. Fix the hook (it runs again on every load until it succeeds, so it must be safe to run twice), then register the module again.',
+          );
+        }
+      }
+
+      const moduleContext = createModuleContext(entry.id, this.routeRegistry, dataDir);
+      let instance: unknown;
+      try {
+        instance = await runWithTimeout(`module "${entry.id}": setup`, this.hookTimeoutMs, () => (setup as (ctx: ModuleContext) => unknown)(moduleContext));
+      } catch (err) {
+        // Routes, timers and listeners registered before the failure must not outlive it.
+        moduleContext.dispose();
+        throw new Error(
+          `module "${entry.id}": setup (default export of ${manifest.backendEntryPath}) failed: ${sentence(err)}${afterTeardown} ` +
+            'The module is failed and nothing it registered is left behind. Fix the backend, then register the module again.',
+        );
+      }
+      try {
+        writeLoadedVersion(this.options.configDir, entry.id, manifest.version);
+      } catch (err) {
+        moduleContext.dispose();
+        throw err;
+      }
+
+      const loadedModule: LoadedModule = {
+        id: entry.id,
+        manifest,
+        manifestDir,
+        source: manifestPath,
+        moduleContext,
+        resolvedViews,
+        dslLib,
+        dataDir,
+        hookContext,
+        instance,
+        teardown: teardown as ModuleTeardownHook | undefined,
+        release: releaseAll,
+        held: existing === undefined ? [] : held,
+      };
+      this.loaded.set(entry.id, loadedModule);
+      return loadedModule;
+    } catch (err) {
+      releaseAll();
+      throw err;
+    }
   }
 
   // Imports a backend or hook file and returns its default export, which must be a function.
-  private async importFunction(id: string, version: string, manifestPath: string, field: string, declared: string, what: string): Promise<ImportedFunction> {
+  private async importFunction(id: string, version: string, manifestPath: string, field: string, declared: string, what: string): Promise<ImportedFile> {
     const file = path.resolve(path.dirname(manifestPath), declared);
     if (!fs.existsSync(file)) {
       throw new Error(`module "${id}": ${what} ${file} (${field} in ${manifestPath}) does not exist. Fix: rebuild the module with "app-core-cli package", or correct the path.`);
@@ -381,27 +426,41 @@ export class ModuleManager {
     // "package" emits) would keep serving the old code: drop its cache entry first. Node keys that cache by the REAL
     // path, which differs from `file` when a folder on the way is a link (a global npm prefix that is a junction, nvm):
     // drop both, or the update would never be seen.
-    delete nodeRequire.cache[file];
-    delete nodeRequire.cache[fs.realpathSync(file)];
-    const specifier = `${pathToFileURL(file).href}?v=${encodeURIComponent(version)}&m=${mtimeMs}-${size}`;
     let mod: BackendEntryExports;
+    let release: (() => void) | undefined;
     try {
-      mod = (await runWithTimeout(`module "${id}": import of ${file}`, this.hookTimeoutMs, () => import(specifier))) as BackendEntryExports;
+      if (isUnloadable(file)) {
+        // A CommonJS file is loaded with require so that the copy a previous load made can be let go of; import() keeps every
+        // copy it made until the process ends. What import() gives for such a file is { default: module.exports }.
+        const loaded = await runWithTimeout(`module "${id}": load of ${file}`, this.hookTimeoutMs, async () => loadCommonJs(file));
+        release = loaded.release;
+        mod = { default: loaded.exports } as BackendEntryExports;
+      } else {
+        const specifier = `${pathToFileURL(file).href}?v=${encodeURIComponent(version)}&m=${mtimeMs}-${size}`;
+        mod = (await runWithTimeout(`module "${id}": import of ${file}`, this.hookTimeoutMs, () => import(specifier))) as BackendEntryExports;
+      }
     } catch (err) {
       throw new Error(`module "${id}": cannot import ${what} ${file} (${field}): ${sentence(err)} The running version, if any, keeps serving.`);
     }
     if (typeof mod.default !== 'function') {
+      release?.();
       throw new Error(
         `module "${id}": ${what} ${file} (${field}) must default-export a function (ctx) => void, got ${describeDefault(mod.default)}. ` +
           'For a CJS bundle add the footer `module.exports = module.exports.default;` ("app-core-cli package" does it); for ESM write `export default function (ctx) {}`.',
       );
     }
-    return mod.default as ImportedFunction;
+    return {
+      fn: mod.default as ImportedFunction,
+      release,
+      held: isUnloadable(file)
+        ? undefined
+        : `${what} ${file} is an ES module: Node cannot unload it, so every update keeps the previous copy in memory until the server restarts. Ship a CommonJS file (app-core-cli package writes api-backend/backend.cjs) and updates release it.`,
+    };
   }
 
   // Runs the instance's teardown (errors and timeouts are logged, never thrown: an instance that cannot
-  // tear down must still be replaced or removed), then disposes its context and drops it. The old module
-  // instance itself may still leak outside moduleContext -- an accepted limitation.
+  // tear down must still be replaced or removed), then disposes its context, lets go of the loaded copies of its files and
+  // drops it. A CommonJS backend is freed with them; an ES module is not (Node never unloads one), see `held`.
   private async stopInstance(mod: LoadedModule, reason: ModuleTeardownReason): Promise<void> {
     try {
       const teardown = mod.teardown;
@@ -413,6 +472,7 @@ export class ModuleManager {
       (this.options.onWarning ?? writeWarning)(`module "${mod.id}": teardown of version ${mod.manifest.version} failed, the module is unloaded anyway: ${getErrorMessage(err)}`);
     } finally {
       mod.moduleContext.dispose();
+      mod.release();
       this.loaded.delete(mod.id);
     }
   }
