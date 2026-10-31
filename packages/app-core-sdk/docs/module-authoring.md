@@ -163,7 +163,9 @@ curl -X POST http://127.0.0.1:4850/api/modules/register \
 
 The registered `id` must equal the manifest's `id`: `register` answers `400` otherwise, and a registry entry that mismatches lands in `failed` at load. A `path` that does not exist answers `400` naming the path. The SDK helper is described in [registering-a-module.md](registering-a-module.md).
 
-`register` and `update` answer `{ id, version, extensionPoints, cascaded, recovered }`: `cascaded` lists the modules unloaded because of this change, `recovered` the failed modules loaded again because of it (see [Providers and dependents](#providers-and-dependents)). Both are also present on failure answers.
+`register` and `update` answer `{ id, version, extensionPoints, cascaded, recovered }` (plus `held`, below): `cascaded` lists the modules unloaded because of this change, `recovered` the failed modules loaded again because of it (see [Providers and dependents](#providers-and-dependents)). Both are also present on failure answers.
+
+**Memory on update.** An update lets go of the previous copy of a CommonJS backend and hooks (`.cjs`, what `package` writes): the memory of the server does not grow with the number of updates (12 updates of an 8 MB backend: no more than a few copies, not twelve). An ES module (`.mjs`) cannot be unloaded by Node: each update keeps the previous copy until the server restarts, and the answer says so in `held` (a list of messages naming the file; absent when nothing is kept). Ship the `.cjs` that `package` writes. Only the module's own files are let go of: a `.cjs` that `require`s other files at run time (a bundle does not) leaves those in Node's cache.
 
 What a rejected registration leaves behind (`retained` in the answer, with a sentence saying so):
 
@@ -422,7 +424,9 @@ Slot ids are the shell slots (`dashboard`, `nav`, `route`, `navbar`, `overlay`) 
 - `requires` does not list the provider, or the provider is not found, not built, or does not expose the slot;
 - the ROOT `$type` of the contributed view is not in `accepts` (children are not validated).
 
-At load, app-core applies the same rules to the modules it has loaded, plus the version: the module goes to `failed` (register answers 422) with the fix when a required module is not loaded or failed, its version is outside the `requires` range (strict semver; a non-semver version never matches), or the slot or `$type` is rejected. At startup modules load in `requires` order; members of a require cycle go to `failed`.
+At load, app-core applies the same rules to the modules it has loaded, plus the version: the module goes to `failed` (register answers 422) with the fix when a required module is not loaded or failed, its version is outside the `requires` range (a version that is not valid semver never matches), or the slot or `$type` is rejected. At startup modules load in `requires` order; members of a require cycle go to `failed`.
+
+**What a contributed view reads.** The provider's page renders it with its own data: `$sources.<key>` of that page and `$route.<param>` of its address are available to the contribution (`label: $route.project`, `href: /modules/task/tasks?project=$route.project`). A `$sources` written on the contributed node itself is ignored without an error: only a page declares sources. To show data of your own module, build the view from the provider's data, or ship a `dslLib` component that fetches by itself (the provider must then list its `$type` in `accepts`). (Test: `ExtensionSlot.hostContext.test.tsx`.)
 
 ### Adding a page to another module's side menu (`<providerId>:nav`)
 
@@ -436,7 +440,7 @@ Every module's side menu is the slot `<id>:nav`, with nothing to declare. A modu
 - The page stays yours: it is served at `/modules/<your id><path>`. While it is open, the provider's tab, side menu and accent are active.
 - Required: `kind: "page"`, a `label` (the entry text) and a fixed `path` (no `:param`). `check`, `package` and load report what is missing.
 - The provider needs no `expose`, and `expose.slots` may not be named `nav` (reserved). The root `$type` is not checked.
-- Like any contribution: `requires` must list the provider, and it must be found (see above). Its version must satisfy the range in strict semver, so a date-based provider version never matches.
+- Like any contribution: `requires` must list the provider, and it must be found (see above). Its version must be valid semver and satisfy the range (prereleases count): `2026.10.26-278-d44c4cdd` satisfies `*` and `>=2026.10.0`. A version with a leading zero (`2026.10.05`) is not valid semver and never matches.
 - A module cannot use `<own id>:nav`: use `nav` for your own pages. A module with only such pages gets no tab; the provider's tab carries them.
 - When the provider is unregistered, the entry goes with it (dependents rules below).
 
