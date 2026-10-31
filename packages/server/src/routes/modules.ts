@@ -6,6 +6,7 @@ import { ManifestIdMismatchError, parseRegistrationPayload, parseUnregisterPaylo
 import { hasRegistryEntry, removeRegistryEntry, writeRegistryEntry, type RegistryEntry } from '../registry.js';
 import { ManifestFileError, ModuleRequirementError, newChangeReport, type ChangeReport, type ModuleManager } from '../loader.js';
 import { ZodError } from 'zod';
+import { receivedPathHint } from '../pathHint.js';
 
 export interface ModulesRoutesOptions {
   modulesDir: string;
@@ -75,12 +76,19 @@ function settleRejection(id: string, entry: RegistryEntry, report: ChangeReport,
   return { retained: false, note: `Nothing was registered: "${id}" has no registry entry. Fix the problem above, then register it again.` };
 }
 
+// A manifest that cannot be read: the message names the path the server read; when that differs from what the caller sent
+// (a Git Bash path, a relative one), it also names what was sent and the form that works.
+function withReceivedPath(err: ManifestFileError, received: string, resolved: string): ManifestFileError {
+  const hint = receivedPathHint(received, resolved);
+  return hint === '' ? err : new ManifestFileError(`${err.message} ${hint}`);
+}
+
 async function handleRegisterOrUpdate(
   body: unknown,
   modulesDir: string,
   manager: ModuleManager,
   report: ChangeReport,
-): Promise<{ id: string; version: string; extensionPoints: number }> {
+): Promise<{ id: string; version: string; extensionPoints: number; held?: string[] }> {
   // A ZodError here is a bad request body: sendError words it as such.
   const payload = parseRegistrationPayload(body);
   const manifestPath = path.resolve(payload.source.path);
@@ -92,7 +100,9 @@ async function handleRegisterOrUpdate(
   } catch (err) {
     // The request was fine; the manifest file it points at is not.
     const original =
-      err instanceof ZodError
+      err instanceof ManifestFileError
+        ? withReceivedPath(err, payload.source.path, manifestPath)
+        : err instanceof ZodError
         ? new InvalidRequestError(
             `module "${payload.id}": the manifest ${manifestPath} is invalid: ${describeIssues(err)} Run "app-core-cli validate ${manifestPath}" for the same check, fix the manifest and register again.`,
             err.issues,
@@ -104,7 +114,8 @@ async function handleRegisterOrUpdate(
   // the push path and the fallback-file path converge on the exact same
   // storage, so there is no separate reconciliation step.
   writeRegistryEntry(modulesDir, entry);
-  return { id: loaded.id, version: loaded.manifest.version, extensionPoints: loaded.resolvedViews.length };
+  // `held`: what this update keeps in memory for good (an ES module backend); absent when the previous copy was let go.
+  return { id: loaded.id, version: loaded.manifest.version, extensionPoints: loaded.resolvedViews.length, ...(loaded.held.length > 0 ? { held: loaded.held } : {}) };
 }
 
 export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutesOptions): Promise<void> {
