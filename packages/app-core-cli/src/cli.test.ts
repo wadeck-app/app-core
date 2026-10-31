@@ -335,3 +335,33 @@ describe('cli check / package (real subprocess)', () => {
     expect(run.stderr).toContain('validate|init|check|package|dev|serve');
   });
 });
+
+describe('cli --help (real subprocess)', () => {
+  // A command that ignored --help would run: serve would listen and never exit, so the call is bounded.
+  const help = (args: string[]) => {
+    const result = spawnSync('node', [cliEntry, ...args], { encoding: 'utf8', timeout: 20_000, env: { ...process.env, BUNDLE_VERSION: undefined } });
+    if (result.status === null) {
+      throw new Error(`cli ${args.join(' ')} did not exit in time (${result.error?.message ?? 'killed'}): it ran instead of printing help`);
+    }
+    return result;
+  };
+
+  it.each(['validate', 'init', 'check', 'package', 'dev', 'serve', 'version', 'update', 'self-check'])('%s --help prints its usage, exits 0 and runs nothing', (command) => {
+    for (const flag of ['--help', '-h']) {
+      const run = help([command, flag]);
+      expect(run.status, `${command} ${flag}: ${run.stderr}`).toBe(0);
+      expect(run.stdout).toMatch(new RegExp(`^app-core-cli ${command}`));
+      expect(run.stderr).toBe('');
+    }
+  });
+
+  it('update --help does not touch the updater, whatever the path of the binary', () => {
+    const run = help(['update', '--help']);
+    expect(run.stdout).not.toContain('Running updater');
+    expect(run.stderr).not.toContain('[fail]');
+  });
+
+  it('a path argument before --help does not run the command either', () => {
+    expect(help(['dev', './no-such-module', '--help']).status).toBe(0);
+  });
+});

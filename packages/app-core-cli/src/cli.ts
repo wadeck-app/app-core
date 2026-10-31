@@ -18,6 +18,7 @@ import { readChannelFromConfig } from '@wadeck-app/shared-cli/ChannelConfig';
 import { runSelfCheck } from '@wadeck-app/shared-cli';
 import { startTray } from './tray/trayCommand.js';
 import { readTrayBuildInfo } from './tray/buildInfo.js';
+import { helpText, isHelpRequest } from './help.js';
 import { devBuildRefusalMessage, isReleaseVersion } from '@wadeck-app/shared-cli/ReleaseVersion';
 import { spawn } from 'node:child_process';
 
@@ -33,6 +34,11 @@ const bundlePath = process.env['LAUNCHER_BUNDLE_OVERRIDE'] ?? fileURLToPath(impo
 const ownDir = dirname(fileURLToPath(import.meta.url));
 
 async function main(): Promise<void> {
+  // Asking how a command works never runs it (nor schedules an update): `update --help` used to run the updater.
+  if (isHelpRequest(process.argv.slice(2))) {
+    process.stdout.write(helpText(process.argv.slice(2)));
+    return;
+  }
   const [command, target, ...rest] = process.argv.slice(2);
 
   // Check for an update in the background on every real invocation (not
