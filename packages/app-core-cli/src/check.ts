@@ -5,7 +5,7 @@ import { build, transform } from 'esbuild';
 import { load as parseYaml } from 'js-yaml';
 import type { SourceManifest } from '@wadeck-app/app-core-sdk';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
-import { rootTypeOf, validateContributions } from '@wadeck-app/app-core-server/contributions';
+import { evaluateOptionalContributions, rootTypeOf, validateContributions } from '@wadeck-app/app-core-server/contributions';
 import { OUTPUT_DIR } from './outputDir.js';
 import { findProvider, type Links } from './providers.js';
 import { validateSourceManifestFile } from './validate.js';
@@ -26,6 +26,8 @@ export interface CheckIssue {
 
 export interface CheckResult {
   issues: CheckIssue[];
+  // Not failures: an optional provider that could not be found, so what contributes to it was not validated.
+  warnings: string[];
   // Present when manifest.json parsed as a valid source manifest.
   manifest?: SourceManifest;
 }
@@ -310,7 +312,7 @@ function checkManifest(moduleDir: string, issues: CheckIssue[]): SourceManifest 
     issues.push({
       file: 'manifest.json',
       problem: result.reason,
-      fix: 'The source manifest holds only id, extensionPoints, dslLib.shared, requires, expose and lifecycle. `package` writes version, backendEntryPath and dslLib.entry/css into dist-module/manifest.json.',
+      fix: 'The source manifest holds only id, extensionPoints, dslLib.shared, requires, optionalRequires, expose and lifecycle. `package` writes version, backendEntryPath and dslLib.entry/css into dist-module/manifest.json.',
     });
     return undefined;
   }
@@ -517,21 +519,37 @@ function viewRootType(moduleDir: string, view: SourceManifest['extensionPoints']
   }
 }
 
-// requires + contributions to custom slots (decision 82), against the provider found among the dependencies.
-function checkContributions(moduleDir: string, manifest: SourceManifest, links: Links, issues: CheckIssue[]): void {
+// requires + contributions to custom slots (decision 82), against the provider found among the dependencies. Returns the
+// warnings: an optional provider that cannot be found is not an error, what contributes to it is just not validated.
+function checkContributions(moduleDir: string, manifest: SourceManifest, links: Links, issues: CheckIssue[]): string[] {
   const views = manifest.extensionPoints.map((ep) => viewRootType(moduleDir, ep.view));
-  const problems = validateContributions({
+  const input = {
     moduleId: manifest.id,
     requires: manifest.requires,
+    optionalRequires: manifest.optionalRequires,
     contributions: manifest.extensionPoints.map((ep, index) => ({ index, slot: ep.slot, rootType: views[index]?.rootType })),
     selfExpose: manifest.expose,
-    lookup: (providerId) => findProvider(moduleDir, providerId, links),
-    mode: 'package',
-  });
-  for (const problem of problems) {
+    lookup: (providerId: string) => findProvider(moduleDir, providerId, links),
+    mode: 'package' as const,
+  };
+  for (const problem of validateContributions(input)) {
     const viewFile = problem.about === 'view' && problem.extensionPointIndex !== undefined ? views[problem.extensionPointIndex]?.file : undefined;
     issues.push({ file: viewFile ?? 'manifest.json', problem: problem.problem, fix: problem.fix });
   }
+  // An optional provider that is there is held to the same contract as a required one (this is the strict gate; at run time the
+  // same finding only makes the contribution inactive). One that is not found is one warning, however many contributions it has.
+  const absent = new Set<string>();
+  for (const [index, why] of evaluateOptionalContributions(input).inactive) {
+    if (why.kind === 'absent') {
+      absent.add(why.providerId ?? '?');
+      continue;
+    }
+    const viewFile = why.about === 'view' ? views[index]?.file : undefined;
+    issues.push({ file: viewFile ?? 'manifest.json', problem: why.reason, fix: why.fix ?? 'Fix the contribution, or the optionalRequires range.' });
+  }
+  return [...absent].map(
+    (id) => `optional module "${id}" was not found (node_modules, or --link ${id}=<folder>): the contributions to it are not validated here. At run time they are used only while ${id} is loaded.`,
+  );
 }
 
 // Checks a module folder against the layout rules (decision 81) and its source manifest. Collects every
@@ -543,18 +561,20 @@ export async function checkModule(moduleDirArg: string, options: CheckOptions = 
   if (!fs.existsSync(moduleDir) || !fs.statSync(moduleDir).isDirectory()) {
     return {
       issues: [{ file: '.', problem: `module folder ${moduleDir} does not exist or is not a folder`, fix: 'Pass the folder that contains manifest.json.' }],
+      warnings: [],
     };
   }
   checkRoot(moduleDir, issues);
   const scanned = await checkSrc(moduleDir, issues);
   const manifest = checkManifest(moduleDir, issues);
   checkPublishing(moduleDir, issues);
+  let warnings: string[] = [];
   if (manifest !== undefined) {
     checkLifecycle(moduleDir, manifest, scanned, issues);
     await checkExposedTypes(moduleDir, manifest, issues);
-    checkContributions(moduleDir, manifest, options.links ?? {}, issues);
+    warnings = checkContributions(moduleDir, manifest, options.links ?? {}, issues);
   }
-  return { issues, manifest };
+  return { issues, warnings, manifest };
 }
 
 export function formatCheckIssues(moduleDir: string, issues: CheckIssue[]): string {

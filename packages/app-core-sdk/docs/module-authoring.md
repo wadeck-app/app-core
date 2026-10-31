@@ -98,6 +98,7 @@ You write the source manifest; app-core loads the packaged one.
 | Path views | `./src/dsl-views/<file>.yaml` | `./dsl-frontend/<file>.json` |
 | `dslLib` | `{ "shared": { ... } }` | adds `entry` and `css` |
 | `requires` | optional | copied |
+| `optionalRequires` | optional; same shape as `requires`, an id is in one of the two | copied (see [Contributing to a module you can do without](#contributing-to-a-module-you-can-do-without-optionalrequires)) |
 | `expose` | optional; `types` is `./src/commons/<file>.ts` | `types` becomes `./types/index.d.ts` |
 | `lifecycle` | optional; `teardown` / `migrate` are `./src/backend/<file>.ts` | `./api-backend/teardown.cjs` / `./api-backend/migrate.cjs` |
 | `showInNav` | optional boolean, `true` when absent | copied |
@@ -447,6 +448,21 @@ Slot ids are the shell slots (`dashboard`, `nav`, `route`, `navbar`, `overlay`) 
 At load, app-core applies the same rules to the modules it has loaded, plus the version: the module goes to `failed` (register answers 422) with the fix when a required module is not loaded or failed, its version is outside the `requires` range (a version that is not valid semver never matches), or the slot or `$type` is rejected. At startup modules load in `requires` order; members of a require cycle go to `failed`.
 
 **What a contributed view reads.** The provider's page renders it with its own data: `$sources.<key>` of that page and `$route.<param>` of its address are available to the contribution (`label: $route.project`, `href: /modules/task/tasks?project=$route.project`). A `$sources` written on the contributed node itself is ignored without an error: only a page declares sources. To show data of your own module, build the view from the provider's data, or ship a `dslLib` component that fetches by itself (the provider must then list its `$type` in `accepts`). (Test: `ExtensionSlot.hostContext.test.tsx`.)
+
+### Contributing to a module you can do without (`optionalRequires`)
+
+`requires` is hard: without the provider the whole module is `failed`. When your module works without it and only adds something to its page when it is there, list it in `optionalRequires` (same shape as `requires`) instead:
+
+```json
+{ "id": "project", "optionalRequires": { "task": "*" }, "extensionPoints": [{ "kind": "widget", "slot": "task:project-header", "view": { "type": "inline", "value": { "$type": "Badge", "label": "Project" } } }] }
+```
+
+- The module loads whether the provider is there or not. A contribution to a provider that is not loaded is **inactive**: `GET /api/modules` gives the module a `warnings` list and the extension point an `inactive` reason, and the log says it once at load. `GET /api/slots/<slot>` and the side menus leave inactive contributions out.
+- It is worked out from the modules loaded at each request, so a provider that registers or updates activates what waited for it, and one that goes away deactivates it again. **No cascade**: an optional provider leaving unloads nobody. A provider that is there but does not fit (version outside the range, slot not exposed, root `$type` not in `accepts`) gives an inactive contribution with that reason, not a failed module.
+- Optional edges are not part of the load order, the cycle check or the cascade: two modules may list each other (`project` <-> `task`), each offering slots the other contributes to. A `requires` cycle is still refused.
+- An id is in `requires` or in `optionalRequires`, not both, and never your own id. The range is checked like a `requires` range.
+- `check` and `package` hold an optional provider that they can find (`node_modules`, `--link`) to the same rules as a required one, as errors. One they cannot find is a single warning line, however many contributions it has: they are not validated, and `package` carries the warning in its result.
+- Your own slots need no declaration. Declare only the modules you contribute to.
 
 ### Adding a page to another module's side menu (`<providerId>:nav`)
 

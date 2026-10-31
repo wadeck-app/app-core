@@ -292,14 +292,14 @@ export async function packageModule(options: PackageOptions): Promise<PackageRes
   const outDir = path.resolve(options.outDir);
   assertSafeOutDir(moduleDir, outDir);
 
-  const { issues, manifest } = await checkModule(moduleDir, { links: options.links });
+  const { issues, warnings: checkWarnings, manifest } = await checkModule(moduleDir, { links: options.links });
   if (issues.length > 0 || manifest === undefined) {
     throw new Error(formatCheckIssues(moduleDir, issues));
   }
 
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
-  const warnings: string[] = [];
+  const warnings: string[] = [...checkWarnings];
   // A module that others `requires` is matched against ranges in strict semver: with another version it can never be a provider.
   if (semver.valid(options.version) === null) {
     warnings.push(
@@ -319,6 +319,7 @@ export async function packageModule(options: PackageOptions): Promise<PackageRes
     backendEntryPath: `./${BACKEND_OUTPUT}`,
     ...(lifecycle === undefined ? {} : { lifecycle }),
     ...(manifest.requires === undefined ? {} : { requires: manifest.requires }),
+    ...(manifest.optionalRequires === undefined ? {} : { optionalRequires: manifest.optionalRequires }),
     ...(expose === undefined ? {} : { expose }),
     ...(manifest.showInNav === undefined ? {} : { showInNav: manifest.showInNav }),
     ...(manifest.title === undefined ? {} : { title: manifest.title }),

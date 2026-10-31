@@ -102,13 +102,16 @@ async function main(): Promise<void> {
       return;
     }
     try {
-      const { issues } = await checkModule(target, { links: parseLinkArgs(rest) });
+      const { issues, warnings } = await checkModule(target, { links: parseLinkArgs(rest) });
       if (issues.length > 0) {
         console.error(formatCheckIssues(target, issues));
         process.exitCode = 1;
         return;
       }
       console.log(`OK: ${target} follows the module layout and its manifest is valid.`);
+      for (const warning of warnings) {
+        console.error(`warning: ${warning}`);
+      }
       for (const warning of await shellWarningsForModule(target)) {
         console.error(`warning: ${warning}`);
       }

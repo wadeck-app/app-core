@@ -208,6 +208,11 @@ export function validateContributions(input: ValidateContributionsInput): Contri
 export interface InactiveContribution {
   kind: 'absent' | 'violation';
   reason: string;
+  // The way out of a violation, and where it is (`view`: the contributed view itself). Absent for `absent`.
+  fix?: string;
+  about?: 'manifest' | 'view';
+  // Who is concerned when the module is missing: the provider's id. Set for `absent`.
+  providerId?: string;
 }
 
 export interface OptionalOutcome {
@@ -233,12 +238,12 @@ export function evaluateOptionalContributions(input: ValidateContributionsInput)
     }
     const result = input.lookup(id);
     if (!result.found) {
-      unusable.set(id, { kind: 'absent', reason: `optional module "${id}" is not available: ${result.why}` });
+      unusable.set(id, { kind: 'absent', reason: `optional module "${id}" is not available: ${result.why}`, providerId: id });
       continue;
     }
     const tooOld: ContributionProblem[] = [];
     if (input.mode === 'load' && !checkRequiredProvider(id, range, input, tooOld)) {
-      unusable.set(id, { kind: 'violation', reason: tooOld[0]?.problem ?? `optional module "${id}" does not fit its range` });
+      unusable.set(id, { kind: 'violation', reason: tooOld[0]?.problem ?? `optional module "${id}" does not fit its range`, fix: tooOld[0]?.fix, about: 'manifest' });
     }
   }
   // The checks of a hard provider, run on the optional ones as if they were required: what they find becomes a reason.
@@ -256,7 +261,7 @@ export function evaluateOptionalContributions(input: ValidateContributionsInput)
     const found: ContributionProblem[] = [];
     checkContribution(contribution, asRequired, new Set(), found);
     if (found[0] !== undefined) {
-      inactive.set(contribution.index, { kind: 'violation', reason: found[0].problem });
+      inactive.set(contribution.index, { kind: 'violation', reason: found[0].problem, fix: found[0].fix, about: found[0].about });
     }
   }
   const warnings = [...inactive].map(([index, why]) => `extensionPoints[${index}] (slot "${input.contributions.find((c) => c.index === index)?.slot ?? '?'}") is inactive: ${why.reason}`);
