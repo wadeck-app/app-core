@@ -89,6 +89,6 @@ describe('VersionsMenu', () => {
     render(<VersionsMenu modules={modules} failed={[]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).queryByText(/A\/B tests/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/A\/B tests are on/)).not.toBeInTheDocument();
   });
 });

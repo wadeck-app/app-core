@@ -1,6 +1,7 @@
 import React from 'react';
 import { Info } from 'lucide-react';
 import { IconButton, Popover, useAbExperiments } from '@wadeck-app/dsl-ui';
+import { AbTestsSection } from './AbTestsSection.js';
 import { AppCoreVersionRow } from './AppCoreVersionRow.js';
 import { VersionRow } from './VersionRow.js';
 import { useBuildInfo } from './useBuildInfo.js';
@@ -44,6 +45,8 @@ export function VersionsMenu({ modules, failed }: { modules: LoadedModuleSummary
         {abTests ? (
           <p className="mt-3 text-muted">A/B tests are on: the dock is at the bottom of the page.</p>
         ) : null}
+
+        <AbTestsSection />
 
         {build.state === 'ready' ? (
           <>

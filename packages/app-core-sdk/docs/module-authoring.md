@@ -363,6 +363,15 @@ ctx.registerRoute('GET', '/report', async (req, reply) => {
 
 How often a view refreshes is the view's `poll` (`$sources.<key>.poll: 30s`): a `poll` reloads every source of the page at each tick, so a route that cannot change that often is better behind `unchanged`.
 
+### A/B tests of a module, and how they are counted
+
+The dock (`dev --ab-tests`, `serve --ab-tests`, or a development build) shows the tests of the page you are on. The versions popup of the shell (the "i" button) counts the tests of **all** the installed modules, over all their pages; `GET /api/ab-tests` gives the same with the detail.
+
+- **In a view, exact.** A `$type: AbTest` node in any view of your module (page, widget, slot contribution, a variant of another test) is found and counted by its `id`; a test repeated with the same id is one.
+- **In your code, estimated.** A `useAbTest({ id, label, ... })` call in the components you ship (`dslLib`) is counted by reading the text of your bundle: each call counts once, with its label when it is a literal string. A call in a component that never mounts is counted too, a call written another way (the hook under another name) is missed, and two calls with the same id count twice. The popup says "estimated" for these.
+- A module whose bundle cannot be read is named in the popup; its tests are not counted as zero.
+- To be counted exactly, declare the test as an `AbTest` node in a view when you can.
+
 ### Pages below pages (the breadcrumb)
 
 The shell shows the trail of nested pages above every module page: the module, then every page of the module whose `path` is the start of the current address, each linking to its page. For `/tasks/7/history` with pages `/tasks`, `/tasks/:id` and `/tasks/:id/history`: Task > Tasks > Task 7 > Task history. A page needs no "back" button: the crumb before it is the way back.

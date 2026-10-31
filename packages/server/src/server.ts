@@ -12,6 +12,7 @@ import { readRegistryEntries } from './registry.js';
 import { getErrorMessage } from './errors.js';
 import { orderByRequires, readRequiredIds } from './loadOrder.js';
 import { etagHook } from './conditionalGet.js';
+import { inventoryAbTests } from './abTestScan.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -108,6 +109,11 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   await server.register(slotsRoutes, { manager });
   // What the shell cannot know from its build: settings of this server process, read once per page load.
   server.get('/api/shell-settings', { onSend: etagHook }, async () => ({ abTests: opts.abTests === true }));
+  // The A/B tests the installed modules declare, over all their pages (see abTestScan.ts for what is exact and what is estimated).
+  server.get('/api/ab-tests', { onSend: etagHook }, async () => {
+    const inventory = await inventoryAbTests(manager.list());
+    return { exact: inventory.views.length, estimated: inventory.components.length, total: inventory.views.length + inventory.components.length, ...inventory };
+  });
 
   // Files of a module's dsl-lib folder (runtime-loaded components). Registered before the
   // catch-all below, and `_lib` is reserved so a module cannot register a route under it.
