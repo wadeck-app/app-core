@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ModuleManager } from '../loader.js';
+import { etagHook } from '../conditionalGet.js';
 
 export interface SlotsRoutesOptions {
   manager: ModuleManager;
@@ -18,7 +19,7 @@ export interface SlotsRoutesOptions {
 export async function slotsRoutes(server: FastifyInstance, opts: SlotsRoutesOptions): Promise<void> {
   const { manager } = opts;
 
-  server.get('/api/slots/:slotId', async (req, reply) => {
+  server.get('/api/slots/:slotId', { onSend: etagHook }, async (req, reply) => {
     const { slotId } = req.params as Record<string, string>;
 
     const contributions: Array<{ order?: number; view: unknown }> = [];

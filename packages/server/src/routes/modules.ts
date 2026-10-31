@@ -7,6 +7,7 @@ import { hasRegistryEntry, removeRegistryEntry, writeRegistryEntry, type Registr
 import { ManifestFileError, ModuleRequirementError, newChangeReport, type ChangeReport, type ModuleManager } from '../loader.js';
 import { ZodError } from 'zod';
 import { receivedPathHint } from '../pathHint.js';
+import { etagHook } from '../conditionalGet.js';
 
 export interface ModulesRoutesOptions {
   modulesDir: string;
@@ -161,7 +162,7 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
   // modules and their resolved views (views are DSL data, not code), plus the modules
   // whose registration exists but failed to load, with the reason and its kind (`cause`:
   // "requirement" is retried automatically, "error" is not).
-  server.get('/api/modules', async (_req, reply) => {
+  server.get('/api/modules', { onSend: etagHook }, async (_req, reply) => {
     const modules = manager.list().map((m) => ({
       id: m.id,
       version: m.manifest.version,

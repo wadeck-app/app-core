@@ -246,6 +246,7 @@ export default function (ctx: ModuleContext) {
 |---|---|
 | `dataDir` | Persistent folder of the module. |
 | `registerRoute(method, subPath, handler)` | Cleared on unload. |
+| `fileVersion(...files)`, `unchanged(req, reply, version)` | Answer 304 without computing: see [Data that changes rarely](#data-that-changes-rarely-etag-and-304). |
 | `setInterval(fn, ms)`, `setTimeout(fn, ms)` | Return an opaque `ModuleTimerHandle`; keeping it is optional, everything still running is cleared on unload. A fired timeout is dropped from tracking. |
 | `clearInterval(handle)`, `clearTimeout(handle)` | Stop one timer. Already cleared, already fired, or after unload: no-op. A value that is not a handle, or the other kind of handle, throws and says what to pass. |
 | `on(event, fn)`, `off(event, fn)`, `emit(event, ...args)` | `off` of an unknown listener, or after unload: no-op. |
@@ -341,6 +342,25 @@ The URL in `$sources` is a plain string handed to app-core's frontend `fetcher` 
 no base-path logic to worry about. Keep the module id a fixed literal in the URL (as shown), never
 a `$route`/dynamic placeholder -- an empty-placeholder path silently skips the fetch in the
 underlying DSL renderer, so a fixed literal is the safe pattern.
+
+### Data that changes rarely (ETag and 304)
+
+A view that refreshes a source (`poll`, a refresh button) asks the same route again. Two things keep an unchanged answer cheap:
+
+- **Automatic.** Every 200 answer to a GET route whose body is text (JSON included) gets an `ETag` (a hash of the body) and `Cache-Control: no-cache`. The browser sends the tag back (`If-None-Match`) and the server answers 304 with no body when it is the same. Only the bytes are saved: your handler still runs. A route that sets its own `ETag` or `Cache-Control` keeps them. Streams and other methods are left alone.
+- **Ahead of the work.** When your data is kept in files, say so and skip the computation:
+
+```ts
+ctx.registerRoute('GET', '/report', async (req, reply) => {
+  // 304 if report.json and rules.json are as the client last saw them; the report is not rebuilt.
+  if (ctx.unchanged(req, reply, await ctx.fileVersion(reportFile, rulesFile))) return reply;
+  return reply.send(await buildReport());
+});
+```
+
+`fileVersion` changes when a file is modified (time or size) or appears or disappears; a missing file is a version, not an error. `unchanged` takes any text that changes when the answer would (a revision number, a counter), not only a file version. It sets the `ETag`; when the client has that version it answers 304 and returns `true`, and the handler must return the reply and do nothing else. Both are for GET routes.
+
+How often a view refreshes is the view's `poll` (`$sources.<key>.poll: 30s`): a `poll` reloads every source of the page at each tick, so a route that cannot change that often is better behind `unchanged`.
 
 ### Pages below pages (the breadcrumb)
 

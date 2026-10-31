@@ -11,6 +11,7 @@ import { resolveConfigDir, resolveModulesDir } from './configDir.js';
 import { readRegistryEntries } from './registry.js';
 import { getErrorMessage } from './errors.js';
 import { orderByRequires, readRequiredIds } from './loadOrder.js';
+import { etagHook } from './conditionalGet.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -106,7 +107,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   await server.register(modulesRoutes, { modulesDir, manager });
   await server.register(slotsRoutes, { manager });
   // What the shell cannot know from its build: settings of this server process, read once per page load.
-  server.get('/api/shell-settings', async () => ({ abTests: opts.abTests === true }));
+  server.get('/api/shell-settings', { onSend: etagHook }, async () => ({ abTests: opts.abTests === true }));
 
   // Files of a module's dsl-lib folder (runtime-loaded components). Registered before the
   // catch-all below, and `_lib` is reserved so a module cannot register a route under it.
@@ -125,7 +126,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   // from a running instance (see moduleRoutes.ts). This route requires at
   // least one path segment after :id, so it never collides with the static
   // /api/modules, /api/modules/register, /api/modules/update routes above.
-  server.all<{ Params: Record<string, string> }>('/api/modules/:id/*', async (req, reply) => {
+  // `etagHook`: a GET answer that is text gets an ETag and becomes a 304 when the client already has it (see conditionalGet.ts).
+  server.all<{ Params: Record<string, string> }>('/api/modules/:id/*', { onSend: etagHook }, async (req, reply) => {
     const { id } = req.params;
     const wildcard = req.params['*'] ?? '';
     const found = manager.routeRegistry.find(id, req.method, `/${wildcard}`);

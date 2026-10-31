@@ -22,6 +22,7 @@ import { ModuleRouteRegistry } from './moduleRoutes.js';
 import { formatContributionProblems, rootTypeOf, validateContributions, type ContributionProblem, type ProviderLookup } from './contributions.js';
 import { orderByRequires, readRequiredIds } from './loadOrder.js';
 import { isUnloadable, loadCommonJs } from './commonJsBackend.js';
+import { fileVersion } from './conditionalGet.js';
 
 const nodeRequire = createRequire(import.meta.url);
 
@@ -372,7 +373,7 @@ export class ModuleManager {
         }
       }
 
-      const moduleContext = createModuleContext(entry.id, this.routeRegistry, dataDir);
+      const moduleContext = createModuleContext(entry.id, this.routeRegistry, dataDir, { fileVersion });
       let instance: unknown;
       try {
         instance = await runWithTimeout(`module "${entry.id}": setup`, this.hookTimeoutMs, () => (setup as (ctx: ModuleContext) => unknown)(moduleContext));

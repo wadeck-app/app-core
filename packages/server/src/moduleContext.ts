@@ -1,4 +1,5 @@
 import type { ModuleRouteHandler, ModuleRouteRegistry } from './moduleRoutes.js';
+import { unchanged } from './etagCore.js';
 
 declare const timerHandleBrand: unique symbol;
 
@@ -27,6 +28,14 @@ export interface ModuleContext {
   off(event: string, fn: (...args: unknown[]) => void): void;
   emit(event: string, ...args: unknown[]): void;
   registerRoute(method: string, subPath: string, handler: ModuleRouteHandler): void;
+  // A version for data kept in files: it changes when one of them is modified or appears or disappears. A missing file is a version
+  // of its own, not an error. Give it to `unchanged`.
+  fileVersion(...files: string[]): Promise<string>;
+  // For a GET route that can tell from a version whether its answer changed, before computing it. Sets the ETag; when the client
+  // already has this version it answers 304 and returns true, and the handler returns the reply and does nothing else:
+  //   if (ctx.unchanged(req, reply, await ctx.fileVersion(file))) return reply;
+  // The answers of GET routes get an ETag from their body anyway (only the bytes are saved); this one saves the work too.
+  unchanged(req: Parameters<ModuleRouteHandler>[0], reply: Parameters<ModuleRouteHandler>[1], version: string): boolean;
   dispose(): void;
 }
 
@@ -76,7 +85,17 @@ function asHandle(handle: unknown, kind: TimerHandle['kind']): TimerHandle {
   return handle;
 }
 
-export function createModuleContext(moduleId: string, routeRegistry: ModuleRouteRegistry, dataDir: string): ModuleContext {
+// What the context needs from Node and cannot import itself: the SDK's main entry, which exports createModuleContext, must stay
+// free of Node builtins. The server passes the real ones; a test of a module's backend passes its own, or none.
+export interface ModuleContextServices {
+  fileVersion?: (files: readonly string[]) => Promise<string>;
+}
+
+function fileVersionUnavailable(): Promise<string> {
+  return Promise.reject(new Error('ctx.fileVersion is not available on this context: createModuleContext was called without the file service of the server. In a test of your backend, pass { fileVersion } as the fourth argument, or give ctx.unchanged a version of your own.'));
+}
+
+export function createModuleContext(moduleId: string, routeRegistry: ModuleRouteRegistry, dataDir: string, services: ModuleContextServices = {}): ModuleContext {
   const intervals = new Map<TimerHandle, NodeJS.Timeout>();
   const timeouts = new Map<TimerHandle, NodeJS.Timeout>();
   const listeners = new Map<string, Set<(...args: unknown[]) => void>>();
@@ -155,6 +174,8 @@ export function createModuleContext(moduleId: string, routeRegistry: ModuleRoute
       }
       routeRegistry.register(moduleId, method, subPath, handler);
     },
+    fileVersion: (...files) => (services.fileVersion ?? fileVersionUnavailable)(files),
+    unchanged: (req, reply, version) => unchanged(req, reply, version),
     dispose() {
       disposed = true;
       intervals.forEach((timer) => clearInterval(timer));
