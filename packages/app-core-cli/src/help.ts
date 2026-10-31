@@ -51,6 +51,11 @@ const COMMANDS: Record<string, CommandHelp> = {
   },
 };
 
+// What `update` says before it changes the machine, so nobody learns it from the effect.
+export function updatePlan(pkgName: string, installed: string): string {
+  return `Updating ${pkgName} (installed: ${installed}): the updater installs the latest published release with "npm install -g" and replaces this command. "app-core-cli update --help" explains it without doing it; "app-core-cli version" shows what is published.`;
+}
+
 const HELP_FLAGS = new Set(['--help', '-h']);
 
 // Whether the user only asks how a command works. `--help` and `-h` never run the command, wherever they stand in the

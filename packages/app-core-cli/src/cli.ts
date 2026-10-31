@@ -18,7 +18,7 @@ import { readChannelFromConfig } from '@wadeck-app/shared-cli/ChannelConfig';
 import { runSelfCheck } from '@wadeck-app/shared-cli';
 import { startTray } from './tray/trayCommand.js';
 import { readTrayBuildInfo } from './tray/buildInfo.js';
-import { helpText, isHelpRequest } from './help.js';
+import { helpText, isHelpRequest, updatePlan } from './help.js';
 import { devBuildRefusalMessage, isReleaseVersion } from '@wadeck-app/shared-cli/ReleaseVersion';
 import { spawn } from 'node:child_process';
 
@@ -310,6 +310,8 @@ async function main(): Promise<void> {
       process.exitCode = 1;
       return;
     }
+    process.stdout.write(`${updatePlan(PKG_NAME, VERSION)}
+`);
     await cliUpdateCommand(updaterPath, PKG_NAME, { rawArgs: rest });
     return;
   }

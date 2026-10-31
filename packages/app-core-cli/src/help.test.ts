@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { helpText, isHelpRequest } from './help.js';
+import { helpText, isHelpRequest, updatePlan } from './help.js';
 
 describe('isHelpRequest', () => {
   it('is a request for help with --help or -h anywhere, and with the word help', () => {
@@ -37,5 +37,14 @@ describe('helpText', () => {
     expect(list).toContain('update');
     expect(list).not.toContain('tray');
     expect(helpText(['help', 'frobnicate'])).toContain('Unknown command "frobnicate".');
+  });
+});
+
+describe('updatePlan', () => {
+  it('says what update will do, which version it starts from, and how to read about it first', () => {
+    const plan = updatePlan('@wadeck-app/app-core-cli', '2026.10.31-12-abc');
+    expect(plan).toContain('@wadeck-app/app-core-cli (installed: 2026.10.31-12-abc)');
+    expect(plan).toContain('npm install -g');
+    expect(plan).toContain('app-core-cli update --help');
   });
 });
