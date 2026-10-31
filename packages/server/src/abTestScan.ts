@@ -11,13 +11,25 @@ import type { LoadedModule } from './loader.js';
 //    own: a call in a component that never mounts counts, a hook called through another name or with a label that is not a
 //    literal is missed or unnamed, and two calls with the same id count twice.
 
+// An extension point of a module: what the shell needs to link to where it is shown.
+export interface PointRef {
+  moduleId: string;
+  // Index in the module's extensionPoints.
+  index: number;
+  kind: string;
+  slot: string;
+  path?: string;
+  label?: string;
+}
+
 export interface ViewAbTest {
   source: 'view';
   moduleId: string;
   id: string;
   label: string | undefined;
-  // Where it sits: the extension point (kind, slot, path or label).
+  // Where it sits, for reading: the extension point (kind, slot, path or label).
   where: string;
+  point: PointRef;
 }
 
 export interface ComponentAbTest {
@@ -32,6 +44,9 @@ export interface AbTestInventory {
   views: ViewAbTest[];
   // Estimated.
   components: ComponentAbTest[];
+  // For each module that ships tests in its code: the extension points (of any module) whose view uses one of its components
+  // (`$type: <moduleId>:<Name>`). The test is on one of these pages; which one the bundle does not say.
+  componentUse: Record<string, PointRef[]>;
   // Modules that ship components the scan could not read (missing or unreadable file): their tests, if any, are not in the count.
   unreadable: Array<{ moduleId: string; reason: string }>;
 }
@@ -51,6 +66,10 @@ function walkViews(node: unknown, visit: (node: Record<string, unknown>) => void
   Object.values(record).forEach((child) => walkViews(child, visit));
 }
 
+function pointRef(moduleId: string, index: number, ep: LoadedModule['resolvedViews'][number]): PointRef {
+  return { moduleId, index, kind: ep.kind, slot: ep.slot, ...(ep.path === undefined ? {} : { path: ep.path }), ...(ep.label === undefined ? {} : { label: ep.label }) };
+}
+
 function describePoint(ep: LoadedModule['resolvedViews'][number]): string {
   return [ep.kind, ep.slot, ep.path ?? ep.label].filter((part) => part !== undefined && part !== '').join(' ');
 }
@@ -59,14 +78,14 @@ function describePoint(ep: LoadedModule['resolvedViews'][number]): string {
 export function scanViews(mod: Pick<LoadedModule, 'id' | 'resolvedViews'>): ViewAbTest[] {
   const seen = new Set<string>();
   const found: ViewAbTest[] = [];
-  for (const ep of mod.resolvedViews) {
+  for (const [index, ep] of mod.resolvedViews.entries()) {
     walkViews(ep.view, (node) => {
       const id = typeof node['id'] === 'string' ? node['id'] : undefined;
       if (id === undefined || seen.has(id)) {
         return;
       }
       seen.add(id);
-      found.push({ source: 'view', moduleId: mod.id, id, label: typeof node['label'] === 'string' ? node['label'] : undefined, where: describePoint(ep) });
+      found.push({ source: 'view', moduleId: mod.id, id, label: typeof node['label'] === 'string' ? node['label'] : undefined, where: describePoint(ep), point: pointRef(mod.id, index, ep) });
     });
   }
   return found;
@@ -111,8 +130,40 @@ async function scanComponents(mod: LoadedModule): Promise<{ found: ComponentAbTe
   }
 }
 
+// The `$type` values of every node of a view.
+function collectTypes(node: unknown, into: Set<string>): void {
+  if (Array.isArray(node)) {
+    node.forEach((child) => collectTypes(child, into));
+    return;
+  }
+  if (typeof node !== 'object' || node === null) {
+    return;
+  }
+  const record = node as Record<string, unknown>;
+  if (typeof record['$type'] === 'string') {
+    into.add(record['$type']);
+  }
+  Object.values(record).forEach((child) => collectTypes(child, into));
+}
+
+// The extension points, in any module, that render a component of one of `owners` (a view uses it as `$type: <owner>:<Name>`).
+function componentUse(modules: readonly LoadedModule[], owners: ReadonlySet<string>): Record<string, PointRef[]> {
+  const use: Record<string, PointRef[]> = {};
+  for (const mod of modules) {
+    for (const [index, ep] of mod.resolvedViews.entries()) {
+      const types = new Set<string>();
+      collectTypes(ep.view, types);
+      const usedOwners = new Set([...types].map((type) => type.split(':')[0] ?? '').filter((prefix) => owners.has(prefix) && prefix !== ''));
+      for (const owner of usedOwners) {
+        (use[owner] ??= []).push(pointRef(mod.id, index, ep));
+      }
+    }
+  }
+  return use;
+}
+
 export async function inventoryAbTests(modules: readonly LoadedModule[]): Promise<AbTestInventory> {
-  const inventory: AbTestInventory = { views: [], components: [], unreadable: [] };
+  const inventory: AbTestInventory = { views: [], components: [], componentUse: {}, unreadable: [] };
   for (const mod of modules) {
     inventory.views.push(...scanViews(mod));
     const components = await scanComponents(mod);
@@ -122,5 +173,6 @@ export async function inventoryAbTests(modules: readonly LoadedModule[]): Promis
       inventory.components.push(...components.found);
     }
   }
+  inventory.componentUse = componentUse(modules, new Set(inventory.components.map((c) => c.moduleId)));
   return inventory;
 }

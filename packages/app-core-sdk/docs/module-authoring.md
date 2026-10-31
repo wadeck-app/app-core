@@ -365,12 +365,13 @@ How often a view refreshes is the view's `poll` (`$sources.<key>.poll: 30s`): a 
 
 ### A/B tests of a module, and how they are counted
 
-The dock (`dev --ab-tests`, `serve --ab-tests`, or a development build) shows the tests of the page you are on. The versions popup of the shell (the "i" button) counts the tests of **all** the installed modules, over all their pages; `GET /api/ab-tests` gives the same with the detail.
+The dock (`dev --ab-tests`, `serve --ab-tests`, or a development build) shows the tests of the page you are on. The **A/B tests** page of the shell (Dashboard menu, under "Tools"; the versions popup gives the count and links to it) lists the tests of **all** the installed modules, over all their pages, with where to go to see each; `GET /api/ab-tests` gives the same data.
 
 - **In a view, exact.** A `$type: AbTest` node in any view of your module (page, widget, slot contribution, a variant of another test) is found and counted by its `id`; a test repeated with the same id is one.
 - **In your code, estimated.** A `useAbTest({ id, label, ... })` call in the components you ship (`dslLib`) is counted by reading the text of your bundle: each call counts once, with its label when it is a literal string. A call in a component that never mounts is counted too, a call written another way (the hook under another name) is missed, and two calls with the same id count twice. The popup says "estimated" for these.
 - A module whose bundle cannot be read is named in the popup; its tests are not counted as zero.
 - To be counted exactly, declare the test as an `AbTest` node in a view when you can.
+- **Where to find a test.** A test in a view is linked to its page (a route with a parameter, like `/executions/:id/logs`, leads to the list it hangs from and says to open an item). The code of a module does not say which page a test is on: the page lists the pages that use one of its components ("Likely on"), and, once you have visited a page with the dock on, the exact address where each test was seen (kept in this browser, `localStorage` `app-core.ab-tests-seen`). A test the dock showed and the scan did not find is listed apart.
 
 ### Pages below pages (the breadcrumb)
 

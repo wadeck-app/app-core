@@ -88,7 +88,7 @@ describe('showInNav (the manifest option that keeps a module out of the navigati
 
   it('leaves the module out of the dashboard shortcuts', () => {
     const home = homeNavModule(navModulesFor(modules));
-    expect(home.pages.map((p) => p.label)).toEqual(['Dashboard', 'Billing', 'Explicit']);
+    expect(home.pages.map((p) => p.label)).toEqual(['Dashboard', 'Billing', 'Explicit', 'A/B tests']);
   });
 
   it('still finds a not listed module from its URL, so its pages get their side menu', () => {
@@ -169,7 +169,7 @@ describe('pages contributed to another module side menu (<provider>:nav)', () =>
 
   it('does not list the contributed entry among the quick-launch targets or as a module', () => {
     const home = homeNavModule(navModulesFor([flow, chart]));
-    expect(home.pages.map((p) => p.label)).toEqual(['Dashboard', 'Flow']);
+    expect(home.pages.map((p) => p.label)).toEqual(['Dashboard', 'Flow', 'A/B tests']);
   });
 
   describe('active module', () => {

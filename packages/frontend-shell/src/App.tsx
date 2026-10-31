@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AbExperiments, RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
+import { AbTestsPage } from './AbTestsPage.js';
+import { AbTestsSeenRecorder } from './abTestsSeen.js';
 import { Dashboard } from './Dashboard.js';
 import { ModuleIndex } from './ModuleIndex.js';
 import { ModulePage } from './ModulePage.js';
@@ -52,6 +54,8 @@ export default function App(): React.ReactElement {
       {/* The one A/B dock (development builds, or `serve --ab-tests`): the shell's own tests and the AbTest nodes of module views share it. */}
       {/* Not `enabled={false}`: that would switch the dock off in development too. */}
       <AbExperiments enabled={abTests ? true : undefined}>
+      {/* Keeps where each A/B test was seen (dock on), for the A/B tests page. */}
+      <AbTestsSeenRecorder />
       <RouterProvider>
         <ToastProvider>
           {/* The outcome of every module action (row/batch actions, forms, brains) is shown as a toast. */}
@@ -88,6 +92,7 @@ export default function App(): React.ReactElement {
               ) : null}
               <Routes>
                 <Route path="/" element={<Dashboard modules={modules} />} />
+                <Route path="/ab-tests" element={<AbTestsPage modules={modules} />} />
                 {pageRoutes.map((r) => (
                   <Route
                     key={`${r.moduleId}${r.path}`}

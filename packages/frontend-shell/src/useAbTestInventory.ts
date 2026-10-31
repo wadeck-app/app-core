@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { getErrorMessage } from './errors.js';
 
+// An extension point of a module (server/src/abTestScan.ts PointRef): what is needed to link to where it is shown.
+export interface PointRef {
+  moduleId: string;
+  index: number;
+  kind: string;
+  slot: string;
+  path?: string;
+  label?: string;
+}
+
 // Mirrors GET /api/ab-tests (server/src/abTestScan.ts): the A/B tests the installed modules declare, over all their pages.
 export interface AbTestInventory {
   // Declared in a view of a module (`$type: AbTest`): exact.
@@ -8,8 +18,10 @@ export interface AbTestInventory {
   // Written in the code a module ships (`useAbTest` calls): an estimate, read from the text of its bundle.
   estimated: number;
   total: number;
-  views: Array<{ moduleId: string; id: string; label?: string; where: string }>;
+  views: Array<{ moduleId: string; id: string; label?: string; where: string; point: PointRef }>;
   components: Array<{ moduleId: string; label?: string }>;
+  // For each module with tests in its code: the extension points whose view uses one of its components.
+  componentUse: Record<string, PointRef[]>;
   // Modules whose components could not be read: their tests, if any, are not in the count.
   unreadable: Array<{ moduleId: string; reason: string }>;
 }

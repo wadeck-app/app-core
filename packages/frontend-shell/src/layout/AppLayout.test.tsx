@@ -85,10 +85,10 @@ describe('AppLayout: sidebar, always visible', () => {
   it('on the dashboard, lists the dashboard and one quick-launch entry per module, each with its logo', () => {
     renderAt('/');
     const nav = screen.getByRole('navigation', { name: 'Dashboard pages' });
-    expect(within(nav).getAllByRole('link').map((l) => l.textContent)).toEqual(['DADashboard', 'BIBilling', 'INInventory', 'REReports', 'ALAudit log', 'SESettings']);
+    expect(within(nav).getAllByRole('link').map((l) => l.textContent)).toEqual(['DADashboard', 'BIBilling', 'INInventory', 'REReports', 'ALAudit log', 'SESettings', 'ATA/B tests']);
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', billing.pages[0].routePath);
-    expect(logosIn(nav)).toEqual(['DA', 'BI', 'IN', 'RE', 'AL', 'SE']);
+    expect(logosIn(nav)).toEqual(['DA', 'BI', 'IN', 'RE', 'AL', 'SE', 'AT']);
   });
 
   it('has no visible header: the active tab already names the module, which stays a heading for screen readers', () => {
@@ -138,7 +138,7 @@ describe('AppLayout: a module that is not listed (showInNav: false)', () => {
   it('has no shortcut on the dashboard menu', () => {
     renderHidden('/');
     const labels = within(screen.getByRole('navigation', { name: 'Dashboard pages' })).getAllByRole('link').map((l) => l.textContent);
-    expect(labels).toEqual(['DADashboard', 'BIBilling', 'INInventory', 'ALAudit log', 'SESettings']);
+    expect(labels).toEqual(['DADashboard', 'BIBilling', 'INInventory', 'ALAudit log', 'SESettings', 'ATA/B tests']);
   });
 
   it('still lists its pages in the side menu while one of them is open, with the current one marked', () => {
@@ -338,5 +338,25 @@ describe('AppLayout: resizable side menu', () => {
     const handle = within(screen.getByTestId('shell-menu')).getByRole('separator', { name: 'Resize the side menu' });
     expect(handle).toHaveAttribute('aria-valuenow');
     expect(handle).toHaveAttribute('tabindex', '0');
+  });
+});
+
+describe('AppLayout: the A/B tests page in the dashboard menu', () => {
+  it('lists it last, apart from the modules under a "Tools" caption, linking to /ab-tests', () => {
+    renderAt('/');
+    const menu = within(screen.getByTestId('shell-menu'));
+    const link = menu.getByRole('link', { name: /A\/B tests/ });
+    expect(link).toHaveAttribute('href', '/ab-tests');
+    const separator = menu.getAllByRole('separator').find((s) => s.getAttribute('aria-label') === 'Tools');
+    expect(separator).toBeDefined();
+    // The caption comes right before the entry, after every module shortcut.
+    const items = Array.from(screen.getByTestId('shell-menu').querySelectorAll('a, [role="separator"]'));
+    expect(items.indexOf(separator as Element)).toBe(items.indexOf(link) - 1);
+    expect(items.filter((el) => el.tagName === 'A').at(-1)).toBe(link);
+  });
+
+  it('is not in the menu of a module', () => {
+    renderAt(billing.basePath);
+    expect(within(screen.getByTestId('shell-menu')).queryByRole('link', { name: /A\/B tests/ })).not.toBeInTheDocument();
   });
 });

@@ -17,7 +17,7 @@ describe('scanViews: $type: AbTest nodes in the views of a module', () => {
     };
     const found = scanViews({ id: 'm', resolvedViews: [point(view, { path: '/logs' })] as never });
     expect(found.map((f) => [f.id, f.label])).toEqual([['outer', 'Outer'], ['inner', 'Inner']]);
-    expect(found[0]).toMatchObject({ source: 'view', moduleId: 'm', where: 'page nav /logs' });
+    expect(found[0]).toMatchObject({ source: 'view', moduleId: 'm', where: 'page nav /logs', point: { moduleId: 'm', index: 0, kind: 'page', slot: 'nav', path: '/logs' } });
   });
 
   it('counts a test repeated with the same id once', () => {
@@ -96,6 +96,31 @@ describe('GET /api/ab-tests', () => {
       expect(body).toMatchObject({ exact: 1, estimated: 2, total: 3, unreadable: [] });
       expect(body.views[0]?.id).toBe('view-test');
       expect(body.components.map((c) => c.label)).toEqual(['One', 'Two']);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('says which pages use the components of a module that has tests in its code, in any module', async () => {
+    const server = await setup(true);
+    try {
+      // A second module whose page renders a component of the first one, and a third that uses nothing of it.
+      const other = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-abscan-other-'));
+      try {
+        fs.writeFileSync(path.join(other, 'backend.cjs'), 'module.exports = function () {};\n');
+        const manifest = (id: string, type: string) =>
+          JSON.stringify({ id, version: '1.0.0', backendEntryPath: './backend.cjs', extensionPoints: [{ kind: 'page', slot: 'route', label: id, path: '/x/:id', view: { type: 'inline', value: { $type: 'VerticalStack', children: [{ $type: type }] } } }] });
+        fs.writeFileSync(path.join(other, 'user.json'), manifest('user', 'scanned:Panel'));
+        fs.writeFileSync(path.join(other, 'bystander.json'), manifest('bystander', 'Badge'));
+        for (const id of ['user', 'bystander']) {
+          const res = await server.inject({ method: 'POST', url: '/api/modules/register', payload: { id, source: { type: 'file', path: path.join(other, `${id}.json`) } } });
+          expect(res.statusCode, res.body).toBe(201);
+        }
+        const body = (await server.inject({ method: 'GET', url: '/api/ab-tests' })).json() as { componentUse: Record<string, Array<{ moduleId: string; index: number; kind: string; slot: string; path?: string }>> };
+        expect(body.componentUse).toEqual({ scanned: [{ moduleId: 'user', index: 0, kind: 'page', slot: 'route', path: '/x/:id', label: 'user' }] });
+      } finally {
+        fs.rmSync(other, { recursive: true, force: true });
+      }
     } finally {
       await server.close();
     }

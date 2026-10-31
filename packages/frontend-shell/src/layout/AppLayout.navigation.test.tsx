@@ -35,7 +35,7 @@ function renderAt(path: string, nav = navModulesFor(modules)) {
 
 // The text of the links of a navigation, without the two letters of a logo in front.
 const linkTexts = (name: string): Array<string | undefined> =>
-  within(screen.getByRole('navigation', { name })).getAllByRole('link').map((l) => l.textContent?.replace(/^(?:DA|FL|QU|TA)(?=[A-Z])/, ''));
+  within(screen.getByRole('navigation', { name })).getAllByRole('link').map((l) => l.textContent?.replace(/^(?:DA|FL|QU|TA|AT)(?=[A-Z])/, ''));
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -49,7 +49,7 @@ describe('menu labels', () => {
 
   it('are left as they are on the dashboard menu, which lists modules', () => {
     renderAt('/');
-    expect(linkTexts('Dashboard pages')).toEqual(['Dashboard', 'Flow', 'Queue', 'Task']);
+    expect(linkTexts('Dashboard pages')).toEqual(['Dashboard', 'Flow', 'Queue', 'Task', 'A/B tests']);
   });
 });
 
