@@ -31,6 +31,8 @@ export interface ContributionProblem {
 export interface ValidateContributionsInput {
   moduleId: string;
   requires: Record<string, string> | undefined;
+  // Modules this one can do without: their slots are served by `evaluateOptionalContributions`, never by the checks that fail a module.
+  optionalRequires?: Record<string, string> | undefined;
   contributions: Contribution[];
   // The module's own `expose`, for contributions to its own slots.
   selfExpose?: ModuleExpose;
@@ -84,6 +86,9 @@ function checkContribution(contribution: Contribution, input: ValidateContributi
     return;
   }
   const { providerId, local } = custom;
+  if (providerId !== input.moduleId && input.requires?.[providerId] === undefined && input.optionalRequires?.[providerId] !== undefined) {
+    return;
+  }
   const where = `extensionPoints[${contribution.index}]`;
   let expose: ModuleExpose | undefined;
   let providerVersion = '';
@@ -105,7 +110,7 @@ function checkContribution(contribution: Contribution, input: ValidateContributi
         about: 'manifest',
         extensionPointIndex: contribution.index,
         problem: `${where} contributes to "${contribution.slot}" but "requires" does not list "${providerId}"`,
-        fix: `Add "requires": { "${providerId}": "^1.0.0" } to manifest.json (use the range of the ${providerId} versions you built against).`,
+        fix: `Add "requires": { "${providerId}": "^1.0.0" } to manifest.json (use the range of the ${providerId} versions you built against), or "optionalRequires" if this module can work without ${providerId}.`,
       });
       return;
     }
@@ -181,10 +186,81 @@ export function validateContributions(input: ValidateContributionsInput): Contri
     }
   }
 
+  for (const [id, range] of Object.entries(input.optionalRequires ?? {})) {
+    if (semver.validRange(range) === null) {
+      problems.push({
+        about: 'manifest',
+        problem: `optionalRequires "${id}" has an invalid semver range ${JSON.stringify(range)}`,
+        fix: 'Use a semver range such as "^1.0.0", ">=1.2.0 <2" or "*".',
+      });
+    }
+  }
+
   for (const contribution of input.contributions) {
     checkContribution(contribution, input, unusable, problems);
   }
   return problems;
+}
+
+// Why a contribution to an optional provider is not used. `absent`: the module is not there (not loaded, failed, or not found
+// where the CLI looks), nothing is wrong with this module. `violation`: it is there and the contract does not hold (version out
+// of range, slot not exposed, root $type not accepted): something to fix.
+export interface InactiveContribution {
+  kind: 'absent' | 'violation';
+  reason: string;
+}
+
+export interface OptionalOutcome {
+  // By index in the manifest's extensionPoints.
+  inactive: Map<number, InactiveContribution>;
+  // One line per inactive contribution, for GET /api/modules and the logs.
+  warnings: string[];
+}
+
+// The contributions to the providers of `optionalRequires`: each is used (not listed in `inactive`) or inactive with its
+// reason. Evaluated again whenever the loaded modules change, so a provider that loads later activates what waited for it.
+export function evaluateOptionalContributions(input: ValidateContributionsInput): OptionalOutcome {
+  const optional = input.optionalRequires ?? {};
+  const inactive = new Map<number, InactiveContribution>();
+  if (Object.keys(optional).length === 0) {
+    return { inactive, warnings: [] };
+  }
+  const unusable = new Map<string, InactiveContribution>();
+  for (const [id, range] of Object.entries(optional)) {
+    if (semver.validRange(range) === null) {
+      unusable.set(id, { kind: 'violation', reason: `optionalRequires "${id}" has an invalid semver range ${JSON.stringify(range)}` });
+      continue;
+    }
+    const result = input.lookup(id);
+    if (!result.found) {
+      unusable.set(id, { kind: 'absent', reason: `optional module "${id}" is not available: ${result.why}` });
+      continue;
+    }
+    const tooOld: ContributionProblem[] = [];
+    if (input.mode === 'load' && !checkRequiredProvider(id, range, input, tooOld)) {
+      unusable.set(id, { kind: 'violation', reason: tooOld[0]?.problem ?? `optional module "${id}" does not fit its range` });
+    }
+  }
+  // The checks of a hard provider, run on the optional ones as if they were required: what they find becomes a reason.
+  const asRequired: ValidateContributionsInput = { ...input, requires: { ...input.requires, ...optional } };
+  for (const contribution of input.contributions) {
+    const custom = splitCustomSlot(contribution.slot);
+    if (custom === undefined || custom.providerId === input.moduleId || input.requires?.[custom.providerId] !== undefined || optional[custom.providerId] === undefined) {
+      continue;
+    }
+    const why = unusable.get(custom.providerId);
+    if (why !== undefined) {
+      inactive.set(contribution.index, why);
+      continue;
+    }
+    const found: ContributionProblem[] = [];
+    checkContribution(contribution, asRequired, new Set(), found);
+    if (found[0] !== undefined) {
+      inactive.set(contribution.index, { kind: 'violation', reason: found[0].problem });
+    }
+  }
+  const warnings = [...inactive].map(([index, why]) => `extensionPoints[${index}] (slot "${input.contributions.find((c) => c.index === index)?.slot ?? '?'}") is inactive: ${why.reason}`);
+  return { inactive, warnings };
 }
 
 // One message for a thrown error: the module, then each problem with its fix. `heading` completes

@@ -18,6 +18,8 @@ export interface ResolvedExtensionPoint {
   // A page of the side menu: a rule above its entry, with `groupLabel` as the caption of the group that follows.
   separatorBefore?: boolean;
   groupLabel?: string;
+  // A contribution to a module this one can do without (`optionalRequires`) that is not used now: the reason. The shell leaves it out.
+  inactive?: string;
 }
 
 // Runtime-loaded components of a module (its dsl-lib folder), cache-busted URLs served by app-core.
@@ -35,6 +37,8 @@ export interface LoadedModuleSummary {
   showInNav?: boolean;
   // From the manifest's `title`: the display name. Absent means the shell derives one from the id.
   title?: string;
+  // Contributions that are inactive right now and why (see `inactive` on the extension points); absent when there are none.
+  warnings?: string[];
 }
 
 // A registered module that could not be loaded; `error` is the reason, `source` the manifest path.

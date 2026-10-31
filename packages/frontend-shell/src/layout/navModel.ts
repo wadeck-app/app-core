@@ -16,7 +16,7 @@ export interface NavPage {
 export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
   return modules.flatMap((m) =>
     m.extensionPoints
-      .filter((ep) => ep.kind === 'page' && ep.slot === 'nav')
+      .filter((ep) => ep.kind === 'page' && ep.slot === 'nav' && ep.inactive === undefined)
       .map((ep, i) => ({
         moduleId: m.id,
         // A nav page with a static path is linked there; one with route params can only be reached by index.
@@ -52,7 +52,8 @@ function contributedPagesFor(modules: LoadedModuleSummary[]): ContributedPage[] 
       m.extensionPoints.flatMap((ep): ContributedPage[] => {
         const provider = menuSlotProvider(ep.slot);
         // The server guarantees a static path, a label and the kind `page`; a module that does not is not loaded at all.
-        if (provider === undefined || provider === m.id || !loaded.has(provider) || ep.kind !== 'page' || ep.path === undefined) {
+        // An inactive contribution (a provider it can do without is not there, or the contract does not hold) is not listed.
+        if (provider === undefined || provider === m.id || !loaded.has(provider) || ep.kind !== 'page' || ep.path === undefined || ep.inactive !== undefined) {
           return [];
         }
         return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), label: ep.label ?? ep.path, exact: ep.path === '/', separatorBefore: ep.separatorBefore, groupLabel: ep.groupLabel } }];

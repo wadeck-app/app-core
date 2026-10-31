@@ -218,3 +218,17 @@ describe('separators in the side menu', () => {
     ]);
   });
 });
+
+describe('contributions that are inactive (a provider the module can do without is not there)', () => {
+  it('leaves an inactive page out of the side menu of the provider, and keeps an active one', () => {
+    const flow = mod('flow', page('nav', 'Executions', '/'));
+    const chart = mod('flow-chart', { ...page('flow:nav', 'Charts', '/charts') }, { ...page('flow:nav', 'Hidden', '/hidden'), inactive: 'optional module "x" is not available' });
+    const menu = navModulesFor([flow, chart]).find((m) => m.id === 'flow')?.pages;
+    expect(menu?.map((p) => p.label)).toEqual(['Executions', 'Charts']);
+  });
+
+  it('leaves an inactive page of the module itself out of its own menu', () => {
+    const own = mod('own', page('nav', 'Home', '/'), { ...page('nav', 'Gone', '/gone'), inactive: 'reason' });
+    expect(navModulesFor([own]).find((m) => m.id === 'own')?.pages.map((p) => p.label)).toEqual(['Home']);
+  });
+});

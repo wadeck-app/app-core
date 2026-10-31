@@ -163,16 +163,21 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
   // whose registration exists but failed to load, with the reason and its kind (`cause`:
   // "requirement" is retried automatically, "error" is not).
   server.get('/api/modules', { onSend: etagHook }, async (_req, reply) => {
-    const modules = manager.list().map((m) => ({
-      id: m.id,
-      version: m.manifest.version,
-      extensionPoints: m.resolvedViews,
-      dslLib: m.dslLib,
-      // Always present for the shell (the manifest field is optional and means true when absent).
-      showInNav: m.manifest.showInNav ?? true,
-      // Only when the manifest names the module; the shell derives a title from the id otherwise.
-      ...(m.manifest.title === undefined ? {} : { title: m.manifest.title }),
-    }));
+    const modules = manager.list().map((m) => {
+      // The contributions to optional providers that are not used right now, with the reason (see ModuleManager.optionalOutcome).
+      const { inactive, warnings } = manager.optionalOutcome(m);
+      return {
+        id: m.id,
+        version: m.manifest.version,
+        extensionPoints: m.resolvedViews.map((view, index) => (inactive.has(index) ? { ...view, inactive: inactive.get(index)?.reason } : view)),
+        ...(warnings.length === 0 ? {} : { warnings }),
+        dslLib: m.dslLib,
+        // Always present for the shell (the manifest field is optional and means true when absent).
+        showInNav: m.manifest.showInNav ?? true,
+        // Only when the manifest names the module; the shell derives a title from the id otherwise.
+        ...(m.manifest.title === undefined ? {} : { title: m.manifest.title }),
+      };
+    });
     return reply.code(200).send({ modules, failed: manager.listFailed() });
   });
 }

@@ -150,6 +150,20 @@ const DslLibSchema = z.object({
   shared: z.record(z.string().min(1)).default({}),
 });
 
+// Modules this one can do without: same shape as `requires`. A contribution to a slot of such a module is used when the module
+// is loaded and its contract holds, and left inactive (with a warning, never silently) when it is not. Not part of the load
+// order, of the cycle check or of the cascade: two modules may list each other here.
+function checkOptionalRequires(manifest: { id: string; requires?: Record<string, string>; optionalRequires?: Record<string, string> }, ctx: z.RefinementCtx): void {
+  for (const id of Object.keys(manifest.optionalRequires ?? {})) {
+    if (manifest.requires?.[id] !== undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['optionalRequires', id], message: `"${id}" is in both "requires" and "optionalRequires": keep it in one. "requires" if the module cannot work without it, "optionalRequires" if it can.` });
+    }
+    if (id === manifest.id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['optionalRequires', id], message: `a module cannot list itself in "optionalRequires": its own slots need no declaration.` });
+    }
+  }
+}
+
 // The manifest a running app-core loads (what `package` writes into dist-module/).
 export const ManifestSchema = z.object({
   // Must equal the id the module is registered under (decision 83); the loader refuses a mismatch.
@@ -159,11 +173,12 @@ export const ManifestSchema = z.object({
   extensionPoints: z.array(ExtensionPointSchema).min(1),
   dslLib: DslLibSchema.optional(),
   requires: RequiresSchema.optional(),
+  optionalRequires: RequiresSchema.optional(),
   expose: ExposeSchema.optional(),
   lifecycle: LifecycleSchema.optional(),
   showInNav: ShowInNavSchema,
   title: TitleSchema,
-});
+}).superRefine(checkOptionalRequires);
 
 // The manifest an author writes at the module root (decision 81). It never names what `package`
 // produces: no version (stamped at package time), no backendEntryPath (src/backend/index.ts by
@@ -175,12 +190,14 @@ export const SourceManifestSchema = z
     extensionPoints: z.array(ExtensionPointSchema).min(1),
     dslLib: z.object({ shared: z.record(z.string().min(1)).default({}) }).strict().optional(),
     requires: RequiresSchema.optional(),
+    optionalRequires: RequiresSchema.optional(),
     expose: ExposeSchema.optional(),
     lifecycle: LifecycleSchema.optional(),
     showInNav: ShowInNavSchema,
     title: TitleSchema,
   })
-  .strict();
+  .strict()
+  .superRefine(checkOptionalRequires);
 
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type SourceManifest = z.infer<typeof SourceManifestSchema>;

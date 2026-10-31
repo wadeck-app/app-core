@@ -19,7 +19,7 @@ import { checkSharedRanges, resolveDslLib, type DslLibUrls, type SharedVersions 
 import { resolveView, resolveRawYaml } from './viewResolver.js';
 import type { RegistryEntry } from './registry.js';
 import { ModuleRouteRegistry } from './moduleRoutes.js';
-import { formatContributionProblems, rootTypeOf, validateContributions, type ContributionProblem, type ProviderLookup } from './contributions.js';
+import { evaluateOptionalContributions, formatContributionProblems, rootTypeOf, validateContributions, type ContributionProblem, type OptionalOutcome, type ProviderLookup } from './contributions.js';
 import { orderByRequires, readRequiredIds } from './loadOrder.js';
 import { isUnloadable, loadCommonJs } from './commonJsBackend.js';
 import { fileVersion } from './conditionalGet.js';
@@ -182,6 +182,21 @@ export class ModuleManager {
 
   list(): LoadedModule[] {
     return [...this.loaded.values()];
+  }
+
+  // Which contributions of a loaded module to its `optionalRequires` providers are used right now, and why the others are not.
+  // Worked out from the modules loaded at this moment each time it is asked, so a provider that registers, updates or goes
+  // away changes the answer at once, with nothing to keep in step. No cascade: an optional provider leaving unloads nobody.
+  optionalOutcome(mod: LoadedModule): OptionalOutcome {
+    return evaluateOptionalContributions({
+      moduleId: mod.id,
+      requires: mod.manifest.requires,
+      optionalRequires: mod.manifest.optionalRequires,
+      contributions: mod.resolvedViews.map((v, index) => ({ index, slot: v.slot, rootType: rootTypeOf(v.view) })),
+      selfExpose: mod.manifest.expose,
+      lookup: (providerId) => this.lookupLoaded(providerId),
+      mode: 'load',
+    });
   }
 
   listFailed(): FailedModule[] {
@@ -408,6 +423,10 @@ export class ModuleManager {
         held: existing === undefined ? [] : held,
       };
       this.loaded.set(entry.id, loadedModule);
+      // Said once in the logs when the module loads; the answer of GET /api/modules is the live one.
+      for (const warning of this.optionalOutcome(loadedModule).warnings) {
+        (this.options.onWarning ?? writeWarning)(`module "${entry.id}" ${warning}`);
+      }
       return loadedModule;
     } catch (err) {
       releaseAll();
@@ -500,6 +519,7 @@ export class ModuleManager {
     const problems = validateContributions({
       moduleId: id,
       requires: manifest.requires,
+      optionalRequires: manifest.optionalRequires,
       contributions: resolvedViews.map((v, index) => ({ index, slot: v.slot, rootType: rootTypeOf(v.view) })),
       selfExpose: manifest.expose,
       lookup: (providerId) => this.lookupLoaded(providerId),

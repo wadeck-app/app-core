@@ -24,8 +24,10 @@ export async function slotsRoutes(server: FastifyInstance, opts: SlotsRoutesOpti
 
     const contributions: Array<{ order?: number; view: unknown }> = [];
     for (const mod of manager.list()) {
-      for (const ep of mod.resolvedViews) {
-        if (ep.slot === slotId) {
+      // A contribution to an optional provider that is not used right now is not served.
+      const { inactive } = manager.optionalOutcome(mod);
+      for (const [index, ep] of mod.resolvedViews.entries()) {
+        if (ep.slot === slotId && !inactive.has(index)) {
           contributions.push({ order: ep.order, view: ep.view });
         }
       }
