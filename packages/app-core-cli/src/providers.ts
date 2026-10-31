@@ -6,9 +6,10 @@ import type { Manifest } from '@wadeck-app/app-core-sdk';
 import { OUTPUT_DIR } from './outputDir.js';
 import { validateManifestFile } from './validate.js';
 
-// Package name -> the folder of that package, used instead of looking the package up in node_modules.
+// Package name OR module id -> the folder of that package, used instead of looking the package up in node_modules.
 // For layouts where the dependency is not installed (a monorepo that does not link it, the repository's
-// own fixtures): the folder holds the dependency's dist-module.
+// own fixtures, a provider the module only does `optionalRequires` on and so does not depend on): the folder holds the
+// dependency's dist-module. A key that is the id of the module looked for is used directly, whatever package.json lists.
 export type Links = Record<string, string>;
 
 export const LINK_USAGE = '--link <package>=<folder>';
@@ -104,7 +105,23 @@ function sourceModuleId(root: string): string | undefined {
 export function locateProvider(moduleDir: string, providerId: string, links: Links): ProviderLocation {
   const fix =
     `Add the package that provides module "${providerId}" to "dependencies" in package.json, install it, and make sure it is built ` +
-    `(its ${OUTPUT_DIR}/manifest.json must exist). If it is not installed in this layout, pass ${LINK_USAGE} to point at its folder.`;
+    `(its ${OUTPUT_DIR}/manifest.json must exist). If it is not installed in this layout, or you do not depend on it, pass ${LINK_USAGE} (the package name, or the module id "${providerId}") to point at its folder.`;
+  // `--link <module id>=<folder>`: asked for by name, so it is looked at first and a link that does not work is said, not skipped.
+  const direct = links[providerId];
+  if (direct !== undefined) {
+    const manifestPath = path.join(direct, OUTPUT_DIR, 'manifest.json');
+    if (!fs.existsSync(manifestPath)) {
+      return { found: false, why: `--link ${providerId}=${direct}: no ${OUTPUT_DIR}/manifest.json there (not a module folder, or not built)`, fix, sourceRoot: sourceModuleId(direct) === providerId ? direct : undefined };
+    }
+    const validated = validateManifestFile(manifestPath);
+    if (!validated.ok) {
+      return { found: false, why: `--link ${providerId}=${direct}: ${manifestPath} is invalid: ${validated.reason.split('\n')[0]}`, fix };
+    }
+    if (validated.manifest.id !== providerId) {
+      return { found: false, why: `--link ${providerId}=${direct}: that folder holds module "${validated.manifest.id}", not "${providerId}"`, fix };
+    }
+    return { found: true, located: { packageName: providerId, root: direct, manifestPath, manifest: validated.manifest, via: 'link' } };
+  }
   const dependencies = dependencyNames(moduleDir);
   if ('missing' in dependencies) {
     return { found: false, why: `${dependencies.missing} (module "${providerId}")`, fix };

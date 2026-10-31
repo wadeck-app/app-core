@@ -58,8 +58,8 @@ describe('check: optionalRequires', () => {
     const dir = track(makeModule(contributorFiles()));
     const result = await checkModule(dir);
     expect(result.issues).toEqual([]);
-    expect(result.warnings).toEqual([expect.stringContaining('optional module "prov" was not found')]);
-    expect(result.warnings[0]).toContain('--link prov=<folder>');
+    expect(result.warnings).toEqual([expect.stringContaining('optional module "prov" is not available')]);
+    expect(result.warnings[0]).toContain('--link prov=<folder of the provider>');
   });
 
   it('says it once per provider, however many contributions it has', async () => {
@@ -117,6 +117,41 @@ describe('check: optionalRequires', () => {
   });
 });
 
+describe('check: --link <module id>=<folder> for a provider the module does not depend on', () => {
+  // The package of the provider is "@x/prov" and the module id is "prov"; the contributor does not list the package at all.
+  const noDependency = (): Record<string, string | null> => ({ ...contributorFiles(), 'package.json': JSON.stringify({ name: '@x/contrib', files: ['dist-module'] }) });
+
+  it('finds the provider by its module id, and validates against it', async () => {
+    const provider = await packagedProvider();
+    const dir = track(makeModule(noDependency()));
+    expect(await checkModule(dir, { links: { prov: provider } })).toMatchObject({ issues: [], warnings: [] });
+
+    const wrong = track(makeModule({ ...noDependency(), 'manifest.json': contributorManifest({ $type: 'Card', title: 'x' }) }));
+    const { issues } = await checkModule(wrong, { links: { prov: provider } });
+    expect(issues[0]?.problem).toContain('contributes a "Card" to "prov:shared-slot", which accepts only: Badge');
+  });
+
+  it('says why a link does not work instead of falling back to the dependencies: not built, or another module', async () => {
+    const notBuilt = track(makeModule(providerFiles()));
+    const dir = track(makeModule(noDependency()));
+    const first = await checkModule(dir, { links: { prov: notBuilt } });
+    expect(first.warnings[0]).toContain('--link prov=');
+    expect(first.warnings[0]).toContain('not a module folder, or not built');
+
+    const other = track(makeModule({ ...providerFiles(), 'manifest.json': JSON.stringify({ ...PROVIDER_MANIFEST, id: 'other' }) }));
+    await packageModule({ moduleDir: other, outDir: path.join(other, 'dist-module'), version: '1.0.0' });
+    const second = await checkModule(dir, { links: { prov: other } });
+    expect(second.warnings[0]).toContain('that folder holds module "other", not "prov"');
+  });
+
+  it('works for a required provider too', async () => {
+    const provider = await packagedProvider();
+    const manifest = contributorManifest(undefined, { optionalRequires: undefined, requires: { prov: '^1.0.0' } });
+    const dir = track(makeModule({ ...noDependency(), 'manifest.json': manifest }));
+    expect((await checkModule(dir, { links: { prov: provider } })).issues).toEqual([]);
+  });
+});
+
 describe('package: optionalRequires', () => {
   it('writes the key into the manifest the server loads, and carries the warning of check', async () => {
     const dir = track(makeModule(contributorFiles()));
@@ -124,7 +159,7 @@ describe('package: optionalRequires', () => {
     const packaged = JSON.parse(fs.readFileSync(path.join(dir, 'dist-module', 'manifest.json'), 'utf8')) as { optionalRequires?: unknown; requires?: unknown };
     expect(packaged.optionalRequires).toEqual({ prov: '^1.0.0' });
     expect(packaged.requires).toBeUndefined();
-    expect(result.warnings.some((w) => w.includes('optional module "prov" was not found'))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('optional module "prov" is not available'))).toBe(true);
   });
 });
 

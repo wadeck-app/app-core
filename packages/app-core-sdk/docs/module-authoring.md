@@ -440,7 +440,7 @@ Slot ids are the shell slots (`dashboard`, `nav`, `route`, `navbar`, `overlay`) 
 { "id": "billing", "requires": { "queue": "^1.0.0" }, "extensionPoints": [{ "kind": "widget", "slot": "queue:subscriber-row", "view": { "type": "path", "value": "./src/dsl-views/row.yaml" } }] }
 ```
 
-`check` and `package` find the provider by reading `node_modules/<dependency>/dist-module/manifest.json` of each dependency (`dependencies`, `devDependencies`, `peerDependencies`) and matching its `id`. Where the dependency is not installed in `node_modules`, pass `--link <package>=<folder>` (folder holding its `dist-module`; repeatable, accepted by `check` and `package`). They report:
+`check` and `package` find the provider by reading `node_modules/<dependency>/dist-module/manifest.json` of each dependency (`dependencies`, `devDependencies`, `peerDependencies`) and matching its `id`. Where the dependency is not installed in `node_modules`, pass `--link <package>=<folder>` (folder holding its `dist-module`; repeatable, accepted by `check` and `package`). A key that is the **module id** also works (`--link task=../app-module-task`): it is used whatever `package.json` lists, which is what a provider you do not depend on (`optionalRequires`) needs, since its package name is not in your dependencies. A link that does not work (no built `dist-module`, or another module's id) is reported, never skipped. They report:
 
 - `requires` does not list the provider, or the provider is not found, not built, or does not expose the slot;
 - the ROOT `$type` of the contributed view is not in `accepts` (children are not validated).
@@ -461,7 +461,7 @@ At load, app-core applies the same rules to the modules it has loaded, plus the 
 - It is worked out from the modules loaded at each request, so a provider that registers or updates activates what waited for it, and one that goes away deactivates it again. **No cascade**: an optional provider leaving unloads nobody. A provider that is there but does not fit (version outside the range, slot not exposed, root `$type` not in `accepts`) gives an inactive contribution with that reason, not a failed module.
 - Optional edges are not part of the load order, the cycle check or the cascade: two modules may list each other (`project` <-> `task`), each offering slots the other contributes to. A `requires` cycle is still refused.
 - An id is in `requires` or in `optionalRequires`, not both, and never your own id. The range is checked like a `requires` range.
-- `check` and `package` hold an optional provider that they can find (`node_modules`, `--link`) to the same rules as a required one, as errors. One they cannot find is a single warning line, however many contributions it has: they are not validated, and `package` carries the warning in its result.
+- `check` and `package` hold an optional provider that they can find (`node_modules`, `--link`) to the same rules as a required one, as errors. One they cannot find is a single warning line that gives the reason (not installed, or what is wrong with the `--link`), however many contributions it has: they are not validated, and `package` carries the warning in its result. To validate against a provider you do not depend on, `--link <module id>=<folder>`.
 - Your own slots need no declaration. Declare only the modules you contribute to.
 
 ### Adding a page to another module's side menu (`<providerId>:nav`)

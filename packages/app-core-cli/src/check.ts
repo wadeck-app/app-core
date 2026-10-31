@@ -538,17 +538,17 @@ function checkContributions(moduleDir: string, manifest: SourceManifest, links: 
   }
   // An optional provider that is there is held to the same contract as a required one (this is the strict gate; at run time the
   // same finding only makes the contribution inactive). One that is not found is one warning, however many contributions it has.
-  const absent = new Set<string>();
+  const absent = new Map<string, string>();
   for (const [index, why] of evaluateOptionalContributions(input).inactive) {
     if (why.kind === 'absent') {
-      absent.add(why.providerId ?? '?');
+      absent.set(why.providerId ?? '?', why.reason);
       continue;
     }
     const viewFile = why.about === 'view' ? views[index]?.file : undefined;
     issues.push({ file: viewFile ?? 'manifest.json', problem: why.reason, fix: why.fix ?? 'Fix the contribution, or the optionalRequires range.' });
   }
   return [...absent].map(
-    (id) => `optional module "${id}" was not found (node_modules, or --link ${id}=<folder>): the contributions to it are not validated here. At run time they are used only while ${id} is loaded.`,
+    ([id, reason]) => `${reason}. The contributions to it are not validated here; at run time they are used only while ${id} is loaded. To validate them, install the provider, or pass --link ${id}=<folder of the provider>.`,
   );
 }
 
