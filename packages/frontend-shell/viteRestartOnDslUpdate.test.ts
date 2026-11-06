@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { entriesGeneratorUrl, installedDslVersions, sameVersions } from './viteRestartOnDslUpdate';
 
@@ -40,12 +41,30 @@ describe('sameVersions', () => {
 });
 
 describe('entriesGeneratorUrl', () => {
-  it('points at the generator of the installed dsl-renderer and changes with its version, so a restart evaluates it again', () => {
-    const v1 = entriesGeneratorUrl(installed({ '@wadeck-app/dsl-ui': '2', '@wadeck-app/dsl-renderer': '3' }));
-    const v2 = entriesGeneratorUrl(installed({ '@wadeck-app/dsl-ui': '2', '@wadeck-app/dsl-renderer': '4' }));
-    expect(v1.startsWith('file:///')).toBe(true);
-    expect(v1.endsWith('/node_modules/@wadeck-app/dsl-renderer/dist/build/entriesGenerator.js?dsl=3')).toBe(true);
-    expect(v2.endsWith('?dsl=4')).toBe(true);
+  // Where the generator is installed does not matter (hoisted or nested): the version is the one of the package it belongs to.
+  function generatorIn(root: string, version: string): string {
+    const dir = path.join(root, 'node_modules', '@wadeck-app', 'dsl-renderer');
+    fs.mkdirSync(path.join(dir, 'dist', 'build'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: '@wadeck-app/dsl-renderer', version }));
+    return pathToFileURL(path.join(dir, 'dist', 'build', 'entriesGenerator.js')).href;
+  }
+  const rootDir = () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dsl-'));
+    roots.push(root);
+    return root;
+  };
+
+  it('keeps the file and adds the version of its dsl-renderer as query, so a new version is evaluated again', () => {
+    const v3 = generatorIn(rootDir(), '3');
+    const v4 = generatorIn(rootDir(), '4');
+    expect(entriesGeneratorUrl(v3)).toBe(`${v3}?dsl=3`);
+    expect(entriesGeneratorUrl(v4)).toBe(`${v4}?dsl=4`);
+    expect(entriesGeneratorUrl(`${v3}?dsl=old`)).toBe(`${v3}?dsl=3`);
+  });
+
+  it('says what to do when the package of the generator cannot be found', () => {
+    const lonely = pathToFileURL(path.join(rootDir(), 'dist', 'build', 'entriesGenerator.js')).href;
+    expect(() => entriesGeneratorUrl(lonely)).toThrow('Cannot find the package.json of @wadeck-app/dsl-renderer');
   });
 });
 

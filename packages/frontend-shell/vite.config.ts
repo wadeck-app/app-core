@@ -20,7 +20,7 @@ export default defineConfig(async () => {
     hooks.__appCoreDslFreshLoader = true;
   }
   const root = fileURLToPath(new URL('../..', import.meta.url));
-  const { entriesGenerator } = (await import(/* @vite-ignore */ entriesGeneratorUrl(root))) as typeof import('@wadeck-app/dsl-renderer/build/entriesGenerator');
+  const { entriesGenerator } = (await import(/* @vite-ignore */ entriesGeneratorUrl(import.meta.resolve('@wadeck-app/dsl-renderer/build/entriesGenerator')))) as typeof import('@wadeck-app/dsl-renderer/build/entriesGenerator');
   // Where the dev server proxies the API: the app-core started on 4850 by default; APP_CORE_API points it at another one
   // (for example an isolated server with sample modules).
   const api = process.env['APP_CORE_API'] ?? 'http://127.0.0.1:4850';

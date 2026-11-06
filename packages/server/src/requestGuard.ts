@@ -18,6 +18,15 @@ export function hostnameOf(hostHeader: string): string | undefined {
   }
 }
 
+// "http://name:port" -> "name", undefined when the header is not an origin.
+function originHostnameOf(origin: string): string | undefined {
+  try {
+    return new URL(origin).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
 // Extra host names the server is reached by (a reverse proxy, an SSH tunnel), from the option or APP_CORE_ALLOWED_HOSTS
 // ("name1,name2", names without port).
 export function allowedHostsFrom(option: readonly string[] | undefined, env: NodeJS.ProcessEnv = process.env): string[] {
@@ -42,6 +51,17 @@ export function registerRequestGuard(server: FastifyInstance, extraHosts: readon
     // Requests that change something: the browser says who is asking in Sec-Fetch-Site. Absent (curl, a CLI, another module's
     // server-side fetch, tests) and same-origin / none (typed address, bookmark) pass.
     if (!SAFE_METHODS.has(request.method) && request.url.startsWith('/api/')) {
+      // Browsers that do not send Sec-Fetch-Site (older Safari) still send Origin on a request that changes something.
+      const origin = request.headers.origin;
+      if (origin !== undefined) {
+        const originHost = origin === 'null' ? undefined : originHostnameOf(origin);
+        if (originHost === undefined || !allowedHosts.has(originHost)) {
+          return reply.code(403).send({
+            error: 'cross-site-request',
+            message: `${request.method} ${request.url.split('?')[0]} was refused: it comes from the origin "${origin}", which is not this app-core. A page of another site must not change anything here. Do it from the app-core dashboard itself, or from a tool that is not a web page (curl, the CLI).`,
+          });
+        }
+      }
       const site = request.headers['sec-fetch-site'];
       if (site === 'cross-site' || site === 'same-site') {
         return reply.code(403).send({

@@ -83,6 +83,21 @@ describe('the request guard, on the real server with a module that changes data'
     }
   });
 
+  it('also refuses, without Sec-Fetch-Site, a change whose Origin is another site, "null" included; the dashboard origins pass', async () => {
+    await start();
+    for (const origin of ['https://attacker.example', 'http://attacker.example:4850', 'null']) {
+      const res = await post({ origin });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toBe('cross-site-request');
+      expect(res.json().message).toContain(`"${origin}"`);
+    }
+    for (const origin of ['http://127.0.0.1:4850', 'http://localhost:5173', 'http://[::1]:4850']) {
+      expect((await post({ origin })).statusCode).toBe(200);
+    }
+    // A read is not stopped by its Origin (the Host check is what protects reads).
+    expect((await get({ origin: 'https://attacker.example' })).statusCode).toBe(200);
+  });
+
   it('guards the built-in routes the same way, not only the module ones', async () => {
     await start();
     const res = await post({ 'sec-fetch-site': 'cross-site' }, '/api/modules/register');
