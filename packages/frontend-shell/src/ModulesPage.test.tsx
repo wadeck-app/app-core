@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { ModulesPage } from './ModulesPage.js';
+import { modulesViewData } from './modulesView.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 
 const ep = (kind: string, slot: string, extra: Record<string, unknown> = {}) => ({ kind, slot, view: {}, rawYaml: '', ...extra });
@@ -30,6 +31,41 @@ const failed: FailedModuleSummary[] = [
   { id: 'task', source: 'C:/mods/task/manifest.json', error: 'setup threw', failedAt: '2026-10-31T10:05:00Z', cause: 'error' },
 ];
 
+describe('modulesViewData', () => {
+  it('counts what is loaded, failed and with warnings', () => {
+    expect(modulesViewData(modules, failed)).toMatchObject({ loaded: 2, failedCount: 2, warningCount: 1, hasFailed: true, hasWarnings: true });
+    expect(modulesViewData(modules, [])).toMatchObject({ hasFailed: false });
+    expect(modulesViewData([modules[1]!], [])).toMatchObject({ hasWarnings: false, warningCount: 0 });
+  });
+
+  it('tells what each module needs, can do without (and what is not loaded), offers, is needed by and brings', () => {
+    const rows = modulesViewData(modules, []).installedRows;
+    expect(rows[0]).toEqual({
+      title: 'Project',
+      href: '/modules/project',
+      version: '2026.10.31-026',
+      needs: '—',
+      optional: 'task *, queue ^1.0.0 (not loaded)',
+      offers: 'project:project-panels',
+      neededBy: 'task',
+      brings: '2 pages, 1 widget',
+    });
+    expect(rows[1]).toMatchObject({ title: 'task', needs: 'project *', optional: '—', offers: '—', neededBy: 'project', brings: '1 page, components' });
+  });
+
+  it('says what to do about a failure according to its cause, and notes a previous version that still runs', () => {
+    const rows = modulesViewData(modules, failed).failedRows;
+    expect(rows[0]).toMatchObject({ module: 'queue', cause: 'Retried by itself' });
+    expect(rows[1]).toMatchObject({ module: 'task', cause: 'Needs a fix' });
+    expect(rows[0]?.error).not.toContain('previous version');
+    expect(rows[1]?.error).toContain('The previous version is still running.');
+  });
+
+  it('gives each warning its module and the address of that module', () => {
+    expect(modulesViewData(modules, []).warningRows).toEqual([{ module: 'project', href: '/modules/project', warning: expect.stringContaining('queue:project-header') }]);
+  });
+});
+
 const renderPage = (loaded = modules, bad: FailedModuleSummary[] = []) =>
   render(
     <MemoryRouter>
@@ -37,62 +73,38 @@ const renderPage = (loaded = modules, bad: FailedModuleSummary[] = []) =>
     </MemoryRouter>,
   );
 
+// The page is a view of the same kind as the module pages: it is rendered by the real renderer with the real components.
 describe('ModulesPage', () => {
-  it('counts what is loaded, failed and with warnings', () => {
-    renderPage(modules, failed);
-    expect(screen.getByText(/loaded,/).textContent).toBe('2 loaded, 2 failed, 1 with warnings.');
-  });
-
-  it('tells what each module needs, can do without, offers and is needed by, and what it brings', () => {
+  it('shows the counts as tiles and the installed modules in a table, like the other pages', async () => {
     renderPage();
-    const projectRow = screen.getByText('Project').closest('tr') as HTMLElement;
-    const cells = within(projectRow).getAllByRole('cell');
-    // Needs / can do without / offers / needed by / brings.
-    expect(cells[2]).toHaveTextContent('nothing');
-    expect(cells[3]).toHaveTextContent('task *');
-    expect(cells[3]).toHaveTextContent('queue ^1.0.0');
-    expect(within(cells[3] as HTMLElement).getByText('(not loaded)').closest('li')).toHaveTextContent('queue');
-    expect(cells[4]).toHaveTextContent('project:project-panels');
-    expect(cells[5]).toHaveTextContent('task');
-    expect(cells[6]).toHaveTextContent('2 pages, 1 widget');
-    const taskRow = screen.getAllByRole('row').find((row) => within(row).queryAllByRole('cell')[0]?.textContent?.startsWith('task')) as HTMLElement;
-    expect(within(taskRow).getAllByRole('cell')[2]).toHaveTextContent('project *');
-    expect(within(taskRow).getAllByRole('cell')[6]).toHaveTextContent('1 page, components');
+    expect(await screen.findByRole('heading', { name: 'Modules' })).toBeInTheDocument();
+    expect(screen.getByText('Loaded')).toBeInTheDocument();
+    expect(screen.getByText('With warnings')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Project' });
+    const projectRow = link.closest('tr') as HTMLElement;
+    expect(projectRow).toHaveTextContent('task *, queue ^1.0.0 (not loaded)');
+    expect(projectRow).toHaveTextContent('project:project-panels');
+    expect(link).toHaveAttribute('href', '/modules/project');
   });
 
-  it('links a module to its pages and an installed dependency to its module', () => {
-    renderPage();
-    const links = screen.getAllByRole('link', { name: 'task' });
-    expect(links.every((l) => l.getAttribute('href') === '/modules/task')).toBe(true);
-  });
+  it('shows the failures and the warnings in their own sections, and none when there is nothing to report', async () => {
+    const { unmount } = renderPage(modules, failed);
+    const failedSection = within(await screen.findByRole('region', { name: 'Failed to load' }));
+    expect(failedSection.getByText(/requires "orch", which is not loaded/)).toBeInTheDocument();
+    expect(failedSection.getByText('Retried by itself')).toBeInTheDocument();
+    expect(failedSection.getByText('Needs a fix')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Warnings' })).getByText(/queue:project-header/)).toBeInTheDocument();
+    unmount();
 
-  it('shows the warnings in full', () => {
-    renderPage();
-    const section = within(screen.getByRole('region', { name: 'Warnings' }));
-    expect(section.getByText(/queue:project-header"\) is inactive: optional module "queue" is not available/)).toBeInTheDocument();
-    expect(section.getByRole('link', { name: 'project' })).toHaveAttribute('href', '/modules/project');
-  });
-
-  it('shows what failed, why, and what to do depending on the cause, noting a previous version that still runs', () => {
-    renderPage(modules, failed);
-    const section = within(screen.getByRole('region', { name: 'Failed to load' }));
-    expect(section.getByText(/requires "orch", which is not loaded/)).toBeInTheDocument();
-    expect(section.getByText(/it loads again by itself/)).toBeInTheDocument();
-    expect(section.getByText('setup threw')).toBeInTheDocument();
-    expect(section.getByText(/Fix the module, then register it again/)).toBeInTheDocument();
-    // `task` failed an update and its previous version is still loaded.
-    expect(section.getByText(/the previous version is still running/)).toBeInTheDocument();
-    expect(section.getAllByText(/C:\/mods\//)).toHaveLength(2);
-  });
-
-  it('has no failure or warning section when there is nothing to report, and says so when nothing is installed', () => {
     renderPage([{ id: 'plain', version: '1', extensionPoints: [ep('page', 'nav')] as LoadedModuleSummary['extensionPoints'] }]);
+    await screen.findByRole('heading', { name: 'Modules' });
+    await waitFor(() => expect(screen.getByText('plain')).toBeInTheDocument());
     expect(screen.queryByRole('region', { name: 'Failed to load' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Warnings' })).not.toBeInTheDocument();
   });
 
-  it('says no module is loaded', () => {
+  it('says no module is loaded', async () => {
     renderPage([]);
-    expect(screen.getByText('No module is loaded.')).toBeInTheDocument();
+    expect(await screen.findByText('No module is loaded.')).toBeInTheDocument();
   });
 });
