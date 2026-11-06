@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
+import { restartOnDslUpdate } from './viteRestartOnDslUpdate';
 
 // Phase 1c: wires the real @wadeck-app/dsl-renderer entriesGenerator (the actual
 // working precedent is orchestrator/packages/orch-app's vite.config.ts, not
@@ -13,7 +15,8 @@ export default defineConfig(async () => {
   // (for example an isolated server with sample modules).
   const api = process.env['APP_CORE_API'] ?? 'http://127.0.0.1:4850';
   return {
-    plugins: [react(), entriesGenerator()],
+    // The root package-lock.json is where `npm install` of a new dsl ends: see restartOnDslUpdate.
+    plugins: [react(), entriesGenerator(), restartOnDslUpdate({ root: fileURLToPath(new URL('../..', import.meta.url)), lockfile: fileURLToPath(new URL('../../package-lock.json', import.meta.url)) })],
     build: {
       outDir: 'dist',
       emptyOutDir: true,

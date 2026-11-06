@@ -28,6 +28,7 @@ const ChartLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/di
 const Chart = (props: React.ComponentProps<typeof ChartLazy>) => <LazyBoundary><ChartLazy {...props} /></LazyBoundary>
 import { DateText } from '@wadeck-app/dsl-ui/dist/components/display/DateText.js'
 import { FetchSpinner } from '@wadeck-app/dsl-ui/dist/components/display/FetchSpinner.js'
+import { FigureRow } from '@wadeck-app/dsl-ui/dist/components/display/FigureRow.js'
 import { JsonViewer } from '@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js'
 const MarkdownLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').then(m => ({ default: m.Markdown })))
 const Markdown = (props: React.ComponentProps<typeof MarkdownLazy>) => <LazyBoundary><MarkdownLazy {...props} /></LazyBoundary>
@@ -35,8 +36,13 @@ import { PageHeader } from '@wadeck-app/dsl-ui/dist/components/display/PageHeade
 import { Progress } from '@wadeck-app/dsl-ui/dist/components/display/Progress.js'
 import { RelativeDate } from '@wadeck-app/dsl-ui/dist/components/display/RelativeDate.js'
 import { Skeleton } from '@wadeck-app/dsl-ui/dist/components/display/Skeleton.js'
+import { SparklineView } from '@wadeck-app/dsl-ui/dist/components/display/SparklineView.js'
 import { Spinner } from '@wadeck-app/dsl-ui/dist/components/display/Spinner.js'
 import { Tag } from '@wadeck-app/dsl-ui/dist/components/display/Tag.js'
+const TimeBrushLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').then(m => ({ default: m.TimeBrush })))
+const TimeBrush = (props: React.ComponentProps<typeof TimeBrushLazy>) => <LazyBoundary><TimeBrushLazy {...props} /></LazyBoundary>
+const TimeSeriesChartLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').then(m => ({ default: m.TimeSeriesChart })))
+const TimeSeriesChart = (props: React.ComponentProps<typeof TimeSeriesChartLazy>) => <LazyBoundary><TimeSeriesChartLazy {...props} /></LazyBoundary>
 import { ButtonCancel } from '@wadeck-app/dsl-ui/dist/components/form/ButtonCancel.js'
 import { ButtonSave } from '@wadeck-app/dsl-ui/dist/components/form/ButtonSave.js'
 import { CronBuilder } from '@wadeck-app/dsl-ui/dist/components/form/CronBuilder.js'
@@ -145,6 +151,7 @@ function CompactSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const ariaLabel = coerceProp(resolveExpressionValue(node['ariaLabel'], ctx), 'CompactSelect.ariaLabel', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['ariaLabel']
 		const placeholder = coerceProp(resolveExpressionValue(node['placeholder'], ctx), 'CompactSelect.placeholder', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['placeholder']
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'CompactSelect.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['disabled']
+		const defaultValue = coerceProp(resolveExpressionValue(node['defaultValue'], ctx), 'CompactSelect.defaultValue', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['defaultValue']
 		const formCtx = useFormContext()
 		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
@@ -153,7 +160,7 @@ function CompactSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
 		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
-			<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} defaultValue={defaultValue} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -834,6 +841,16 @@ export const FetchSpinnerEntry: ComponentRegistryEntry = {
 	},
 }
 
+export const FigureRowEntry: ComponentRegistryEntry = {
+	name: 'FigureRow', category: 'composite', tags: ["figures","kpi","metrics","stats","row","sparkline","trend","dashboard"],
+	nodeSchema: null as never,
+	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['FigureRowNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
+	render: ({ node, ctx }: RegistryRenderProps) => {
+		const items = coerceProp(resolveExpressionValue(node['items'], ctx), 'FigureRow.items', 'array', true) as import('@wadeck-app/dsl-ui/dist/components/display/FigureRow.js').FigureRowProps['items']
+		return <FigureRow items={items} />
+	},
+}
+
 export const JsonViewerEntry: ComponentRegistryEntry = {
 	name: 'JsonViewer', category: 'atomic', tags: ["json","viewer","code"],
 	nodeSchema: null as never,
@@ -917,6 +934,17 @@ export const SkeletonEntry: ComponentRegistryEntry = {
 	},
 }
 
+export const SparklineViewEntry: ComponentRegistryEntry = {
+	name: 'SparklineView', category: 'atomic', tags: ["sparkline","trend","inline","chart"],
+	nodeSchema: null as never,
+	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['SparklineViewNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
+	render: ({ node, ctx }: RegistryRenderProps) => {
+		const points = coerceProp(resolveExpressionValue(node['points'], ctx), 'SparklineView.points', 'array', true) as import('@wadeck-app/dsl-ui/dist/components/display/SparklineView.js').SparklineViewProps['points']
+		const ariaLabel = coerceProp(resolveExpressionValue(node['ariaLabel'], ctx), 'SparklineView.ariaLabel', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/display/SparklineView.js').SparklineViewProps['ariaLabel']
+		return <SparklineView points={points} ariaLabel={ariaLabel} />
+	},
+}
+
 export const SpinnerEntry: ComponentRegistryEntry = {
 	name: 'Spinner', category: 'atomic', tags: ["loading","spinner"],
 	nodeSchema: null as never,
@@ -937,6 +965,57 @@ export const TagEntry: ComponentRegistryEntry = {
 		const color = coerceProp(resolveExpressionValue(node['color'], ctx), 'Tag.color', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Tag.js').TagProps['color']
 		const onRemove = coerceProp(resolveExpressionValue(node['onRemove'], ctx), 'Tag.onRemove', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/display/Tag.js').TagProps['onRemove']
 		return <Tag label={label} color={color} onRemove={onRemove} />
+	},
+}
+
+export const TimeBrushEntry: ComponentRegistryEntry = {
+	name: 'TimeBrush', category: 'composite', tags: ["chart","timeseries","brush"],
+	nodeSchema: null as never,
+	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['TimeBrushNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
+	render: ({ node, ctx }: RegistryRenderProps) => {
+		const data = coerceProp(resolveExpressionValue(node['data'], ctx), 'TimeBrush.data', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['data']
+		const xKey = coerceProp(resolveExpressionValue(node['xKey'], ctx), 'TimeBrush.xKey', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['xKey']
+		const valueKey = coerceProp(resolveExpressionValue(node['valueKey'], ctx), 'TimeBrush.valueKey', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['valueKey']
+		const kind = coerceProp(resolveExpressionValue(node['kind'], ctx), 'TimeBrush.kind', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['kind']
+		const domain = coerceProp(resolveExpressionValue(node['domain'], ctx), 'TimeBrush.domain', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['domain']
+		const syncGroup = coerceProp(resolveExpressionValue(node['syncGroup'], ctx), 'TimeBrush.syncGroup', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['syncGroup']
+		const height = coerceProp(resolveExpressionValue(node['height'], ctx), 'TimeBrush.height', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['height']
+		const yAxisWidth = coerceProp(resolveExpressionValue(node['yAxisWidth'], ctx), 'TimeBrush.yAxisWidth', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['yAxisWidth']
+		const marginRight = coerceProp(resolveExpressionValue(node['marginRight'], ctx), 'TimeBrush.marginRight', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['marginRight']
+		return <TimeBrush data={data} xKey={xKey} valueKey={valueKey} kind={kind} domain={domain} syncGroup={syncGroup} height={height} yAxisWidth={yAxisWidth} marginRight={marginRight} />
+	},
+}
+
+export const TimeSeriesChartEntry: ComponentRegistryEntry = {
+	name: 'TimeSeriesChart', category: 'composite', tags: ["chart","timeseries"],
+	nodeSchema: null as never,
+	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['TimeSeriesChartNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
+	render: ({ node, ctx }: RegistryRenderProps) => {
+		const data = coerceProp(resolveExpressionValue(node['data'], ctx), 'TimeSeriesChart.data', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['data']
+		const xKey = coerceProp(resolveExpressionValue(node['xKey'], ctx), 'TimeSeriesChart.xKey', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['xKey']
+		const domain = coerceProp(resolveExpressionValue(node['domain'], ctx), 'TimeSeriesChart.domain', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['domain']
+		const series = coerceProp(resolveExpressionsDeep(node['series'], ctx), 'TimeSeriesChart.series', 'array', true) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['series']
+		const bands = coerceProp(resolveExpressionsDeep(node['bands'], ctx), 'TimeSeriesChart.bands', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['bands']
+		const rangeAreas = coerceProp(resolveExpressionsDeep(node['rangeAreas'], ctx), 'TimeSeriesChart.rangeAreas', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['rangeAreas']
+		const legendItems = coerceProp(resolveExpressionsDeep(node['legendItems'], ctx), 'TimeSeriesChart.legendItems', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['legendItems']
+		const gapDashAfterDays = coerceProp(resolveExpressionValue(node['gapDashAfterDays'], ctx), 'TimeSeriesChart.gapDashAfterDays', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['gapDashAfterDays']
+		const syncGroup = coerceProp(resolveExpressionValue(node['syncGroup'], ctx), 'TimeSeriesChart.syncGroup', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['syncGroup']
+		const title = coerceProp(resolveExpressionValue(node['title'], ctx), 'TimeSeriesChart.title', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['title']
+		const height = coerceProp(resolveExpressionValue(node['height'], ctx), 'TimeSeriesChart.height', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['height']
+		const yUnit = coerceProp(resolveExpressionValue(node['yUnit'], ctx), 'TimeSeriesChart.yUnit', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yUnit']
+		const yFormat = coerceProp(resolveExpressionValue(node['yFormat'], ctx), 'TimeSeriesChart.yFormat', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yFormat']
+		const yDecimals = coerceProp(resolveExpressionValue(node['yDecimals'], ctx), 'TimeSeriesChart.yDecimals', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yDecimals']
+		const yIncludeZero = coerceProp(resolveExpressionValue(node['yIncludeZero'], ctx), 'TimeSeriesChart.yIncludeZero', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yIncludeZero']
+		const yAxisWidth = coerceProp(resolveExpressionValue(node['yAxisWidth'], ctx), 'TimeSeriesChart.yAxisWidth', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yAxisWidth']
+		const marginRight = coerceProp(resolveExpressionValue(node['marginRight'], ctx), 'TimeSeriesChart.marginRight', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['marginRight']
+		const emptyMessage = coerceProp(resolveExpressionValue(node['emptyMessage'], ctx), 'TimeSeriesChart.emptyMessage', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['emptyMessage']
+		const xFormat = coerceProp(resolveExpressionValue(node['xFormat'], ctx), 'TimeSeriesChart.xFormat', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['xFormat']
+		const yRightFormat = coerceProp(resolveExpressionValue(node['yRightFormat'], ctx), 'TimeSeriesChart.yRightFormat', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yRightFormat']
+		const yRightUnit = coerceProp(resolveExpressionValue(node['yRightUnit'], ctx), 'TimeSeriesChart.yRightUnit', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yRightUnit']
+		const yRightDecimals = coerceProp(resolveExpressionValue(node['yRightDecimals'], ctx), 'TimeSeriesChart.yRightDecimals', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yRightDecimals']
+		const yRightIncludeZero = coerceProp(resolveExpressionValue(node['yRightIncludeZero'], ctx), 'TimeSeriesChart.yRightIncludeZero', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yRightIncludeZero']
+		const yRightAxisWidth = coerceProp(resolveExpressionValue(node['yRightAxisWidth'], ctx), 'TimeSeriesChart.yRightAxisWidth', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yRightAxisWidth']
+		return <TimeSeriesChart data={data} xKey={xKey} domain={domain} series={series} bands={bands} rangeAreas={rangeAreas} legendItems={legendItems} gapDashAfterDays={gapDashAfterDays} syncGroup={syncGroup} title={title} height={height} yUnit={yUnit} yFormat={yFormat} yDecimals={yDecimals} yIncludeZero={yIncludeZero} yAxisWidth={yAxisWidth} marginRight={marginRight} emptyMessage={emptyMessage} xFormat={xFormat} yRightFormat={yRightFormat} yRightUnit={yRightUnit} yRightDecimals={yRightDecimals} yRightIncludeZero={yRightIncludeZero} yRightAxisWidth={yRightAxisWidth} />
 	},
 }
 
@@ -1238,9 +1317,10 @@ export const HorizontalStackEntry: ComponentRegistryEntry = {
 		const align = coerceProp(resolveExpressionValue(node['align'], ctx), 'HorizontalStack.align', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['align']
 		const justify = coerceProp(resolveExpressionValue(node['justify'], ctx), 'HorizontalStack.justify', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['justify']
 		const fill = coerceProp(resolveExpressionValue(node['fill'], ctx), 'HorizontalStack.fill', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['fill']
+		const wrap = coerceProp(resolveExpressionValue(node['wrap'], ctx), 'HorizontalStack.wrap', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['wrap']
 		const itemSizes = coerceProp(resolveExpressionValue(node['itemSizes'], ctx), 'HorizontalStack.itemSizes', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/layout/HorizontalStack.js').HorizontalStackProps['itemSizes']
 		return (
-			<HorizontalStack gap={gap} align={align} justify={justify} fill={fill} itemSizes={itemSizes}>
+			<HorizontalStack gap={gap} align={align} justify={justify} fill={fill} wrap={wrap} itemSizes={itemSizes}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</HorizontalStack>
 		)
@@ -1793,14 +1873,18 @@ export const allEntries: ComponentRegistryEntry[] = [
 	ChartEntry,
 	DateTextEntry,
 	FetchSpinnerEntry,
+	FigureRowEntry,
 	JsonViewerEntry,
 	MarkdownEntry,
 	PageHeaderEntry,
 	ProgressEntry,
 	RelativeDateEntry,
 	SkeletonEntry,
+	SparklineViewEntry,
 	SpinnerEntry,
 	TagEntry,
+	TimeBrushEntry,
+	TimeSeriesChartEntry,
 	ButtonCancelEntry,
 	ButtonSaveEntry,
 	CronBuilderEntry,
@@ -1873,7 +1957,7 @@ CheckboxGroupEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","
 ChipButtonEntry.allowedChildren = {"items":["atomic"]};
 ChipButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["active","aria-label","aria-pressed","color","emphasis","items","onClick","shape","title"] : [];
 ColorPickerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options"] : [];
-CompactSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","bind","disabled","options","placeholder","resetUrlParams","urlParam"] : [];
+CompactSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","bind","defaultValue","disabled","options","placeholder","resetUrlParams","urlParam"] : [];
 DeleteButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 IconButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["aria-label","icon","size"] : [];
 LiveToggleEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["live","onChange","urlParam"] : [];
@@ -1887,12 +1971,14 @@ ThemePickerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","la
 ThemePickerEntry.requiresContext = ["ThemeContext"];
 AbTestEntry.mapSlots = {"variants":{"keys":["label","hint","view"],"nodeKey":"view"}};
 AbTestEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["id","initial","label","variants"] : [];
-AbTestEntry.requiresContext = ["AbExperimentsContext"];
+AbTestEntry.providesContext = ["AbParentContext"];
+AbTestEntry.requiresContext = ["AbParentContext","AbExperimentsContext"];
 AvatarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["alt","fallback","size","src"] : [];
 BadgeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["external","href","label","size","tone","variant"] : [];
 ChartEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["data","fill","height","series","showLegend","variant","xAxisKey","xAxisType","xFormat","yFormat","yUnit"] : [];
 DateTextEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["dateStyle","part","relative","value"] : [];
 FetchSpinnerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["loading"] : [];
+FigureRowEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 JsonViewerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["field","maxHeight","row"] : [];
 MarkdownEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["allowImages","collapsed","maxHeight","text"] : [];
 PageHeaderEntry.allowedChildren = {"headerActions":["button","action"]};
@@ -1900,8 +1986,12 @@ PageHeaderEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["headerActi
 ProgressEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","layout","max","showValue","size","value","valueLabel","variant"] : [];
 RelativeDateEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["date","format","live","tooltip"] : [];
 SkeletonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["count","decorative","height","variant","width"] : [];
+SparklineViewEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","points"] : [];
 SpinnerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","size"] : [];
 TagEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["color","label","onRemove"] : [];
+TimeBrushEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["data","domain","height","kind","marginRight","syncGroup","valueKey","xKey","yAxisWidth"] : [];
+TimeSeriesChartEntry.itemKeys = {"series":{"keys":["key","name","color","width","dots","pointColorKey","detailKey","gapDash","legend","kind","fromKey","decimals","showValue","axis"]},"bands":{"keys":["from","to","color","opacity","label"]},"rangeAreas":{"keys":["lowKey","highKey","name","color","opacity","legend"]},"legendItems":{"keys":["label","color"]}};
+TimeSeriesChartEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bands","data","domain","emptyMessage","gapDashAfterDays","height","legendItems","marginRight","rangeAreas","series","syncGroup","title","xFormat","xKey","yAxisWidth","yDecimals","yFormat","yIncludeZero","yRightAxisWidth","yRightDecimals","yRightFormat","yRightIncludeZero","yRightUnit","yUnit"] : [];
 ButtonCancelEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabled","label","onCancel"] : [];
 ButtonSaveEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabledReason","hasChanges","isPending","label","onClick"] : [];
 ButtonSaveEntry.requiresContext = ["FormContext"];
@@ -1943,7 +2033,7 @@ DialogFooterEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] 
 DialogFooterEntry.providesContext = ["ButtonContext"];
 DividerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","orientation"] : [];
 HorizontalStackEntry.allowedChildren = {"items":["layout","table","form","display","composite","atomic"]};
-HorizontalStackEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["align","fill","gap","itemSizes","items","justify"] : [];
+HorizontalStackEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["align","fill","gap","itemSizes","items","justify","wrap"] : [];
 NavBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 NavBarEntry.providesContext = ["ButtonContext"];
 PageContentEntry.allowedChildren = {"sections":["layout","composite","header","content","chart","table","tabs","navigation","action-bar","form","stepper","wizard","upload","dropzone","file","navigator","browser","keys","security","scopes","admin","management","versions","history"]};
