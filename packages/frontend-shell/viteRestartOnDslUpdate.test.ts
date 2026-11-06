@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { installedDslVersions, sameVersions } from './viteRestartOnDslUpdate';
+import { entriesGeneratorUrl, installedDslVersions, sameVersions } from './viteRestartOnDslUpdate';
 
 const roots: string[] = [];
 function installed(versions: Record<string, string>): string {
@@ -36,5 +36,15 @@ describe('sameVersions', () => {
     expect(sameVersions(a, { ...a })).toBe(true);
     expect(sameVersions(a, { ...a, '@wadeck-app/dsl-ui': '4' })).toBe(false);
     expect(sameVersions(a, { ...a, '@wadeck-app/dsl-renderer': '4' })).toBe(false);
+  });
+});
+
+describe('entriesGeneratorUrl', () => {
+  it('points at the generator of the installed dsl-renderer and changes with its version, so a restart evaluates it again', () => {
+    const v1 = entriesGeneratorUrl(installed({ '@wadeck-app/dsl-ui': '2', '@wadeck-app/dsl-renderer': '3' }));
+    const v2 = entriesGeneratorUrl(installed({ '@wadeck-app/dsl-ui': '2', '@wadeck-app/dsl-renderer': '4' }));
+    expect(v1.startsWith('file:///')).toBe(true);
+    expect(v1.endsWith('/node_modules/@wadeck-app/dsl-renderer/dist/build/entriesGenerator.js?dsl=3')).toBe(true);
+    expect(v2.endsWith('?dsl=4')).toBe(true);
   });
 });

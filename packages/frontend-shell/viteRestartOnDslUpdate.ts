@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { Plugin } from 'vite';
 
 const WATCHED = ['@wadeck-app/dsl-ui', '@wadeck-app/dsl-renderer'] as const;
@@ -16,6 +17,13 @@ export function installedDslVersions(root: string): Record<string, string> {
     }
   }
   return versions;
+}
+
+// The URL to import dsl-renderer's entries generator from: its file under `root`, with the installed dsl-renderer version as query so
+// that a new version is evaluated again instead of served from the module cache of the running process.
+export function entriesGeneratorUrl(root: string): string {
+  const file = path.join(root, 'node_modules', '@wadeck-app', 'dsl-renderer', 'dist', 'build', 'entriesGenerator.js');
+  return `${pathToFileURL(file).href}?dsl=${encodeURIComponent(installedDslVersions(root)['@wadeck-app/dsl-renderer'] ?? 'unknown')}`;
 }
 
 export const sameVersions = (a: Record<string, string>, b: Record<string, string>): boolean => WATCHED.every((name) => a[name] === b[name]);

@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
-import { restartOnDslUpdate } from './viteRestartOnDslUpdate';
+import { entriesGeneratorUrl, restartOnDslUpdate } from './viteRestartOnDslUpdate';
 
 // Phase 1c: wires the real @wadeck-app/dsl-renderer entriesGenerator (the actual
 // working precedent is orchestrator/packages/orch-app's vite.config.ts, not
@@ -10,13 +10,16 @@ import { restartOnDslUpdate } from './viteRestartOnDslUpdate';
 // raw ./src/*) by default -- no dsl.config.yaml needed, since app-core has no
 // custom component package of its own (unlike orch-app's "@orch": "orch-ui").
 export default defineConfig(async () => {
-  const { entriesGenerator } = await import('@wadeck-app/dsl-renderer/build/entriesGenerator');
+  // Imported by a URL that carries the installed version: Vite's own restart (see restartOnDslUpdate) keeps modules already imported,
+  // so a plain import would keep generating the registry with the generator of the dsl the process started with.
+  const root = fileURLToPath(new URL('../..', import.meta.url));
+  const { entriesGenerator } = (await import(/* @vite-ignore */ entriesGeneratorUrl(root))) as typeof import('@wadeck-app/dsl-renderer/build/entriesGenerator');
   // Where the dev server proxies the API: the app-core started on 4850 by default; APP_CORE_API points it at another one
   // (for example an isolated server with sample modules).
   const api = process.env['APP_CORE_API'] ?? 'http://127.0.0.1:4850';
   return {
     // The root package-lock.json is where `npm install` of a new dsl ends: see restartOnDslUpdate.
-    plugins: [react(), entriesGenerator(), restartOnDslUpdate({ root: fileURLToPath(new URL('../..', import.meta.url)), lockfile: fileURLToPath(new URL('../../package-lock.json', import.meta.url)) })],
+    plugins: [react(), entriesGenerator(), restartOnDslUpdate({ root, lockfile: fileURLToPath(new URL('../../package-lock.json', import.meta.url)) })],
     build: {
       outDir: 'dist',
       emptyOutDir: true,
