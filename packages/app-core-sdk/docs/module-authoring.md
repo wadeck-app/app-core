@@ -704,6 +704,8 @@ These appear as the HTTP `error` of `register`/`update` and under `failed` in `G
 | `registerRoute: ... conflicts with the already registered ...` / `"<path>" is reserved` | load | Same method and shape twice, or a `/_lib` sub path. |
 | `dslLib.shared["<pkg>"] is not provided by the app-core shell` / `the module's components were built for <pkg> "<range>" but the app-core shell provides <v>` | load | Declare only packages the shell shares; rebuild against its version. |
 | `cannot verify dslLib.shared for ... (no build-info.json ...)` | warning on stderr | Run `npm run build:full` in the app-core repo; the ranges are not checked meanwhile. |
+| 403 `cross-site-request` (`Sec-Fetch-Site: cross-site` or `same-site`) | request | The server refuses every non-GET `/api/` request that a page of another site makes, your module routes included: no guard to write. curl, CLIs and server-side fetches send no such header and pass. |
+| 403 `host-not-allowed` | request | The request was addressed to a name other than `127.0.0.1`, `localhost`, `[::1]` (DNS rebinding protection, reads included). Behind a proxy or tunnel start the server with `APP_CORE_ALLOWED_HOSTS=<name>` (comma-separated, no port). |
 | `APP_CORE_HOOK_TIMEOUT_MS="<x>" is not a positive integer` | startup | Set a number of ms, or unset it. |
 | `Bundled frontend not found at <dir>` | `serve` | Reinstall the CLI, or run `npm run build` in the repo. |
 

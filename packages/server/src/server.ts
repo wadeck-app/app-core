@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { modulesRoutes } from './routes/modules.js';
 import { slotsRoutes } from './routes/slots.js';
+import { allowedHostsFrom, registerRequestGuard } from './requestGuard.js';
 import { libContentType, resolveLibRequest, sharedVersionsFromBuildInfo, type SharedVersions } from './dslLib.js';
 import { ModuleManager } from './loader.js';
 import { resolveConfigDir, resolveModulesDir } from './configDir.js';
@@ -21,6 +22,8 @@ export interface BuildServerOptions {
   publicDir?: string;
   // Turns the A/B test dock on in the served shell (it is off outside development). `app-core-cli serve --ab-tests`.
   abTests?: boolean;
+  // Host names (without port) the server may be addressed by besides 127.0.0.1, localhost and [::1]; APP_CORE_ALLOWED_HOSTS adds more.
+  allowedHosts?: string[];
 }
 
 export interface AppCoreServer {
@@ -124,6 +127,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   });
 
   const server = Fastify({ logger: false });
+  // Before every route, the modules' included (see requestGuard.ts).
+  registerRequestGuard(server, allowedHostsFrom(opts.allowedHosts));
   // Any way of closing the server (stop(), dev, tests) runs the modules' teardown first; idempotent.
   server.addHook('onClose', async () => {
     await manager.shutdown();
