@@ -53,6 +53,15 @@ describe('modulesViewData', () => {
     expect(rows[1]).toMatchObject({ title: 'task', needs: 'project *', optional: '—', offers: '—', neededBy: 'project', brings: '1 page, components' });
   });
 
+  it('counts the components of a module once its bundle is loaded, and says when that is not known yet', () => {
+    const brings = (count: Parameters<typeof modulesViewData>[2] extends ((id: string) => infer R) | undefined ? R : never): string =>
+      modulesViewData(modules, [], (id) => (id === 'task' ? count : undefined)).installedRows[1]!.brings;
+    expect(brings(3)).toBe('1 page, 3 components');
+    expect(brings(1)).toBe('1 page, 1 component');
+    expect(brings('loading')).toBe('1 page, components (loading)');
+    expect(brings('error')).toBe('1 page, components (failed to load)');
+  });
+
   it('says what to do about a failure according to its cause, and notes a previous version that still runs', () => {
     const rows = modulesViewData(modules, failed).failedRows;
     expect(rows[0]).toMatchObject({ module: 'queue', cause: 'Retried by itself' });

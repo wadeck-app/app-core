@@ -141,6 +141,8 @@ const ModuleLibsContext = createContext<ModuleLibStatuses>({});
 
 export const ModuleLibsProvider = ModuleLibsContext.Provider;
 
+export const useModuleLibStatuses = (): ModuleLibStatuses => useContext(ModuleLibsContext);
+
 // Renders `children` only once the module's components are registered; modules without a
 // dsl-lib have no status and render immediately. `quiet` (for widgets in the navbar or overlay, where a
 // paragraph would break the layout) renders nothing while loading or failed: a failure is still shown by

@@ -57,7 +57,7 @@ sections:
               - { key: version, label: Version, mono: true, nowrap: true }
               - { key: needs, label: Needs }
               - { key: optional, label: Can do without }
-              - { key: offers, label: Offers (slots), mono: true }
+              - { key: offers, label: Offers (slots) }
               - { key: neededBy, label: Needed by }
               - { key: brings, label: Brings, nowrap: true }
 `;
@@ -75,19 +75,32 @@ export interface ModulesViewData {
 
 const NOTHING = '—';
 
-function parts(module: LoadedModuleSummary): string {
+// How many components a module's bundle registered, or why that is not known: still loading, or failed to load.
+export type ComponentCount = number | 'loading' | 'error' | undefined;
+
+function components(count: ComponentCount): string {
+  if (count === 'loading') return 'components (loading)';
+  if (count === 'error') return 'components (failed to load)';
+  return count === undefined ? 'components' : `${count} component${count === 1 ? '' : 's'}`;
+}
+
+function parts(module: LoadedModuleSummary, libCount: ComponentCount): string {
   const count = (kind: string): number => module.extensionPoints.filter((ep) => ep.kind === kind).length;
   const plural = (n: number, word: string): string => `${n} ${word}${n > 1 ? 's' : ''}`;
   const others = module.extensionPoints.length - count('page') - count('widget');
   return (
-    [count('page') > 0 ? plural(count('page'), 'page') : '', count('widget') > 0 ? plural(count('widget'), 'widget') : '', others > 0 ? `${others} other` : '', module.dslLib === undefined ? '' : 'components']
+    [count('page') > 0 ? plural(count('page'), 'page') : '', count('widget') > 0 ? plural(count('widget'), 'widget') : '', others > 0 ? `${others} other` : '', module.dslLib === undefined ? '' : components(libCount)]
       .filter(Boolean)
       .join(', ') || NOTHING
   );
 }
 
 // What the Modules page shows, from the list the server gave the shell.
-export function modulesViewData(modules: readonly LoadedModuleSummary[], failed: readonly FailedModuleSummary[]): ModulesViewData {
+export function modulesViewData(
+  modules: readonly LoadedModuleSummary[],
+  failed: readonly FailedModuleSummary[],
+  componentCount: (moduleId: string) => ComponentCount = () => undefined,
+): ModulesViewData {
   const installed = new Set(modules.map((m) => m.id));
   const needed = (id: string): string[] => modules.filter((m) => m.requires?.[id] !== undefined || m.optionalRequires?.[id] !== undefined).map((m) => m.id);
   const withWarnings = modules.filter((m) => (m.warnings ?? []).length > 0);
@@ -118,7 +131,7 @@ export function modulesViewData(modules: readonly LoadedModuleSummary[], failed:
       optional: listed(m.optionalRequires),
       offers: (m.exposedSlots ?? []).map((slot) => `${m.id}:${slot}`).join(', ') || NOTHING,
       neededBy: needed(m.id).join(', ') || NOTHING,
-      brings: parts(m),
+      brings: parts(m, componentCount(m.id)),
     })),
   };
 }

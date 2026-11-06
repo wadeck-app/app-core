@@ -15,6 +15,9 @@ export function unregisterModuleEntries(moduleId: string): void {
   keysByModule.delete(moduleId);
 }
 
+// How many components a module has registered (0 until its bundle is loaded).
+export const moduleComponentCount = (moduleId: string): number => keysByModule.get(moduleId)?.length ?? 0;
+
 // Registers a module's components as `<moduleId>:<entry.name>`; replaces any previous set of that module.
 export function registerModuleEntries(moduleId: string, entries: ComponentRegistryEntry[]): void {
   unregisterModuleEntries(moduleId);
