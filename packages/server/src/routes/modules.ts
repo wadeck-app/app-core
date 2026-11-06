@@ -171,6 +171,10 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
         version: m.manifest.version,
         extensionPoints: m.resolvedViews.map((view, index) => (inactive.has(index) ? { ...view, inactive: inactive.get(index)?.reason } : view)),
         ...(warnings.length === 0 ? {} : { warnings }),
+        // What the module needs (hard), can do without (optional) and offers (the names of its slots): for the modules page.
+        ...(m.manifest.requires === undefined ? {} : { requires: m.manifest.requires }),
+        ...(m.manifest.optionalRequires === undefined ? {} : { optionalRequires: m.manifest.optionalRequires }),
+        ...(m.manifest.expose?.slots === undefined ? {} : { exposedSlots: Object.keys(m.manifest.expose.slots) }),
         dslLib: m.dslLib,
         // Always present for the shell (the manifest field is optional and means true when absent).
         showInNav: m.manifest.showInNav ?? true,

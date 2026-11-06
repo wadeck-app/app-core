@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AbExperiments, RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { AbTestsPage } from './AbTestsPage.js';
+import { ModulesPage } from './ModulesPage.js';
 import { AbTestsSeenRecorder } from './abTestsSeen.js';
 import { Dashboard } from './Dashboard.js';
 import { ModuleIndex } from './ModuleIndex.js';
@@ -93,6 +94,7 @@ export default function App(): React.ReactElement {
               <Routes>
                 <Route path="/" element={<Dashboard modules={modules} />} />
                 <Route path="/ab-tests" element={<AbTestsPage modules={modules} />} />
+                <Route path="/modules-overview" element={<ModulesPage modules={modules} failed={failedModules} />} />
                 {pageRoutes.map((r) => (
                   <Route
                     key={`${r.moduleId}${r.path}`}

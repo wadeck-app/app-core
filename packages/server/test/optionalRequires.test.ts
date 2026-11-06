@@ -98,6 +98,21 @@ describe('optionalRequires: contributions to modules a module can do without', (
     expect(warnings.join('')).toContain('module "tsk" extensionPoints[0] (slot "proj:header") is inactive');
   });
 
+  it('tells what a module needs, can do without and offers, for the modules page', async () => {
+    await register('proj', projManifest());
+    const hard = writeModule('needy', { requires: { proj: '^1.0.0' }, points: [{ slot: 'proj:header', view: { $type: 'Badge', label: 'n' } }] });
+    expect((await register('needy', hard)).statusCode).toBe(201);
+
+    type Described = { requires?: Record<string, string>; optionalRequires?: Record<string, string>; exposedSlots?: string[] };
+    const proj = (await moduleOf('proj')) as Described | undefined;
+    expect(proj).toMatchObject({ optionalRequires: { tsk: '*' }, exposedSlots: ['header'] });
+    expect(proj?.requires).toBeUndefined();
+    const needy = (await moduleOf('needy')) as Described | undefined;
+    expect(needy?.requires).toEqual({ proj: '^1.0.0' });
+    expect(needy?.optionalRequires).toBeUndefined();
+    expect(needy?.exposedSlots).toBeUndefined();
+  });
+
   it('activates the contribution when the provider loads, and drops it again when the provider goes, with no cascade', async () => {
     await register('tsk', tskManifest());
     expect((await register('proj', projManifest())).statusCode).toBe(201);

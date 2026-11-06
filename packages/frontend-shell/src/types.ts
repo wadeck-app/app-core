@@ -39,6 +39,10 @@ export interface LoadedModuleSummary {
   title?: string;
   // Contributions that are inactive right now and why (see `inactive` on the extension points); absent when there are none.
   warnings?: string[];
+  // What the module needs (`requires`), can do without (`optionalRequires`): module id -> semver range. And the names of the slots it offers.
+  requires?: Record<string, string>;
+  optionalRequires?: Record<string, string>;
+  exposedSlots?: string[];
 }
 
 // A registered module that could not be loaded; `error` is the reason, `source` the manifest path.

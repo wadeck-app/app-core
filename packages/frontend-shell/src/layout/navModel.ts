@@ -102,6 +102,8 @@ export const listedNavModules = (navModules: NavModule[]): NavModule[] => navMod
 export const HOME_MODULE_ID = '__home';
 // The page that lists the A/B tests of all the installed modules (see AbTestsPage).
 export const AB_TESTS_PATH = '/ab-tests';
+// The page that says what is installed, what each module needs and offers, and what is wrong (see ModulesPage).
+export const MODULES_PATH = '/modules-overview';
 
 export function homeNavModule(navModules: NavModule[]): NavModule {
   return {
@@ -112,7 +114,8 @@ export function homeNavModule(navModules: NavModule[]): NavModule {
       { moduleId: HOME_MODULE_ID, routePath: '/', label: 'Dashboard', exact: true },
       ...listedNavModules(navModules).map((m) => ({ moduleId: m.id, routePath: m.pages[0].routePath, label: m.title, exact: false })),
       // Tools of the app itself, apart from the modules.
-      { moduleId: HOME_MODULE_ID, routePath: AB_TESTS_PATH, label: 'A/B tests', exact: true, separatorBefore: true, groupLabel: 'Tools' },
+      { moduleId: HOME_MODULE_ID, routePath: MODULES_PATH, label: 'Modules', exact: true, separatorBefore: true, groupLabel: 'Tools' },
+      { moduleId: HOME_MODULE_ID, routePath: AB_TESTS_PATH, label: 'A/B tests', exact: true },
     ],
     listed: true,
   };

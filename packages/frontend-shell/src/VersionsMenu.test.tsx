@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { AbExperiments } from '@wadeck-app/dsl-ui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VersionsMenu } from './VersionsMenu.js';
@@ -37,7 +38,7 @@ afterEach(() => {
 describe('VersionsMenu', () => {
   it('shows nothing until opened, then app-core, each module version and the frontend libraries', async () => {
     stubBuildInfo(new Response(JSON.stringify(buildInfo), { status: 200, headers: { 'content-type': 'application/json' } }));
-    render(<VersionsMenu modules={modules} failed={failed} />);
+    render(<MemoryRouter><VersionsMenu modules={modules} failed={failed} /></MemoryRouter>);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
@@ -54,7 +55,7 @@ describe('VersionsMenu', () => {
 
   it('says so, with the reason, when the build information cannot be read', async () => {
     stubBuildInfo(new Response('<html></html>', { status: 200, headers: { 'content-type': 'text/html' } }));
-    render(<VersionsMenu modules={modules} failed={[]} />);
+    render(<MemoryRouter><VersionsMenu modules={modules} failed={[]} /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByText(/unknown \(/)).toBeInTheDocument();
@@ -63,7 +64,7 @@ describe('VersionsMenu', () => {
 
   it('reports when no module is installed', async () => {
     stubBuildInfo(new Response(JSON.stringify(buildInfo), { status: 200 }));
-    render(<VersionsMenu modules={[]} failed={[]} />);
+    render(<MemoryRouter><VersionsMenu modules={[]} failed={[]} /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
     expect(await screen.findByText('No module installed.')).toBeInTheDocument();
   });
@@ -75,9 +76,11 @@ describe('VersionsMenu', () => {
   ])('says whether the A/B tests are on (host enabled: $enabled)', async ({ enabled, shown }) => {
     stubBuildInfo(new Response(JSON.stringify(buildInfo), { status: 200 }));
     render(
-      <AbExperiments enabled={enabled}>
-        <VersionsMenu modules={modules} failed={[]} />
-      </AbExperiments>,
+      <MemoryRouter>
+        <AbExperiments enabled={enabled}>
+          <VersionsMenu modules={modules} failed={[]} />
+        </AbExperiments>
+      </MemoryRouter>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
     const dialog = await screen.findByRole('dialog');
@@ -86,7 +89,7 @@ describe('VersionsMenu', () => {
 
   it('says nothing about A/B tests without a host', async () => {
     stubBuildInfo(new Response(JSON.stringify(buildInfo), { status: 200 }));
-    render(<VersionsMenu modules={modules} failed={[]} />);
+    render(<MemoryRouter><VersionsMenu modules={modules} failed={[]} /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByText(/A\/B tests are on/)).not.toBeInTheDocument();

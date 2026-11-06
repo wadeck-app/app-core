@@ -1,9 +1,11 @@
 import React from 'react';
 import { Info } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { IconButton, Popover, useAbExperiments } from '@wadeck-app/dsl-ui';
 import { AbTestsSection } from './AbTestsSection.js';
 import { AppCoreVersionRow } from './AppCoreVersionRow.js';
 import { VersionRow } from './VersionRow.js';
+import { MODULES_PATH } from './layout/navModel.js';
 import { useBuildInfo } from './useBuildInfo.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from './types.js';
 
@@ -14,6 +16,7 @@ export function VersionsMenu({ modules, failed }: { modules: LoadedModuleSummary
   // On in development and with `app-core-cli serve --ab-tests`: the host of the dock says so, whatever the reason.
   const abTests = useAbExperiments()?.enabled === true;
   const failedOnly = failed.filter((f) => !modules.some((m) => m.id === f.id));
+  const withWarnings = modules.filter((m) => (m.warnings ?? []).length > 0).length;
 
   return (
     <Popover
@@ -41,6 +44,14 @@ export function VersionsMenu({ modules, failed }: { modules: LoadedModuleSummary
             </VersionRow>
           ))}
         </dl>
+        {/* Only a sign: the dependencies, the warnings and the failures are told in full on the Modules page. */}
+        <p className="mt-1">
+          {withWarnings > 0 ? <span className="text-warning-text">{withWarnings} with warnings. </span> : null}
+          {failed.length > 0 ? <span className="text-danger">{failed.length} failed. </span> : null}
+          <Link to={MODULES_PATH} className="text-primary underline-offset-2 hover:underline">
+            Modules page: dependencies, warnings
+          </Link>
+        </p>
 
         {abTests ? (
           <p className="mt-3 text-muted">A/B tests are on: the dock is at the bottom of the page.</p>
