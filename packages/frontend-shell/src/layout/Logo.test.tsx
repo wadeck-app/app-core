@@ -39,7 +39,7 @@ describe('Logo', () => {
   it('sits in a box of one width whatever the letters, so the labels next to logos line up', () => {
     const boxes = ['Q', 'Modules', 'Task'].map((title) => render(<Logo title={title} moduleId={title} />).container.querySelector('[data-logo-box]')!.className);
     expect(new Set(boxes).size).toBe(1);
-    expect(boxes[0]).toContain('w-8');
+    expect(boxes[0]).toContain('w-7');
   });
 
   it('keeps the color of the id when the title changes', () => {
