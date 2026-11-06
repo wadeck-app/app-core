@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { register } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { entriesGeneratorUrl, restartOnDslUpdate } from './viteRestartOnDslUpdate';
 
@@ -10,8 +11,14 @@ import { entriesGeneratorUrl, restartOnDslUpdate } from './viteRestartOnDslUpdat
 // raw ./src/*) by default -- no dsl.config.yaml needed, since app-core has no
 // custom component package of its own (unlike orch-app's "@orch": "orch-ui").
 export default defineConfig(async () => {
-  // Imported by a URL that carries the installed version: Vite's own restart (see restartOnDslUpdate) keeps modules already imported,
-  // so a plain import would keep generating the registry with the generator of the dsl the process started with.
+  // Imported by a URL that carries the installed version, and so is everything it imports (dslFreshLoader.mjs): Vite's own restart
+  // (see restartOnDslUpdate) keeps the modules already imported, so a plain import would keep generating the registry with the
+  // generator of the dsl the process started with. Registered once per process (a config reload runs this function again).
+  const hooks = globalThis as { __appCoreDslFreshLoader?: boolean };
+  if (hooks.__appCoreDslFreshLoader !== true) {
+    register(new URL('./dslFreshLoader.mjs', import.meta.url));
+    hooks.__appCoreDslFreshLoader = true;
+  }
   const root = fileURLToPath(new URL('../..', import.meta.url));
   const { entriesGenerator } = (await import(/* @vite-ignore */ entriesGeneratorUrl(root))) as typeof import('@wadeck-app/dsl-renderer/build/entriesGenerator');
   // Where the dev server proxies the API: the app-core started on 4850 by default; APP_CORE_API points it at another one

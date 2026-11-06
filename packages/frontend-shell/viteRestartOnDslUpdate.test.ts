@@ -48,3 +48,25 @@ describe('entriesGeneratorUrl', () => {
     expect(v2.endsWith('?dsl=4')).toBe(true);
   });
 });
+
+describe('dslFreshLoader', () => {
+  // The hook is plain ESM next to vite.config.ts; the real proof (a module deep in the graph is evaluated again after a restart)
+  // is the marker experiment described in the commit that added it.
+  const next = async (specifier: string) => ({ url: new URL(specifier, 'file:///r/dist/build/entriesGenerator.js').href });
+  const load = async () => (await import('./dslFreshLoader.mjs')) as { resolve: (s: string, c: { parentURL?: string }, n: typeof next) => Promise<{ url: string }> };
+
+  it('hands the version query of a module to the relative modules it imports, and to theirs in turn', async () => {
+    const { resolve } = await load();
+    const child = await resolve('./dslConfig.js', { parentURL: 'file:///r/dist/build/entriesGenerator.js?dsl=3' }, next);
+    expect(child.url).toBe('file:///r/dist/build/dslConfig.js?dsl=3');
+    const grandChild = await resolve('../dslKeys.js', { parentURL: child.url }, next);
+    expect(grandChild.url).toBe('file:///r/dist/dslKeys.js?dsl=3');
+  });
+
+  it('leaves alone what is not a relative import from a versioned module (bare packages, modules without the query)', async () => {
+    const { resolve } = await load();
+    expect((await resolve('ts-morph', { parentURL: 'file:///r/a.js?dsl=3' }, async () => ({ url: 'file:///n/ts-morph/index.js' }))).url).toBe('file:///n/ts-morph/index.js');
+    expect((await resolve('./b.js', { parentURL: 'file:///r/a.js' }, next)).url).toBe('file:///r/dist/build/b.js');
+    expect((await resolve('./b.js', {}, next)).url).toBe('file:///r/dist/build/b.js');
+  });
+});
