@@ -12,7 +12,7 @@
 ## dsl packages
 
 - Always take the latest `@wadeck-app/dsl-ui` and `@wadeck-app/dsl-renderer` when dsl-owner publishes (standing instruction of the user). `npm install @wadeck-app/dsl-renderer@latest @wadeck-app/dsl-ui@latest`, then put `"latest"` back in the root `package.json` and in the root entry of `package-lock.json` (npm rewrites them to a caret range), build, test, commit.
-- The Vite dev server (5173) restarts itself on the new dsl. The server on 4850 does not: it reads `public/build-info.json` only at start (refresh it with `npm run build:full` first), so ask orch-owner to restart that job when modules with a `dslLib.shared` range depend on the new version.
+- The Vite dev server (5173) restarts itself on the new dsl. The server on 4850 needs no restart for the version check: it reads `public/build-info.json` again when the file changes (one stat per module check, `sharedVersionsSource` in `server.ts`), so `npm run build:full` is enough for a module with a `dslLib.shared` range. A module refused earlier is registered again by its owner.
 
 ## Tray icon (app-core-cli)
 

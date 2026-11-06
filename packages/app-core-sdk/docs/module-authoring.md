@@ -589,7 +589,7 @@ In the packaged manifest:
 - `shared` declares the ranges you built against. At load, app-core checks them against the
   versions the shell was built with (`/build-info.json`); a mismatch, an unknown package or an
   invalid range makes the module fail with a message in `GET /api/modules` `failed`, and the running
-  version is kept. If `build-info.json` is missing the check is skipped with a warning on stderr.
+  version is kept. If `build-info.json` is missing the check is skipped with a warning on stderr. The file is read again when it changes, so a rebuilt shell counts without restarting the server; register the module again after that.
 - The shell provides the router, `ToastProvider` and the theme tokens (use dsl-ui semantic classes,
   never raw colors). Use relative `/api/modules/<id>/...` URLs for your module's own endpoints.
 - Build `src/dsl-components/style.css` with Tailwind using the dsl-ui preset AND its content globs, exactly like the

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { buildServer, type AppCoreServer } from '../src/server.js';
+import { buildServer, sharedVersionsSource, type AppCoreServer } from '../src/server.js';
 
 const BUILD_INFO = { builtAt: 'x', dslUi: '2026.10.17-095-7b2c28f1', dslRenderer: '2026.10.17-095-7b2c28f1', react: '19.3.0', reactDom: '19.3.0', reactRouterDom: '7.18.4' };
 
@@ -130,6 +130,36 @@ describe('dsl-lib: serving, validation and lifecycle', () => {
     expect(res.json().retained).toBe(false);
     expect(state.failed.find((f) => f.id === 'm2')).toBeUndefined();
     expect((await app.server.inject({ method: 'GET', url: '/api/modules/m2/_lib/entries.mjs' })).statusCode).toBe(404);
+  });
+
+  it('counts a rebuilt frontend without a restart: build-info.json is read again only when the file changed', async () => {
+    await start({ ...BUILD_INFO, dslUi: '2026.11.6-306-aaaaaaaa' });
+    const needs307 = writeModule(path.join(root, 'new'), { id: 'm3', shared: { '@wadeck-app/dsl-ui': '>=2026.11.6-307-0' } });
+    const refused = await register('m3', needs307);
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json().error).toContain('provides 2026.11.6-306-aaaaaaaa');
+
+    // The frontend is rebuilt on a newer dsl while the server keeps running.
+    fs.writeFileSync(path.join(root, 'public', 'build-info.json'), JSON.stringify({ ...BUILD_INFO, dslUi: '2026.11.6-318-209d72bc', builtAt: 'later' }));
+    const accepted = await register('m3', needs307);
+    expect(accepted.statusCode).toBe(201);
+
+  });
+
+  it('parses build-info.json again only when the file changed (one stat per check, no polling)', () => {
+    const publicDir = path.join(root, 'public');
+    fs.mkdirSync(publicDir, { recursive: true });
+    const file = path.join(publicDir, 'build-info.json');
+    fs.writeFileSync(file, JSON.stringify(BUILD_INFO));
+    const source = sharedVersionsSource(publicDir);
+    const first = source();
+    expect(source()).toBe(first);
+    fs.writeFileSync(file, JSON.stringify({ ...BUILD_INFO, dslUi: '2026.11.6-318-209d72bc' }));
+    const second = source();
+    expect(second).not.toBe(first);
+    expect(second?.versions['@wadeck-app/dsl-ui']).toBe('2026.11.6-318-209d72bc');
+    fs.rmSync(file);
+    expect(source()).toBeUndefined();
   });
 
   it('warns explicitly, and still loads, when build-info.json is missing', async () => {

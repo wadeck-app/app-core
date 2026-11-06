@@ -107,6 +107,9 @@ export interface ModuleManagerOptions {
   sharedVersions?: SharedVersions;
   // Where those versions come from, for the messages (file, build time, and a note when it looks stale).
   sharedOrigin?: string;
+  // Alternative to the two above for a server that outlives a rebuild of its frontend: asked each time a module is checked (it is
+  // up to the callback to be cheap), so a new build-info.json counts without a restart. Wins over `sharedVersions`.
+  sharedSource?: () => { versions: SharedVersions; origin: string } | undefined;
   // Receives warnings and teardown failures; defaults to a line on stderr.
   onWarning?: (message: string) => void;
 }
@@ -565,7 +568,8 @@ export class ModuleManager {
     if (manifest.dslLib === undefined) {
       return undefined;
     }
-    const { unverified } = checkSharedRanges(manifest.dslLib.shared, this.options.sharedVersions, this.options.sharedOrigin);
+    const shared = this.options.sharedSource === undefined ? { versions: this.options.sharedVersions, origin: this.options.sharedOrigin } : this.options.sharedSource();
+    const { unverified } = checkSharedRanges(manifest.dslLib.shared, shared?.versions, shared?.origin);
     if (unverified.length > 0) {
       (this.options.onWarning ?? writeWarning)(
         `module "${id}": cannot verify dslLib.shared for ${unverified.join(', ')} (no build-info.json with these versions next to the served frontend; run "npm run build:full").`,

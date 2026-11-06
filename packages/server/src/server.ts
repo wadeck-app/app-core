@@ -57,6 +57,28 @@ function installedVersions(publicDir: string): SharedVersions {
   return installed;
 }
 
+// build-info.json read again only when the file changed (size or modification time): checking a module costs one stat, there is no
+// polling, and a rebuilt frontend counts for the next module checked without restarting the server.
+export function sharedVersionsSource(publicDir: string): () => SharedInfo | undefined {
+  const file = path.join(publicDir, 'build-info.json');
+  let key: string | undefined;
+  let cached: SharedInfo | undefined;
+  return () => {
+    let next: string;
+    try {
+      const { mtimeMs, size } = fs.statSync(file);
+      next = `${mtimeMs}:${size}`;
+    } catch {
+      next = 'missing';
+    }
+    if (next !== key) {
+      key = next;
+      cached = readSharedVersions(publicDir);
+    }
+    return cached;
+  };
+}
+
 function readSharedVersions(publicDir: string): SharedInfo | undefined {
   const file = path.join(publicDir, 'build-info.json');
   if (!fs.existsSync(file)) {
@@ -93,11 +115,12 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   const publicDir = opts.publicDir ?? path.resolve(__dirname, '../../../public');
   const hasPublic = fs.existsSync(publicDir);
   // Throws here, at startup, when APP_CORE_HOOK_TIMEOUT_MS is not a positive integer.
-  const shared = hasPublic ? readSharedVersions(publicDir) : undefined;
+  const sharedSource = hasPublic ? sharedVersionsSource(publicDir) : undefined;
+  // First read now, so a missing or unreadable file is said at startup (stderr), as before.
+  sharedSource?.();
   const manager = new ModuleManager({
     configDir: opts.configDir ?? resolveConfigDir(),
-    sharedVersions: shared?.versions,
-    sharedOrigin: shared?.origin,
+    ...(sharedSource === undefined ? {} : { sharedSource }),
   });
 
   const server = Fastify({ logger: false });
