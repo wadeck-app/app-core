@@ -3,13 +3,17 @@ import { Link } from 'react-router-dom';
 import { CountBadge } from './CountBadge.js';
 import type { TertiaryNav } from './tertiaryModel.js';
 
-// The tabs of the third level, under the trail, in the sticky block at the top of the page. Their look is not decided here: it is the
-// third level of the look of the whole navigation (src/navStyles.css, A/B test `shell-nav-style`), so that the top bar, the side menu
-// and these tabs say "current" the same way. The inactive state is the same classes as the tabs of the top bar and the rows of the
-// side menu.
-export function TertiaryTabs({ nav, label }: { nav: TertiaryNav; label: string }): React.ReactElement {
+// The tabs of the third level, under the trail, in the sticky block at the top of the page. Their look is the third level of the look
+// of the whole navigation (src/navStyles.css), so that the top bar, the side menu and these tabs say "current" the same way. The
+// inactive state is the same classes as the tabs of the top bar and the rows of the side menu.
+export function TertiaryTabs({ nav, label }: { nav: TertiaryNav; label: string }): React.ReactElement | null {
+  // A page without a third level shows nothing.
+  if (nav.items.length === 0) {
+    return null;
+  }
   return (
-    <nav aria-label={label} data-nav-level="tertiary" className="flex gap-1 px-4 pt-1">
+    // pt-3: room between the trail above and the tabs.
+    <nav aria-label={label} data-nav-level="tertiary" className="flex gap-1 px-4 pt-3">
       {nav.items.map((item) => {
         const current = item.id === nav.activeId;
         return (

@@ -10,6 +10,8 @@ export interface NavPage {
   // A rule above the entry in the side menu, and the caption of the group that follows (from the manifest).
   separatorBefore?: boolean;
   groupLabel?: string;
+  // A figure next to the label in the side menu (unread alerts, open items). No module declares one yet: nothing fills it.
+  count?: number;
 }
 
 // Base slot: page/nav -> a navigation entry routing to a full-page render (frontend-shell.md "Base slots").

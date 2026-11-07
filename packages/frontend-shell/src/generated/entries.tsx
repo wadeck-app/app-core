@@ -152,6 +152,7 @@ function CompactSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const placeholder = coerceProp(resolveExpressionValue(node['placeholder'], ctx), 'CompactSelect.placeholder', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['placeholder']
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'CompactSelect.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['disabled']
 		const defaultValue = coerceProp(resolveExpressionValue(node['defaultValue'], ctx), 'CompactSelect.defaultValue', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['defaultValue']
+		const storageKey = coerceProp(resolveExpressionValue(node['storageKey'], ctx), 'CompactSelect.storageKey', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['storageKey']
 		const formCtx = useFormContext()
 		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
@@ -160,7 +161,7 @@ function CompactSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
 		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
-			<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} defaultValue={defaultValue} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} defaultValue={defaultValue} storageKey={storageKey} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -1957,7 +1958,7 @@ CheckboxGroupEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","
 ChipButtonEntry.allowedChildren = {"items":["atomic"]};
 ChipButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["active","aria-label","aria-pressed","color","emphasis","items","onClick","shape","title"] : [];
 ColorPickerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options"] : [];
-CompactSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","bind","defaultValue","disabled","options","placeholder","resetUrlParams","urlParam"] : [];
+CompactSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","bind","defaultValue","disabled","options","placeholder","resetUrlParams","storageKey","urlParam"] : [];
 DeleteButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 IconButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["aria-label","icon","size"] : [];
 LiveToggleEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["live","onChange","urlParam"] : [];

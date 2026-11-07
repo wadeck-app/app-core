@@ -7,8 +7,9 @@ import { DateSettingsProvider } from '../../dates/DateFormatContext.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { AppLayout } from '../AppLayout.js';
+import type { LoadedModuleSummary } from '../../types.js';
+import { navModulesFor } from '../navModel.js';
 import { FIXTURE_NAV } from '../testFixtures.js';
-import { NAV_STYLES, useNavStyle } from '../useNavStyle.js';
 import { CountBadge } from './CountBadge.js';
 import { SAMPLE_TERTIARY, useTertiaryNav, type TertiaryNav } from './tertiaryModel.js';
 import { TertiaryTabs } from './TertiaryTabs.js';
@@ -52,6 +53,16 @@ describe('the figure of an entry', () => {
 });
 
 describe('the tabs of the third level', () => {
+  it('show nothing for a page without a third level', () => {
+    const { container } = inRouter(<TertiaryTabs nav={nav('x', [])} label="Tabs" />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('leave room between the trail above and the tabs', () => {
+    inRouter(<TertiaryTabs nav={nav()} label="Tabs" />);
+    expect(screen.getByRole('navigation', { name: 'Tabs' }).className).toContain('pt-3');
+  });
+
   it('are a named navigation of links to distinct addresses, the current one marked, marked for the stylesheet of the navigation', () => {
     inRouter(<TertiaryTabs nav={nav('alerts')} label="Tabs" />);
     const tabs = screen.getByRole('navigation', { name: 'Tabs' });
@@ -70,46 +81,17 @@ describe('the tabs of the third level', () => {
   });
 });
 
-// The look of the three levels is in a stylesheet, which jsdom does not apply: what can be checked is that it holds each theme the
-// dock offers, and nothing the dock does not offer.
+// The look of the three levels (rail) is in a stylesheet, which jsdom does not apply: what can be checked is that it reaches the
+// three levels for the current entry, and that nothing in it waits for a theme to be chosen.
 describe('the stylesheet of the navigation', () => {
-  const themesInCss = [...navStylesCss.matchAll(/^html\[data-nav-style='([a-z]+)'\] \{/gm)].map((m) => m[1]);
-
-  it('has a block for every theme of the dock but today, and for no other', () => {
-    const themes = Object.keys(NAV_STYLES).filter((t) => t !== 'current');
-    expect(new Set(themesInCss)).toEqual(new Set(themes));
-    expect(themesInCss).toHaveLength(themes.length);
-  });
-
   it('reaches the three levels for the current entry', () => {
     expect(navStylesCss).toContain("nav[aria-label='Modules']");
     expect(navStylesCss).toContain("[data-testid='shell-menu'] nav");
     expect(navStylesCss).toContain("nav[data-nav-level='tertiary']");
   });
-});
 
-describe('useNavStyle', () => {
-  afterEach(() => {
-    window.history.replaceState(null, '', '/');
-    window.localStorage.clear();
-    delete document.documentElement.dataset['navStyle'];
-  });
-  const withChoice = (choice?: string) => {
-    window.history.replaceState(null, '', choice === undefined ? '/' : `/?ab.shell-nav-style=${choice}`);
-    return renderHook(() => useNavStyle(), { wrapper: ({ children }) => <AbExperiments enabled>{children}</AbExperiments> });
-  };
-
-  it('puts nothing on the page for today: the navigation keeps the look dsl-ui gives it', () => {
-    withChoice();
-    expect(document.documentElement.dataset['navStyle']).toBeUndefined();
-  });
-
-  it('puts the chosen theme on the page, and takes it off when the layout goes away', () => {
-    const view = withChoice('soft');
-    expect(view.result.current).toBe('soft');
-    expect(document.documentElement.dataset['navStyle']).toBe('soft');
-    view.unmount();
-    expect(document.documentElement.dataset['navStyle']).toBeUndefined();
+  it('is decided: no theme attribute to switch on', () => {
+    expect(navStylesCss).not.toContain('data-nav-style');
   });
 });
 
@@ -120,18 +102,30 @@ describe('the layout', () => {
   });
 
   const billing = FIXTURE_NAV[0]!;
-  const renderAt = (path: string, { dock = false }: { dock?: boolean } = {}) =>
+  // A list and the page of one of its items: the trail of the item is three long, the case that asks for a third level.
+  const orders: LoadedModuleSummary[] = [
+    {
+      id: 'orders',
+      version: '1',
+      extensionPoints: [
+        { kind: 'page', slot: 'nav', label: 'Items', path: '/items', view: {}, rawYaml: '' },
+        { kind: 'page', slot: 'route', label: 'Item', path: '/items/:id', view: {}, rawYaml: '' },
+      ],
+    },
+  ];
+  const renderAt = (path: string, { dock = false, deep = false }: { dock?: boolean; deep?: boolean } = {}) =>
     render(
       <MemoryRouter initialEntries={[path]}>
         <AbExperiments enabled={dock ? true : undefined}>
           <DateSettingsProvider>
-            <AppLayout modules={[]} navModules={FIXTURE_NAV}>
+            <AppLayout modules={deep ? orders : []} navModules={deep ? navModulesFor(orders) : FIXTURE_NAV}>
               <p>content</p>
             </AppLayout>
           </DateSettingsProvider>
         </AbExperiments>
       </MemoryRouter>,
     );
+  const ITEM_PAGE = '/modules/orders/items/42';
 
   it('sticks the trail under the top bar, always (decided)', () => {
     renderAt(`${billing.basePath}/p1`);
@@ -139,12 +133,20 @@ describe('the layout', () => {
   });
 
   it('shows no sample tabs without the A/B dock: no page declares a third level yet', () => {
-    renderAt(billing.basePath);
+    renderAt(ITEM_PAGE, { deep: true });
     expect(screen.queryByRole('navigation', { name: /sections$/ })).not.toBeInTheDocument();
   });
 
-  it('with the dock, puts the tabs in the same sticky block as the trail, under it, before the page', () => {
-    renderAt(`${billing.basePath}/p1`, { dock: true });
+  it('shows nothing for a page without a third level, the dock or not: a list page, the dashboard', () => {
+    const list = renderAt('/modules/orders/items', { dock: true, deep: true });
+    expect(screen.queryByRole('navigation', { name: /sections$/ })).not.toBeInTheDocument();
+    list.unmount();
+    renderAt('/', { dock: true });
+    expect(screen.queryByRole('navigation', { name: /sections$/ })).not.toBeInTheDocument();
+  });
+
+  it('with the dock, puts the tabs of an opened item in the same sticky block as the trail, under it, before the page', () => {
+    renderAt(ITEM_PAGE, { dock: true, deep: true });
     const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
     const tabs = screen.getByRole('navigation', { name: /sections$/ });
     const block = trail.closest('.sticky');
@@ -156,8 +158,12 @@ describe('the layout', () => {
     order.slice(1).forEach((el, i) => expect(order[i]!.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy());
   });
 
-  it('with the dock, shows them on the dashboard too, so that the look can be judged anywhere', () => {
-    renderAt('/', { dock: true });
-    expect(screen.getByRole('navigation', { name: /sections$/ })).toBeInTheDocument();
+  it('with the dock, shows sample figures on rows of the side menu, and none without it', () => {
+    const rows = () => within(screen.getByRole('navigation', { name: /pages$/ })).getAllByRole('link');
+    const view = renderAt(billing.basePath, { dock: true });
+    expect(rows().some((r) => /12$/.test(r.textContent ?? ''))).toBe(true);
+    view.unmount();
+    renderAt(billing.basePath);
+    expect(rows().some((r) => /\d$/.test(r.textContent ?? ''))).toBe(false);
   });
 });

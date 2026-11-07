@@ -10,7 +10,6 @@ import { TopBarActions } from './TopBarActions.js';
 import { applyTabOrder, useTabOrder } from './useTabOrder.js';
 import { useTertiaryNav } from './tertiary/tertiaryModel.js';
 import { TertiaryTabs } from './tertiary/TertiaryTabs.js';
-import { useNavStyle } from './useNavStyle.js';
 import type { LayoutProps } from './types.js';
 
 const routerLink = ({ href, children, ...rest }: ShellLinkProps): React.ReactElement => (
@@ -55,18 +54,21 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   // shown with the A/B dock, where their style is tested (see tertiary/TertiaryTabs.tsx). They are on every page then, the dashboard
   // included, so that the style can be judged anywhere.
   const dockOn = useAbExperiments()?.enabled === true;
-  // The look of the whole navigation (top bar, side menu, these tabs): an A/B test, see navStyles.css.
-  useNavStyle();
   const tertiary = useTertiaryNav();
   const currentPage = menuModule.pages.find((p) => isPageCurrent(pathname, p));
   const pageTitle = currentPage === undefined ? menuModule.title : trimModulePrefix(currentPage.label, menuModule.title);
   const crumbs = trimmedTrail(breadcrumbFor(pathname, navModules, modules));
-  const tabsOn = dockOn;
+  // A page has a third level or it has none, and with none nothing is drawn. No page declares one yet, so the samples (with the A/B dock
+  // only) stand on the pages of an item opened from a list: a trail of three, the case that asks for one (a task opens: its sections).
+  const tertiaryItems = dockOn && crumbs.length >= 3 ? tertiary.items : [];
+  const tabsOn = tertiaryItems.length > 0;
+  // Sample figures on two rows of the side menu, with the A/B dock only, to judge the look of a figure in the menu (nothing fills `count`).
+  const sampleCounts = [undefined, 12, undefined, 3];
   const menu: ShellMenu = {
     title: menuModule.title,
     label: `${menuModule.title} pages`,
     // A page that asks for a separator gets a rule (and a caption) above its entry; the shell drops one that leads or trails.
-    items: menuModule.pages.flatMap((p): ShellMenu['items'] => [
+    items: menuModule.pages.flatMap((p, index): ShellMenu['items'] => [
       ...(p.separatorBefore === true ? [{ kind: 'separator' as const, id: `separator:${p.routePath}`, label: p.groupLabel }] : []),
       {
         id: p.routePath,
@@ -76,6 +78,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
         // The dashboard menu lists modules: each gets its logo.
         icon: onDashboard ? <Logo title={p.label} moduleId={p.moduleId} /> : undefined,
         current: isPageCurrent(pathname, p) ? ('page' as const) : undefined,
+        badge: p.count ?? (dockOn ? sampleCounts[index] : undefined),
       },
     ]),
   };
@@ -110,7 +113,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       {crumbs.length > 0 || tabsOn ? (
         <div className={`sticky top-shell-bar z-10 border-b border-border bg-bg ${tabsOn ? '' : 'pb-2'}`}>
           <Breadcrumb crumbs={crumbs} />
-          {tabsOn ? <TertiaryTabs nav={tertiary} label={`${pageTitle} sections`} /> : null}
+          {tabsOn ? <TertiaryTabs nav={{ ...tertiary, items: tertiaryItems }} label={`${pageTitle} sections`} /> : null}
         </div>
       ) : null}
       {children}
