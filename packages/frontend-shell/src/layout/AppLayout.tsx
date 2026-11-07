@@ -8,6 +8,9 @@ import { breadcrumbFor, trimModulePrefix, type Crumb } from './navHelpers.js';
 import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent, listedNavModules } from './navModel.js';
 import { TopBarActions } from './TopBarActions.js';
 import { applyTabOrder, useTabOrder } from './useTabOrder.js';
+import { useTertiaryNav, type TertiaryNav } from './tertiary/tertiaryModel.js';
+import { TertiaryColumn, TertiaryCrumb, TertiaryFlyout, TertiaryPills, TertiaryRail, TertiarySubBar, TertiaryTabs, accordionEntries } from './tertiary/TertiaryViews.js';
+import { useTertiaryVariant, type TertiaryVariant } from './tertiary/useTertiaryVariant.js';
 import type { LayoutProps } from './types.js';
 
 const routerLink = ({ href, children, ...rest }: ShellLinkProps): React.ReactElement => (
@@ -48,6 +51,11 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
 
   const menuModule = active ?? homeNavModule(navModules);
   const onDashboard = menuModule.id === HOME_MODULE_ID;
+  // A/B test of where a third level goes (see tertiary/): only on the pages of a module, the dashboard and the app's own pages have none.
+  const tertiaryVariant = useTertiaryVariant();
+  const tertiary = useTertiaryNav();
+  const tertiaryOn = !onDashboard && tertiaryVariant !== 'none';
+  const currentPage = menuModule.pages.find((p) => isPageCurrent(pathname, p));
   const menu: ShellMenu = {
     title: menuModule.title,
     label: `${menuModule.title} pages`,
@@ -63,6 +71,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
         icon: onDashboard ? <Logo title={p.label} moduleId={p.moduleId} /> : undefined,
         current: isPageCurrent(pathname, p) ? ('page' as const) : undefined,
       },
+      ...(tertiaryOn && tertiaryVariant === 'accordion' && p === currentPage ? accordionEntries(tertiary, p.routePath) : []),
     ]),
   };
 
@@ -91,8 +100,79 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       // The name of the drag handle of the `resizable` menu.
       resizeLabel="Resize the side menu"
     >
-      <Breadcrumb crumbs={trimmedTrail(breadcrumbFor(pathname, navModules, modules))} />
-      {children}
+      <TertiaryPlacement
+        variant={tertiaryOn ? tertiaryVariant : 'none'}
+        nav={tertiary}
+        title={currentPage === undefined ? menuModule.title : trimModulePrefix(currentPage.label, menuModule.title)}
+        trail={<Breadcrumb crumbs={trimmedTrail(breadcrumbFor(pathname, navModules, modules))} trailing={tertiaryOn && tertiaryVariant === 'crumb' ? <TertiaryCrumb nav={tertiary} /> : undefined} />}
+      >
+        {children}
+      </TertiaryPlacement>
     </AppShell>
   );
+}
+
+// Puts the third level where the A/B variant says. `trail` is the breadcrumb, `children` the page. The accordion (in the side menu) and
+// the breadcrumb switcher (in the trail) are built elsewhere and leave the page as it is.
+function TertiaryPlacement({ variant, nav, title, trail, children }: { variant: TertiaryVariant; nav: TertiaryNav; title: string; trail: React.ReactNode; children: React.ReactNode }): React.ReactElement {
+  const label = `${title} sections`;
+  switch (variant) {
+    case 'tabs':
+      return (
+        <>
+          {trail}
+          <TertiaryTabs nav={nav} label={label} />
+          {children}
+        </>
+      );
+    case 'pills':
+      return (
+        <>
+          {trail}
+          <TertiaryPills nav={nav} label={label} />
+          {children}
+        </>
+      );
+    case 'subbar':
+      return (
+        <>
+          <TertiarySubBar nav={nav} label={label} title={title} />
+          {trail}
+          {children}
+        </>
+      );
+    case 'column':
+      return (
+        <>
+          {trail}
+          <TertiaryColumn nav={nav} label={label} title={title}>
+            {children}
+          </TertiaryColumn>
+        </>
+      );
+    case 'rail':
+      return (
+        <>
+          {trail}
+          <TertiaryRail nav={nav} label={label}>
+            {children}
+          </TertiaryRail>
+        </>
+      );
+    case 'flyout':
+      return (
+        <>
+          <TertiaryFlyout nav={nav} label={label} />
+          {trail}
+          {children}
+        </>
+      );
+    default:
+      return (
+        <>
+          {trail}
+          {children}
+        </>
+      );
+  }
 }

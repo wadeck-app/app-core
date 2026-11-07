@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import type { Crumb } from './navHelpers.js';
 
 // Where the user is, as nested pages: earlier crumbs are links to their page, the last one is the current place.
-export function Breadcrumb({ crumbs }: { crumbs: Crumb[] }): React.ReactElement | null {
+export function Breadcrumb({ crumbs, trailing }: { crumbs: Crumb[]; trailing?: React.ReactNode }): React.ReactElement | null {
   if (crumbs.length === 0) {
     return null;
   }
@@ -25,6 +25,7 @@ export function Breadcrumb({ crumbs }: { crumbs: Crumb[] }): React.ReactElement 
             )}
           </li>
         ))}
+        {trailing}
       </ol>
     </nav>
   );
