@@ -11,6 +11,7 @@ import { useTertiaryNav } from './tertiary/tertiaryModel.js';
 import { accordionEntries } from './tertiary/TertiaryViews.js';
 import { TertiaryPlacement } from './tertiary/TertiaryPlacement.js';
 import { useBreadcrumbVariant } from './breadcrumb/BreadcrumbTrail.js';
+import { useHeaderVariant } from './tertiary/StickyHeader.js';
 import { useTertiaryVariant } from './tertiary/useTertiaryVariant.js';
 import type { LayoutProps } from './types.js';
 
@@ -53,10 +54,11 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   const menuModule = active ?? homeNavModule(navModules);
   const onDashboard = menuModule.id === HOME_MODULE_ID;
   // A/B test of where a third level goes (see tertiary/): only on the pages of a module, the dashboard and the app's own pages have none.
-  const tertiaryChoice = useTertiaryVariant();
-  const breadcrumbVariant = useBreadcrumbVariant();
+  const headerVariant = useHeaderVariant();
+  const tertiaryChoice = useTertiaryVariant(headerVariant !== 'off');
+  const breadcrumbVariant = useBreadcrumbVariant(headerVariant !== 'off');
   const tertiary = useTertiaryNav();
-  const tertiaryOn = !onDashboard && tertiaryChoice.placement !== 'none';
+  const tertiaryOn = !onDashboard && (headerVariant !== 'off' || tertiaryChoice.placement !== 'none');
   const currentPage = menuModule.pages.find((p) => isPageCurrent(pathname, p));
   const menu: ShellMenu = {
     title: menuModule.title,
@@ -105,6 +107,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       <TertiaryPlacement
         choice={tertiaryOn ? tertiaryChoice : { ...tertiaryChoice, placement: 'none' }}
         breadcrumb={breadcrumbVariant}
+        header={tertiaryOn ? headerVariant : 'off'}
         nav={tertiary}
         title={currentPage === undefined ? menuModule.title : trimModulePrefix(currentPage.label, menuModule.title)}
         moduleId={onDashboard ? undefined : menuModule.id}

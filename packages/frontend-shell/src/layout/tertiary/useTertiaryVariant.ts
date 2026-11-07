@@ -12,7 +12,8 @@ export interface TertiaryChoice {
 
 // The rows of the A/B dock for the third level of navigation (primary = top bar, secondary = side menu): where it goes, and, once a
 // family is chosen, a row for its look. The look rows are only in the dock while their family is the placement.
-export function useTertiaryVariant(): TertiaryChoice {
+// `replaced`: a sticky header (shell-header) lays out the third level itself, so these rows are left out of the dock.
+export function useTertiaryVariant(replaced = false): TertiaryChoice {
   const placement = useAbTest<TertiaryVariant>({
     id: 'shell-tertiary',
     label: 'Third menu level',
@@ -62,6 +63,6 @@ export function useTertiaryVariant(): TertiaryChoice {
       headed: { label: 'Headed', hint: 'Stripe, Intercom: a heading and a second line under each entry (sample texts).' },
     },
   });
-  useRegisterAbTests([placement, ...(placement.value === 'tabs' ? [tabs] : []), ...(placement.value === 'subbar' ? [subbar] : []), ...(placement.value === 'column' ? [column] : [])]);
+  useRegisterAbTests(replaced ? [] : [placement, ...(placement.value === 'tabs' ? [tabs] : []), ...(placement.value === 'subbar' ? [subbar] : []), ...(placement.value === 'column' ? [column] : [])]);
   return { placement: placement.value, tabs: tabs.value, subbar: subbar.value, column: column.value };
 }

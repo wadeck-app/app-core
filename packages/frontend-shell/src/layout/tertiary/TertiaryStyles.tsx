@@ -102,7 +102,8 @@ const readCollapsed = (): boolean => {
 // A list between the side menu and the page. `collapsible`: folds to a strip of initials (Slack, Linear; kept in this browser).
 // `card`: a floating card instead of a full-height rule (Notion settings). `headed`: a heading and a second line under each entry
 // (Stripe settings, Intercom).
-export function StyledColumn({ nav, label, title, style, children }: { nav: TertiaryNav; label: string; title: string; style: ColumnStyle; children: React.ReactNode }): React.ReactElement {
+// `stickyOffset`: how far under the top bar it sticks (a CSS length), when something else sticks above it.
+export function StyledColumn({ nav, label, title, style, stickyOffset, children }: { nav: TertiaryNav; label: string; title: string; style: ColumnStyle; stickyOffset?: string; children: React.ReactNode }): React.ReactElement {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const fold = style === 'collapsible' && collapsed;
   const toggle = (): void => {
@@ -120,7 +121,7 @@ export function StyledColumn({ nav, label, title, style, children }: { nav: Tert
       : `sticky top-shell-bar shrink-0 self-start border-r border-border px-3 py-4 ${fold ? 'w-14' : style === 'headed' ? 'w-60' : 'w-48'}`;
   return (
     <div className="flex items-start">
-      <nav aria-label={label} className={frame}>
+      <nav aria-label={label} style={stickyOffset === undefined ? undefined : { top: `calc(var(--app-shell-bar-height, 0px) + ${stickyOffset})` }} className={frame}>
         {style === 'collapsible' ? (
           <button
             type="button"

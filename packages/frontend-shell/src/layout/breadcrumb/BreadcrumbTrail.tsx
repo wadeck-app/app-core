@@ -9,7 +9,8 @@ import { useAbTest, useRegisterAbTests } from '@wadeck-app/dsl-ui';
 export type BreadcrumbVariant = 'classic' | 'sticky' | 'path' | 'back' | 'right' | 'bar';
 
 // One row of the A/B dock: where and how the trail of nested pages is drawn.
-export function useBreadcrumbVariant(): BreadcrumbVariant {
+// `replaced`: a sticky header (shell-header) lays out the trail itself, so this row is left out of the dock.
+export function useBreadcrumbVariant(replaced = false): BreadcrumbVariant {
   const test = useAbTest<BreadcrumbVariant>({
     id: 'shell-breadcrumb',
     label: 'Breadcrumb',
@@ -23,7 +24,7 @@ export function useBreadcrumbVariant(): BreadcrumbVariant {
       bar: { label: 'Bottom bar', hint: 'macOS Finder path bar: the trail in a bar at the bottom of the content area.' },
     },
   });
-  useRegisterAbTests([test]);
+  useRegisterAbTests(replaced ? [] : [test]);
   return test.value;
 }
 

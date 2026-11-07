@@ -4,6 +4,7 @@ import type { Crumb } from '../navHelpers.js';
 import type { TertiaryNav } from './tertiaryModel.js';
 import { StyledColumn, StyledSubBar, StyledTabs } from './TertiaryStyles.js';
 import { TertiaryCrumb, TertiaryFlyout, TertiaryPills, TertiaryRail } from './TertiaryViews.js';
+import { StickyHeader, type HeaderVariant } from './StickyHeader.js';
 import type { TertiaryChoice } from './useTertiaryVariant.js';
 
 // Puts the trail and the third level where the A/B tests say. `children` is the page. The accordion (in the side menu) is built in
@@ -12,6 +13,7 @@ import type { TertiaryChoice } from './useTertiaryVariant.js';
 export function TertiaryPlacement({
   choice,
   breadcrumb,
+  header,
   nav,
   title,
   moduleId,
@@ -20,6 +22,7 @@ export function TertiaryPlacement({
 }: {
   choice: TertiaryChoice;
   breadcrumb: BreadcrumbVariant;
+  header: HeaderVariant;
   nav: TertiaryNav;
   title: string;
   moduleId: string | undefined;
@@ -27,6 +30,14 @@ export function TertiaryPlacement({
   children: React.ReactNode;
 }): React.ReactElement {
   const label = `${title} sections`;
+  // A sticky header lays out the trail and the third level together, whatever the other two tests say.
+  if (header !== 'off') {
+    return (
+      <StickyHeader variant={header} nav={nav} title={title} moduleId={moduleId} crumbs={crumbs}>
+        {children}
+      </StickyHeader>
+    );
+  }
   const trail = (variant: BreadcrumbVariant = breadcrumb): React.ReactElement => (
     <BreadcrumbTrail variant={variant} crumbs={crumbs} moduleId={moduleId} trailing={choice.placement === 'crumb' ? <TertiaryCrumb nav={nav} /> : undefined} />
   );

@@ -11,6 +11,7 @@ import { TertiaryCrumb, TertiaryPills, TertiaryRail, accordionEntries } from './
 import { BreadcrumbTrail, type BreadcrumbVariant } from '../breadcrumb/BreadcrumbTrail.js';
 import { TertiaryPlacement } from './TertiaryPlacement.js';
 import type { TertiaryChoice } from './useTertiaryVariant.js';
+import type { HeaderVariant } from './StickyHeader.js';
 
 const nav = (activeId = 'activity'): TertiaryNav => ({ items: SAMPLE_TERTIARY, activeId, hrefFor: (id) => `/p?tertiary=${id}` });
 const inRouter = (ui: React.ReactElement, path = '/modules/billing') => render(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>);
@@ -196,7 +197,7 @@ describe('sticky trail with a sticky bar', () => {
   const crumbs = [{ label: 'Queue', href: '/modules/queue' }, { label: 'Overview' }];
   const place = (choice: Partial<TertiaryChoice>) =>
     inRouter(
-      <TertiaryPlacement choice={{ placement: 'tabs', tabs: 'sticky', subbar: 'chips', column: 'plain', ...choice }} breadcrumb="sticky" nav={nav()} title="Overview" moduleId="queue" crumbs={crumbs}>
+      <TertiaryPlacement choice={{ placement: 'tabs', tabs: 'sticky', subbar: 'chips', column: 'plain', ...choice }} breadcrumb="sticky" header="off" nav={nav()} title="Overview" moduleId="queue" crumbs={crumbs}>
         <p>the page</p>
       </TertiaryPlacement>,
     );
@@ -218,6 +219,53 @@ describe('sticky trail with a sticky bar', () => {
     const bar = screen.getByRole('navigation', { name: 'Overview sections' });
     expect(trail.parentElement).toBe(bar.parentElement);
     expect(bar.compareDocumentPosition(trail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe('sticky header variants', () => {
+  const crumbs = [{ label: 'Queue', href: '/modules/queue' }, { label: 'Overview' }];
+  const variants: Array<Exclude<HeaderVariant, 'off'>> = ['stack', 'inline', 'title', 'condense', 'path', 'crumb', 'column', 'rail', 'tinted', 'headroom'];
+
+  const place = (header: HeaderVariant) =>
+    inRouter(
+      <TertiaryPlacement choice={{ placement: 'none', tabs: 'line', subbar: 'chips', column: 'plain', header: 'off' } as TertiaryChoice} breadcrumb="classic" header={header} nav={nav('alerts')} title="Overview" moduleId="queue" crumbs={crumbs}>
+        <p>the page</p>
+      </TertiaryPlacement>,
+    );
+
+  it.each(variants)('%s has the trail, every entry of the third level with the current one marked, and the page', (variant) => {
+    place(variant);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    expect(screen.getByText('the page')).toBeInTheDocument();
+    // The third level is a navigation of links, or (crumb only) a button that opens them.
+    if (variant === 'crumb') {
+      expect(screen.getByRole('button', { name: /Alerts/ })).toBeInTheDocument();
+      return;
+    }
+    const level = screen.getByRole('navigation', { name: 'Overview sections' });
+    const links = within(level).getAllByRole('link');
+    expect(links.map((l) => l.textContent?.replace(/Latest events|Needs attention|Totals and trends|Options of this page/, ''))).toEqual(SAMPLE_TERTIARY.map((i) => i.label));
+    expect(links.filter((l) => l.getAttribute('aria-current') === 'page').map((l) => l.textContent)).toEqual(['Alerts']);
+  });
+
+  it.each(variants.filter((v) => v !== 'condense'))('%s keeps the trail in a sticky block', (variant) => {
+    place(variant);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).closest('.sticky')).not.toBeNull();
+  });
+
+  it('places the third level in the same sticky block as the trail for the rows that carry both', () => {
+    for (const variant of ['stack', 'inline', 'title', 'path', 'tinted', 'headroom'] as const) {
+      const view = place(variant);
+      const block = screen.getByRole('navigation', { name: 'Breadcrumb' }).closest('.sticky');
+      expect(block?.contains(screen.getByRole('navigation', { name: 'Overview sections' }))).toBe(true);
+      view.unmount();
+    }
+  });
+
+  it('adds nothing for off: the separate tests decide', () => {
+    place('off');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Overview sections' })).not.toBeInTheDocument();
   });
 });
 

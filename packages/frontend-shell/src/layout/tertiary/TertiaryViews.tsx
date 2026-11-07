@@ -21,9 +21,9 @@ export function accordionEntries(nav: TertiaryNav, parentId: string): ShellItem[
 }
 
 // Pills: a segmented control (Vercel, Linear's view switcher).
-export function TertiaryPills({ nav, label }: { nav: TertiaryNav; label: string }): React.ReactElement {
+export function TertiaryPills({ nav, label, bare = false }: { nav: TertiaryNav; label: string; bare?: boolean }): React.ReactElement {
   return (
-    <nav aria-label={label} className="px-4 pt-3">
+    <nav aria-label={label} className={bare ? '' : 'px-4 pt-3'}>
       <div className="inline-flex gap-0.5 rounded-lg bg-bg-secondary p-0.5">
         {nav.items.map((item) => {
           const current = item.id === nav.activeId;
@@ -44,11 +44,12 @@ export function TertiaryPills({ nav, label }: { nav: TertiaryNav; label: string 
 }
 
 // Rail: a sticky list on the right of the page with a line and a marker on the current entry (Stripe docs, Notion).
-export function TertiaryRail({ nav, label, children }: { nav: TertiaryNav; label: string; children: React.ReactNode }): React.ReactElement {
+// `stickyOffset`: how far under the top bar it sticks (a CSS length), when something else sticks above it.
+export function TertiaryRail({ nav, label, stickyOffset, children }: { nav: TertiaryNav; label: string; stickyOffset?: string; children: React.ReactNode }): React.ReactElement {
   return (
     <div className="flex items-start">
       <div className="min-w-0 flex-1">{children}</div>
-      <nav aria-label={label} className="sticky top-shell-bar mr-4 mt-4 w-44 shrink-0 self-start py-2">
+      <nav aria-label={label} style={stickyOffset === undefined ? undefined : { top: `calc(var(--app-shell-bar-height, 0px) + ${stickyOffset})` }} className="sticky top-shell-bar mr-4 mt-4 w-44 shrink-0 self-start py-2">
         <p className="mb-2 pl-3 text-xs font-medium text-muted">In this section</p>
         <ul className="border-l border-border">
           {nav.items.map((item) => {
