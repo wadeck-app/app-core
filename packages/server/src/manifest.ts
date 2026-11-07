@@ -19,6 +19,15 @@ const PAGE_PATH_PATTERN = /^(?:\/|(?:\/(?:[A-Za-z0-9_-]+|:[A-Za-z_][A-Za-z0-9_]*
 export const WIDGET_MAX_SPAN = 12;
 const SpanSchema = z.number().int().min(1, 'must be between 1 and ' + WIDGET_MAX_SPAN).max(WIDGET_MAX_SPAN, 'must be between 1 and ' + WIDGET_MAX_SPAN).optional();
 
+const TAB_GROUP_PATTERN = /^[a-z][a-z0-9-]*$/;
+const TabSchema = z
+  .object({
+    group: z.string().regex(TAB_GROUP_PATTERN, 'tab.group must be lower case letters, digits or "-", starting with a letter (for example "task")'),
+    label: z.string().trim().min(1, 'tab.label must not be empty: it is the text of the tab (for example "History")'),
+    order: z.number().optional(),
+  })
+  .strict();
+
 const ExtensionPointSchema = z
   .object({
     kind: z.string().min(1),
@@ -37,6 +46,10 @@ const ExtensionPointSchema = z
     // A rule above this entry of the side menu, to set groups of pages apart; `groupLabel` is the caption of the group that follows.
     separatorBefore: z.boolean().optional(),
     groupLabel: z.string().trim().min(1, 'groupLabel must not be empty').optional(),
+    // This page is a tab of the third level of navigation: the pages of the module that share a `group` are shown as tabs under the
+    // trail, on each of them. `label` is the text of the tab (`History`, not the page label `Task history`), `order` sorts the tabs
+    // (declaration order when absent).
+    tab: TabSchema.optional(),
     path: z
       .string()
       .regex(PAGE_PATH_PATTERN, 'path must look like "/jobs/:id": segments of letters, digits, "_" or "-", or ":param"')
@@ -66,6 +79,17 @@ const ExtensionPointSchema = z
     }
     if (ep.groupLabel !== undefined && ep.separatorBefore !== true) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['groupLabel'], message: '"groupLabel" is the caption of the separator: add "separatorBefore": true, or remove "groupLabel".' });
+    }
+  })
+  // `tab` makes a page a tab of the third level: a page of the module (slot `nav` or `route`) that has an address.
+  .superRefine((ep, ctx) => {
+    if (ep.tab === undefined) {
+      return;
+    }
+    if (ep.kind !== 'page' || (ep.slot !== MENU_SLOT_LOCAL && ep.slot !== 'route')) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['tab'], message: `"tab" makes a page of this module a tab of the third level (kind "page", slot "nav" or "route"); this is kind "${ep.kind}" on slot "${ep.slot}". Remove it.` });
+    } else if (ep.path === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['tab'], message: '"tab" needs the page to have a "path": a tab links to a page by its address.' });
     }
   })
   // A contribution to `<providerId>:nav` is an entry in that module's side menu: it needs what a menu entry needs.
@@ -164,6 +188,48 @@ function checkOptionalRequires(manifest: { id: string; requires?: Record<string,
   }
 }
 
+const paramsOf = (pagePath: string): string[] =>
+  pagePath
+    .split('/')
+    .filter((segment) => segment.startsWith(':'))
+    .map((segment) => segment.slice(1))
+    .sort();
+
+// The pages that share a tab group are the tabs of one thing (a task, a job): on each of them the shell links the others, filling the
+// ":params" of their address from the current page. So they must have the same parameters, be at least two, and not repeat a label.
+function checkTabGroups(manifest: { extensionPoints: Array<{ path?: string; tab?: { group: string; label: string } }> }, ctx: z.RefinementCtx): void {
+  const groups = new Map<string, Array<{ index: number; path: string; label: string }>>();
+  manifest.extensionPoints.forEach((ep, index) => {
+    if (ep.tab !== undefined && ep.path !== undefined) {
+      groups.set(ep.tab.group, [...(groups.get(ep.tab.group) ?? []), { index, path: ep.path, label: ep.tab.label }]);
+    }
+  });
+  for (const [group, members] of groups) {
+    const at = (member: { index: number }): (string | number)[] => ['extensionPoints', member.index, 'tab'];
+    if (members.length < 2) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: at(members[0]!), message: `tab group "${group}" has one page ("${members[0]!.path}"): tabs need at least two. Add the other page(s) to the group, or remove "tab".` });
+      continue;
+    }
+    const expected = paramsOf(members[0]!.path).join(',');
+    for (const member of members.slice(1)) {
+      if (paramsOf(member.path).join(',') !== expected) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: at(member),
+          message: `tab group "${group}": "${member.path}" has the parameters [${paramsOf(member.path).join(', ')}] but "${members[0]!.path}" has [${expected.split(',').filter(Boolean).join(', ')}]. The tabs of a group are pages of the same thing, so they take the same ":params"; use the same names.`,
+        });
+      }
+    }
+    const seen = new Set<string>();
+    for (const member of members) {
+      if (seen.has(member.label)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: at(member), message: `tab group "${group}" has two tabs labelled "${member.label}": give each tab its own label.` });
+      }
+      seen.add(member.label);
+    }
+  }
+}
+
 // The manifest a running app-core loads (what `package` writes into dist-module/).
 export const ManifestSchema = z.object({
   // Must equal the id the module is registered under (decision 83); the loader refuses a mismatch.
@@ -178,7 +244,7 @@ export const ManifestSchema = z.object({
   lifecycle: LifecycleSchema.optional(),
   showInNav: ShowInNavSchema,
   title: TitleSchema,
-}).superRefine(checkOptionalRequires);
+}).superRefine(checkOptionalRequires).superRefine(checkTabGroups);
 
 // The manifest an author writes at the module root (decision 81). It never names what `package`
 // produces: no version (stamped at package time), no backendEntryPath (src/backend/index.ts by
@@ -197,7 +263,8 @@ export const SourceManifestSchema = z
     title: TitleSchema,
   })
   .strict()
-  .superRefine(checkOptionalRequires);
+  .superRefine(checkOptionalRequires)
+  .superRefine(checkTabGroups);
 
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type SourceManifest = z.infer<typeof SourceManifestSchema>;

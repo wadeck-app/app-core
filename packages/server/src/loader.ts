@@ -327,6 +327,7 @@ export class ModuleManager {
       height: ep.height,
       separatorBefore: ep.separatorBefore,
       groupLabel: ep.groupLabel,
+      tab: ep.tab,
     }));
 
     const problems = this.findProblems(entry.id, manifest, resolvedViews);

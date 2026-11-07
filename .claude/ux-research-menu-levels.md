@@ -27,6 +27,7 @@ Carbon breadcrumb: under the header, above the page title. Fluent breadcrumb: "D
 ## Decided (user, November 2026)
 
 - The trail is sticky; the third level is tabs under the trail, in the same sticky block. Not an accordion in the side menu: the third level depends on a choice made in the page (a task opened from a list, its sections as tabs).
-- One look for the three levels, chosen among 8 (underline, soft, glow, solid, outline, rail, ink, raised): **rail**. Before, three looks: a glow on the top bar tab, a filled row in the side menu, a line under the third level.
+- One look for the three levels, chosen among 8 prototypes: **rail** (built into dsl-ui AppShell; the third level carries the same classes).
 - The third level is not always there: a page without one shows nothing; and room is left between the trail and the tabs.
 - Removed: placements (accordion, sub-bar, column, rail, flyout, pills), breadcrumb looks, sticky header variants.
+- The third level is declared by the module: `tab: { group, label, order? }` on its pages. Pages of a group are the tabs; same `:params`, at least two.

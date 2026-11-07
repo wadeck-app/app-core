@@ -167,37 +167,21 @@ describe('AppLayout: a module that is not listed (showInNav: false)', () => {
 
 // What the adapter owns, on top of the generic shell: the module model and the URL.
 describe('AppLayout: adapter between the module model and the shell', () => {
-  const asBackgroundImage = (css: string): string => {
-    const probe = document.createElement('i');
-    probe.style.backgroundImage = css;
-    return probe.style.backgroundImage;
-  };
-  const upBlend = (color: string): string => {
-    const mixed = (pct: number): string => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
-    return `radial-gradient(60% 90% at 50% 100%, ${mixed(32)}, transparent 100%), linear-gradient(0deg, ${mixed(14)}, transparent)`;
-  };
   const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name });
   const menuLink = (navName: string, name: string) => within(screen.getByRole('navigation', { name: navName })).getByRole('link', { name });
 
-  it('highlights the current module tab with the color of that module', () => {
+  // The "rail" look of the current tab (grey fill, accent bar) belongs to dsl-ui's AppShell, which draws it in the accent of the module
+  // (tested below, "module accent"). What the adapter owes it: mark the current tab and put no glow of its own on it.
+  it('marks the current tab and gives no tab a highlight of its own', () => {
     renderAt(billing.basePath);
-    expect(tab('Billing').style.backgroundImage).toBe(asBackgroundImage(upBlend(moduleColor('billing'))));
-    expect(tab('Inventory').style.backgroundImage).toBe('');
+    expect(tab('Billing')).toHaveAttribute('aria-current', 'true');
+    for (const name of ['Billing', 'Inventory', 'Dashboard']) {
+      expect(tab(name).style.backgroundImage).toBe('');
+    }
   });
 
-  it('gives two modules two different highlights', () => {
-    renderAt(billing.basePath);
-    const a = tab('Billing').style.backgroundImage;
-    document.body.innerHTML = '';
-    renderAt(FIXTURE_NAV[1].basePath);
-    const b = tab('Inventory').style.backgroundImage;
-    expect(b).toBe(asBackgroundImage(upBlend(moduleColor('inventory'))));
-    expect(b).not.toBe(a);
-  });
-
-  it('highlights the Dashboard tab with the theme accent when it is the current page', () => {
+  it('marks the Dashboard tab as current on the dashboard', () => {
     renderAt('/');
-    expect(tab('Dashboard').style.backgroundImage).toBe(asBackgroundImage(upBlend('var(--color-primary-solid)')));
     expect(tab('Dashboard')).toHaveAttribute('aria-current', 'page');
   });
 

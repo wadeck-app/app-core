@@ -132,3 +132,65 @@ describe('parseManifest: separators in the side menu', () => {
     expect(problemsOf(() => parseManifest(withPage({ slot: 'route', separatorBefore: true })))).toContainEqual(expect.stringContaining('kind "page" on slot "route"'));
   });
 });
+
+describe('parseManifest: tabs of the third level', () => {
+  const view = { type: 'inline', value: { $type: 'TextBox' } };
+  const manifest = (pages: Array<Record<string, unknown>>) => ({
+    id: 'task',
+    version: '1.0.0',
+    backendEntryPath: './backend.mjs',
+    extensionPoints: pages.map((p) => ({ kind: 'page', slot: 'route', view, ...p })),
+  });
+  const tabs = [
+    { path: '/tasks/p/:project/:id', label: 'Task', tab: { group: 'task', label: 'Details' } },
+    { path: '/tasks/p/:project/:id/history', label: 'Task history', tab: { group: 'task', label: 'History', order: 20 } },
+  ];
+  const message = (input: unknown): string => {
+    try {
+      parseManifest(input);
+    } catch (err) {
+      return (err as ZodError).issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(' | ');
+    }
+    return '';
+  };
+
+  it('accepts pages of a module that share a group, with the same parameters', () => {
+    const parsed = parseManifest(manifest(tabs));
+    expect(parsed.extensionPoints.map((ep) => ep.tab)).toEqual([{ group: 'task', label: 'Details' }, { group: 'task', label: 'History', order: 20 }]);
+  });
+
+  it('accepts a page of the menu as a tab too, and several independent groups', () => {
+    const input = manifest([
+      { slot: 'nav', path: '/tasks', label: 'Tasks', tab: { group: 'lists', label: 'List' } },
+      { slot: 'nav', path: '/tree', label: 'Tree', tab: { group: 'lists', label: 'Tree' } },
+      ...tabs,
+    ]);
+    expect(() => parseManifest(input)).not.toThrow();
+  });
+
+  it('refuses a group of one page, and says what to do', () => {
+    expect(message(manifest([tabs[0]!]))).toContain('tab group "task" has one page ("/tasks/p/:project/:id"): tabs need at least two');
+  });
+
+  it('refuses pages of one group whose parameters differ, naming both addresses', () => {
+    const text = message(manifest([tabs[0]!, { path: '/tasks/:id/history', label: 'H', tab: { group: 'task', label: 'History' } }]));
+    expect(text).toContain('tab group "task": "/tasks/:id/history" has the parameters [id] but "/tasks/p/:project/:id" has [id, project]');
+    expect(text).toContain('use the same names');
+  });
+
+  it('refuses two tabs with the same label in a group', () => {
+    expect(message(manifest([tabs[0]!, { path: '/tasks/p/:project/:id/x', label: 'X', tab: { group: 'task', label: 'Details' } }]))).toContain('two tabs labelled "Details"');
+  });
+
+  it('refuses a tab that is not a page of this module with an address', () => {
+    expect(message(manifest([{ ...tabs[0]!, slot: 'flow:nav', path: '/x' }, tabs[1]!]))).toContain('"tab" makes a page of this module a tab');
+    expect(message(manifest([{ ...tabs[0]!, kind: 'widget', slot: 'dashboard', path: undefined }, tabs[1]!]))).toContain('"tab" makes a page of this module a tab');
+    expect(message(manifest([{ ...tabs[0]!, path: undefined }, tabs[1]!]))).toContain('"tab" needs the page to have a "path"');
+  });
+
+  it('refuses an empty label, a bad group name and an unknown key', () => {
+    expect(message(manifest([{ ...tabs[0]!, tab: { group: 'task', label: ' ' } }, tabs[1]!]))).toContain('tab.label must not be empty');
+    expect(message(manifest([{ ...tabs[0]!, tab: { group: 'Task Group', label: 'A' } }, tabs[1]!]))).toContain('tab.group must be lower case');
+    expect(message(manifest([{ ...tabs[0]!, tab: { group: 'task', label: 'A', icon: 'x' } }, tabs[1]!]))).toContain('Unrecognized key');
+  });
+});

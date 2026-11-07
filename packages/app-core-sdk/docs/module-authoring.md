@@ -504,6 +504,21 @@ A `page` of the menu (slot `nav`, or `<providerId>:nav`) can set itself apart fr
 - Both fields fail `check` and `package` on anything that is not a page of the menu, and `groupLabel` without `separatorBefore: true`, with the fix in the message.
 - The menu orders entries as before (own pages in manifest order, then contributed pages by `order`), so place the entry that starts a group where you want the rule.
 
+### Tabs of a page (`tab`)
+
+When a page opens something (a task from a list, a job) and that thing has several pages (details, history, logs), make those pages tabs: the shell shows them under the trail, on each of them, in the same sticky block.
+
+```json
+{ "kind": "page", "slot": "route", "label": "Task", "path": "/tasks/p/:project/:id", "tab": { "group": "task", "label": "Details", "order": 10 }, "view": { "type": "path", "value": "./src/dsl-views/task.yaml" } },
+{ "kind": "page", "slot": "route", "label": "Task history", "path": "/tasks/p/:project/:id/history", "tab": { "group": "task", "label": "History", "order": 20 }, "view": { "type": "path", "value": "./src/dsl-views/task-history.yaml" } }
+```
+
+- Pages of the module with the same `group` are the tabs; `label` is the text of the tab (short: "History", not "Task history"); `order` sorts them (declaration order when absent, after those with an `order`).
+- Each tab is a page with its own address: the shell links it by filling the `:params` of the page shown. So all pages of a group take **the same `:params`** and there are **at least two**; `check` and `package` fail otherwise, with the fix in the message.
+- Only a page of the module (slot `nav` or `route`) that has a `path`. A page that is not a tab, or has no sibling, shows no third level: nothing is drawn.
+- Other tabs of a group can be the pages of a list: `/tasks/p/:project` (Tasks) and `/tree/p/:project` (Tree) as the views of one project.
+- A figure next to a tab (open items, alerts) is supported by the shell (`count`) but no manifest field fills it yet.
+
 ### Dates and times
 
 Never format a date yourself: the shell has one formatter, set by the user (calendar-clock button in the top bar) and applied to every date, so a module that formats its own ignores the user's choices. Settings, kept in the browser: language (English `en-GB` by default, never the browser's language unless the user picks "auto"), ISO 8601 or the language's conventions, 12h/24h, time zone (computer, UTC or a name), first day of the week, weekday names.

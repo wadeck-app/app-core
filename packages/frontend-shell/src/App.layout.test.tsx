@@ -42,13 +42,12 @@ describe('App: layout', () => {
     expect(within(screen.getByTestId('shell-menu')).getByRole('link', { name: 'History' })).toBeInTheDocument();
   });
 
-  it('highlights the active module tab with the Up blend style, and no other tab', async () => {
+  it('marks the active module tab as current, and no other tab', async () => {
     render(<App />);
     expect(await screen.findByText('overview-page')).toBeInTheDocument();
-    const tab = within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Jobs mod' });
-    expect(tab.style.backgroundImage).toContain('radial-gradient(60% 90% at 50% 100%');
-    expect(tab.style.backgroundImage).toContain('linear-gradient(0deg');
-    expect(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: 'Dashboard' }).style.backgroundImage).toBe('');
+    const tabs = within(screen.getByRole('navigation', { name: 'Modules' }));
+    expect(tabs.getByRole('link', { name: 'Jobs mod' })).toHaveAttribute('aria-current', 'true');
+    expect(tabs.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
   });
 
   it('shows no A/B test bar: every test is decided', () => {
