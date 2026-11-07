@@ -9,8 +9,8 @@ import type { TertiaryNav } from './tertiaryModel.js';
 import { TertiaryPills } from './TertiaryViews.js';
 
 // The trail and the third level in ONE sticky header, under the top bar: they stay in view while the page scrolls, as a single block
-// (two sticky bars would stick at the same place and hide each other). When one variant is chosen it replaces the separate
-// "Third menu level" and "Breadcrumb" tests of the dock.
+// (two sticky bars would stick at the same place and hide each other). It is the last row of the dock because, once a variant is
+// chosen, it lays out the trail and the third level itself and the rows above only keep their choice.
 //
 // What these variants are built on (design-system documentation, read in November 2026; see the notes of the A/B test):
 // - the third level is a horizontal row of links to distinct addresses inside the page (Carbon: "use tabs within the page"; PatternFly:
@@ -24,10 +24,10 @@ export type HeaderVariant = 'off' | 'stack' | 'inline' | 'title' | 'condense' | 
 export function useHeaderVariant(): HeaderVariant {
   const test = useAbTest<HeaderVariant>({
     id: 'shell-header',
-    label: 'Sticky header',
+    label: 'Sticky header (overrides the rows above)',
     initial: 'off',
     options: {
-      off: { label: 'Off', hint: 'Use the separate tests below (third menu level, breadcrumb). The reference.' },
+      off: { label: 'Off', hint: 'The rows above decide (third menu level, breadcrumb). The reference.' },
       stack: { label: 'Stack', hint: 'The trail, then the tabs: two rows in one sticky block. The trail stays above the title, top left.' },
       inline: { label: 'Inline', hint: 'One row: the trail on the left, the tabs on the right. The least sticky height.' },
       title: { label: 'Title row', hint: 'The trail, then a row with the page name followed by the chosen entry, and a segmented control: the title follows the selected entry.' },

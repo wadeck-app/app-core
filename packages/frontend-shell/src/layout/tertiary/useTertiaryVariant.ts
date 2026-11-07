@@ -10,12 +10,11 @@ export interface TertiaryChoice {
 }
 
 // The rows of the A/B dock for the third level of navigation (primary = top bar, secondary = side menu): where it goes, and, once a
-// family is chosen, a row for its look. The look rows are only in the dock while their family is the placement.
+// family is chosen, a row for its look.
 // What stays is what design-system documentation backs: tabs / horizontal navigation inside the page (Carbon: "use tabs within the
 // page"; PatternFly: "secondary horizontal navigation"; Primer: tabs "directly above the content they affect"), and the accordion
 // in the side menu (PatternFly: "3-level expandable navigation"; but Carbon and Fluent say their side menus do not go there).
-// `replaced`: a sticky header (shell-header) lays out the third level itself, so these rows are left out of the dock.
-export function useTertiaryVariant(replaced = false): TertiaryChoice {
+export function useTertiaryVariant(): TertiaryChoice {
   const placement = useAbTest<TertiaryVariant>({
     id: 'shell-tertiary',
     label: 'Third menu level',
@@ -29,7 +28,7 @@ export function useTertiaryVariant(replaced = false): TertiaryChoice {
   });
   const tabs = useAbTest<TabsStyle>({
     id: 'shell-tertiary-tabs',
-    label: 'Tabs look',
+    label: 'Tabs look (with Tabs)',
     initial: 'line',
     options: {
       line: { label: 'Line', hint: 'Underlined tabs under the trail. Figures are shown next to the labels.' },
@@ -39,7 +38,7 @@ export function useTertiaryVariant(replaced = false): TertiaryChoice {
   });
   const subbar = useAbTest<SubBarStyle>({
     id: 'shell-tertiary-subbar',
-    label: 'Sub-bar look',
+    label: 'Sub-bar look (with Sub-bar)',
     initial: 'chips',
     options: {
       chips: { label: 'Chips', hint: 'Outlined chips after the page name.' },
@@ -48,6 +47,7 @@ export function useTertiaryVariant(replaced = false): TertiaryChoice {
       tabs: { label: 'Tabs', hint: 'Underlined tabs running the height of the bar, on the right.' },
     },
   });
-  useRegisterAbTests(replaced ? [] : [placement, ...(placement.value === 'tabs' ? [tabs] : []), ...(placement.value === 'subbar' ? [subbar] : [])]);
+  // Every dimension is always in the dock: the looks only apply once their placement is chosen, and say so in their label.
+  useRegisterAbTests([placement, tabs, subbar]);
   return { placement: placement.value, tabs: tabs.value, subbar: subbar.value };
 }

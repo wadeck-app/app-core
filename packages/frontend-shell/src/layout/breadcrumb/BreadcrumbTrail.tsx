@@ -10,8 +10,7 @@ export type BreadcrumbVariant = 'classic' | 'sticky' | 'path' | 'back';
 
 // One row of the A/B dock: how the trail of nested pages is drawn. It stays at the top left, above the page title (Atlassian: "Place
 // breadcrumbs at the top left corner of the screen, above the page title"; Carbon: under the header, above the page title).
-// `replaced`: a sticky header (shell-header) lays out the trail itself, so this row is left out of the dock.
-export function useBreadcrumbVariant(replaced = false): BreadcrumbVariant {
+export function useBreadcrumbVariant(): BreadcrumbVariant {
   const test = useAbTest<BreadcrumbVariant>({
     id: 'shell-breadcrumb',
     label: 'Breadcrumb',
@@ -23,7 +22,7 @@ export function useBreadcrumbVariant(replaced = false): BreadcrumbVariant {
       back: { label: 'Back', hint: 'Linear, iOS: only a "back to the parent" link and the name of the current page.' },
     },
   });
-  useRegisterAbTests(replaced ? [] : [test]);
+  useRegisterAbTests([test]);
   return test.value;
 }
 

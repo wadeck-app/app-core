@@ -54,9 +54,10 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   const menuModule = active ?? homeNavModule(navModules);
   const onDashboard = menuModule.id === HOME_MODULE_ID;
   // A/B test of where a third level goes (see tertiary/): only on the pages of a module, the dashboard and the app's own pages have none.
+  // The order of the calls is the order of the rows in the dock: the sticky header, which overrides the others, comes last.
+  const tertiaryChoice = useTertiaryVariant();
+  const breadcrumbVariant = useBreadcrumbVariant();
   const headerVariant = useHeaderVariant();
-  const tertiaryChoice = useTertiaryVariant(headerVariant !== 'off');
-  const breadcrumbVariant = useBreadcrumbVariant(headerVariant !== 'off');
   const tertiary = useTertiaryNav();
   const tertiaryOn = !onDashboard && (headerVariant !== 'off' || tertiaryChoice.placement !== 'none');
   const currentPage = menuModule.pages.find((p) => isPageCurrent(pathname, p));
