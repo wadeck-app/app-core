@@ -24,6 +24,8 @@ Carbon breadcrumb: under the header, above the page title. Fluent breadcrumb: "D
 - Not obtained: Material 3 (empty, rendered by script), Salesforce, Cloudscape, Spectrum (404), Polaris (moved), Atlassian tabs and navigation pages.
 - Nothing read backs a third column, a right rail, a flyout, a breadcrumb dropdown, a trail at the right or at the bottom: removed from the tests.
 
-## What the tests keep
+## Decided (user, November 2026)
 
-Third level as tabs / horizontal navigation in the page, one row of links per level, trail above the title top left, a sticky block as short as possible (one row, or condensed, or hidden while reading), title following the chosen entry. The accordion stays as the contested option (PatternFly yes, Carbon and Fluent no).
+- The trail is sticky; the third level is tabs under the trail, in the same sticky block. Not an accordion in the side menu: the third level depends on a choice made in the page (a task opened from a list, its sections as tabs).
+- Left open: the dress of the tabs (`shell-tabs-style`: line, menu row, glow, segmented, chips, folder). The line style is the page tabs of dsl-ui; the others borrow from the side menu rows, the glow of the top bar tabs and the chip buttons.
+- Removed: placements (accordion, sub-bar, column, rail, flyout, pills), breadcrumb looks, sticky header variants.

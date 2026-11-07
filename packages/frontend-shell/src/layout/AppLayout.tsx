@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AppShell, useRootAccent, type ShellItem, type ShellLinkProps, type ShellMenu } from '@wadeck-app/dsl-ui';
+import { AppShell, useAbExperiments, useRootAccent, type ShellItem, type ShellLinkProps, type ShellMenu } from '@wadeck-app/dsl-ui';
+import { Breadcrumb } from './Breadcrumb.js';
 import { Logo, moduleColor } from './Logo.js';
 import { NavSettings } from './NavSettings.js';
 import { breadcrumbFor, trimModulePrefix, type Crumb } from './navHelpers.js';
@@ -8,11 +9,7 @@ import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent, listedNa
 import { TopBarActions } from './TopBarActions.js';
 import { applyTabOrder, useTabOrder } from './useTabOrder.js';
 import { useTertiaryNav } from './tertiary/tertiaryModel.js';
-import { accordionEntries } from './tertiary/TertiaryViews.js';
-import { TertiaryPlacement } from './tertiary/TertiaryPlacement.js';
-import { useBreadcrumbVariant } from './breadcrumb/BreadcrumbTrail.js';
-import { useHeaderVariant } from './tertiary/StickyHeader.js';
-import { useTertiaryVariant } from './tertiary/useTertiaryVariant.js';
+import { TertiaryTabs, useTabsStyle } from './tertiary/TertiaryTabs.js';
 import type { LayoutProps } from './types.js';
 
 const routerLink = ({ href, children, ...rest }: ShellLinkProps): React.ReactElement => (
@@ -53,14 +50,16 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
 
   const menuModule = active ?? homeNavModule(navModules);
   const onDashboard = menuModule.id === HOME_MODULE_ID;
-  // A/B test of where a third level goes (see tertiary/): only on the pages of a module, the dashboard and the app's own pages have none.
-  // The order of the calls is the order of the rows in the dock: the sticky header, which overrides the others, comes last.
-  const tertiaryChoice = useTertiaryVariant();
-  const breadcrumbVariant = useBreadcrumbVariant();
-  const headerVariant = useHeaderVariant();
+  // The third level: tabs under the trail. No page declares one yet (the manifest has no field for it), so they are samples and only
+  // shown with the A/B dock, where their style is tested (see tertiary/TertiaryTabs.tsx). They are on every page then, the dashboard
+  // included, so that the style can be judged anywhere.
+  const dockOn = useAbExperiments()?.enabled === true;
+  const tabsStyle = useTabsStyle();
   const tertiary = useTertiaryNav();
-  const tertiaryOn = !onDashboard && (headerVariant !== 'off' || tertiaryChoice.placement !== 'none');
   const currentPage = menuModule.pages.find((p) => isPageCurrent(pathname, p));
+  const pageTitle = currentPage === undefined ? menuModule.title : trimModulePrefix(currentPage.label, menuModule.title);
+  const crumbs = trimmedTrail(breadcrumbFor(pathname, navModules, modules));
+  const tabsOn = dockOn && tabsStyle !== 'off';
   const menu: ShellMenu = {
     title: menuModule.title,
     label: `${menuModule.title} pages`,
@@ -76,7 +75,6 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
         icon: onDashboard ? <Logo title={p.label} moduleId={p.moduleId} /> : undefined,
         current: isPageCurrent(pathname, p) ? ('page' as const) : undefined,
       },
-      ...(tertiaryOn && tertiaryChoice.placement === 'accordion' && p === currentPage ? accordionEntries(tertiary, p.routePath) : []),
     ]),
   };
 
@@ -105,17 +103,15 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       // The name of the drag handle of the `resizable` menu.
       resizeLabel="Resize the side menu"
     >
-      <TertiaryPlacement
-        choice={tertiaryOn ? tertiaryChoice : { ...tertiaryChoice, placement: 'none' }}
-        breadcrumb={breadcrumbVariant}
-        header={tertiaryOn ? headerVariant : 'off'}
-        nav={tertiary}
-        title={currentPage === undefined ? menuModule.title : trimModulePrefix(currentPage.label, menuModule.title)}
-        moduleId={onDashboard ? undefined : menuModule.id}
-        crumbs={trimmedTrail(breadcrumbFor(pathname, navModules, modules))}
-      >
-        {children}
-      </TertiaryPlacement>
+      {/* Decided: the trail sticks under the top bar, with the tabs of the third level under it when there are some: one block, because
+          two sticky bars would stick at the same place and hide each other. */}
+      {crumbs.length > 0 || tabsOn ? (
+        <div className={`sticky top-shell-bar z-10 border-b border-border bg-bg ${tabsOn ? '' : 'pb-2'}`}>
+          <Breadcrumb crumbs={crumbs} />
+          {tabsOn ? <TertiaryTabs nav={tertiary} label={`${pageTitle} sections`} style={tabsStyle as Exclude<typeof tabsStyle, 'off'>} /> : null}
+        </div>
+      ) : null}
+      {children}
     </AppShell>
   );
 }
