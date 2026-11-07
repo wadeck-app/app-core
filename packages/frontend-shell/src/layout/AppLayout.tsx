@@ -9,7 +9,8 @@ import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent, listedNa
 import { TopBarActions } from './TopBarActions.js';
 import { applyTabOrder, useTabOrder } from './useTabOrder.js';
 import { useTertiaryNav } from './tertiary/tertiaryModel.js';
-import { TertiaryTabs, useTabsStyle } from './tertiary/TertiaryTabs.js';
+import { TertiaryTabs } from './tertiary/TertiaryTabs.js';
+import { useNavStyle } from './useNavStyle.js';
 import type { LayoutProps } from './types.js';
 
 const routerLink = ({ href, children, ...rest }: ShellLinkProps): React.ReactElement => (
@@ -54,12 +55,13 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   // shown with the A/B dock, where their style is tested (see tertiary/TertiaryTabs.tsx). They are on every page then, the dashboard
   // included, so that the style can be judged anywhere.
   const dockOn = useAbExperiments()?.enabled === true;
-  const tabsStyle = useTabsStyle();
+  // The look of the whole navigation (top bar, side menu, these tabs): an A/B test, see navStyles.css.
+  useNavStyle();
   const tertiary = useTertiaryNav();
   const currentPage = menuModule.pages.find((p) => isPageCurrent(pathname, p));
   const pageTitle = currentPage === undefined ? menuModule.title : trimModulePrefix(currentPage.label, menuModule.title);
   const crumbs = trimmedTrail(breadcrumbFor(pathname, navModules, modules));
-  const tabsOn = dockOn && tabsStyle !== 'off';
+  const tabsOn = dockOn;
   const menu: ShellMenu = {
     title: menuModule.title,
     label: `${menuModule.title} pages`,
@@ -108,7 +110,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       {crumbs.length > 0 || tabsOn ? (
         <div className={`sticky top-shell-bar z-10 border-b border-border bg-bg ${tabsOn ? '' : 'pb-2'}`}>
           <Breadcrumb crumbs={crumbs} />
-          {tabsOn ? <TertiaryTabs nav={tertiary} label={`${pageTitle} sections`} style={tabsStyle as Exclude<typeof tabsStyle, 'off'>} /> : null}
+          {tabsOn ? <TertiaryTabs nav={tertiary} label={`${pageTitle} sections`} /> : null}
         </div>
       ) : null}
       {children}

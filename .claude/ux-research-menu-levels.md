@@ -27,5 +27,5 @@ Carbon breadcrumb: under the header, above the page title. Fluent breadcrumb: "D
 ## Decided (user, November 2026)
 
 - The trail is sticky; the third level is tabs under the trail, in the same sticky block. Not an accordion in the side menu: the third level depends on a choice made in the page (a task opened from a list, its sections as tabs).
-- Left open: the dress of the tabs (`shell-tabs-style`: line, menu row, glow, segmented, chips, folder). The line style is the page tabs of dsl-ui; the others borrow from the side menu rows, the glow of the top bar tabs and the chip buttons.
+- Left open: ONE look for the three levels (`shell-nav-style`: underline, soft, glow, solid, outline, rail, ink, raised, against today's three different looks). Today: a glow on the top bar tab, a filled row in the side menu, a line under the third level.
 - Removed: placements (accordion, sub-bar, column, rail, flyout, pills), breadcrumb looks, sticky header variants.
