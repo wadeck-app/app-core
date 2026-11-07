@@ -4,12 +4,13 @@ import { ChevronRight } from 'lucide-react';
 import type { Crumb } from './navHelpers.js';
 
 // Where the user is, as nested pages: earlier crumbs are links to their page, the last one is the current place.
-export function Breadcrumb({ crumbs, trailing }: { crumbs: Crumb[]; trailing?: React.ReactNode }): React.ReactElement | null {
+// `bare`: without its own padding, to sit inside a bar that has its own.
+export function Breadcrumb({ crumbs, trailing, bare = false }: { crumbs: Crumb[]; trailing?: React.ReactNode; bare?: boolean }): React.ReactElement | null {
   if (crumbs.length === 0) {
     return null;
   }
   return (
-    <nav aria-label="Breadcrumb" className="px-4 pt-3">
+    <nav aria-label="Breadcrumb" className={bare ? '' : 'px-4 pt-3'}>
       <ol className="flex flex-wrap items-center gap-1 text-xs text-muted">
         {crumbs.map((crumb, i) => (
           <li key={`${i}-${crumb.label}`} className="flex items-center gap-1">

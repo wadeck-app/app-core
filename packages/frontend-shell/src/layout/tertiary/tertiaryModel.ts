@@ -4,15 +4,18 @@ import { useLocation } from 'react-router-dom';
 export interface TertiaryItem {
   id: string;
   label: string;
+  // Sample figures for the placements that show them (a count next to the label, a second line under it).
+  count?: number;
+  caption?: string;
 }
 
 // The A/B test is about WHERE a third level of navigation goes, not about what is in it. No module declares a third level yet (the
 // manifest has no such field), so every page of a module gets these sample entries; the choice is kept in the address (?tertiary=).
 export const SAMPLE_TERTIARY: readonly TertiaryItem[] = [
-  { id: 'summary', label: 'Summary' },
-  { id: 'activity', label: 'Activity' },
-  { id: 'alerts', label: 'Alerts' },
-  { id: 'settings', label: 'Settings' },
+  { id: 'summary', label: 'Summary', caption: 'Totals and trends' },
+  { id: 'activity', label: 'Activity', count: 12, caption: 'Latest events' },
+  { id: 'alerts', label: 'Alerts', count: 3, caption: 'Needs attention' },
+  { id: 'settings', label: 'Settings', caption: 'Options of this page' },
 ];
 
 export const TERTIARY_PARAM = 'tertiary';

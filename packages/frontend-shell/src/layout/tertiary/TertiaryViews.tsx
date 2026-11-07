@@ -20,27 +20,6 @@ export function accordionEntries(nav: TertiaryNav, parentId: string): ShellItem[
   }));
 }
 
-// Tabs: underlined, at the top of the page, with a rule under them (GitHub, Stripe).
-export function TertiaryTabs({ nav, label }: { nav: TertiaryNav; label: string }): React.ReactElement {
-  return (
-    <nav aria-label={label} className="mt-2 flex gap-5 border-b border-border px-4">
-      {nav.items.map((item) => {
-        const current = item.id === nav.activeId;
-        return (
-          <Link
-            key={item.id}
-            to={nav.hrefFor(item.id)}
-            aria-current={current ? 'page' : undefined}
-            className={`${LINK} -mb-px border-b-2 px-1 pb-2 pt-1 ${current ? 'border-primary font-medium text-primary' : 'border-transparent text-muted hover:text-content'}`}
-          >
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
 // Pills: a segmented control (Vercel, Linear's view switcher).
 export function TertiaryPills({ nav, label }: { nav: TertiaryNav; label: string }): React.ReactElement {
   return (
@@ -61,34 +40,6 @@ export function TertiaryPills({ nav, label }: { nav: TertiaryNav; label: string 
         })}
       </div>
     </nav>
-  );
-}
-
-// Column: a narrow list between the side menu and the page (Slack, Jira), sticky under the top bar.
-export function TertiaryColumn({ nav, label, title, children }: { nav: TertiaryNav; label: string; title: string; children: React.ReactNode }): React.ReactElement {
-  return (
-    <div className="flex items-start">
-      <nav aria-label={label} className="sticky top-shell-bar w-48 shrink-0 self-start border-r border-border px-3 py-4">
-        <p className="mb-2 truncate px-2 text-xs font-medium text-muted">{title}</p>
-        <ul className="space-y-0.5">
-          {nav.items.map((item) => {
-            const current = item.id === nav.activeId;
-            return (
-              <li key={item.id}>
-                <Link
-                  to={nav.hrefFor(item.id)}
-                  aria-current={current ? 'page' : undefined}
-                  className={`${LINK} block px-2 py-1.5 ${current ? 'bg-primary-light font-medium text-primary' : 'text-content hover:bg-bg-secondary'}`}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
   );
 }
 
@@ -117,28 +68,6 @@ export function TertiaryRail({ nav, label, children }: { nav: TertiaryNav; label
         </ul>
       </nav>
     </div>
-  );
-}
-
-// Sub-bar: a thin full-width bar stuck under the top bar, entries as chips (Shopify, Google Cloud).
-export function TertiarySubBar({ nav, label, title }: { nav: TertiaryNav; label: string; title: string }): React.ReactElement {
-  return (
-    <nav aria-label={label} className="sticky top-shell-bar z-10 flex items-center gap-2 overflow-x-auto border-b border-border bg-bg-secondary px-4 py-1.5">
-      <span className="mr-2 shrink-0 text-xs font-medium text-muted">{title}</span>
-      {nav.items.map((item) => {
-        const current = item.id === nav.activeId;
-        return (
-          <Link
-            key={item.id}
-            to={nav.hrefFor(item.id)}
-            aria-current={current ? 'page' : undefined}
-            className={`${LINK} shrink-0 border px-3 py-0.5 ${current ? 'border-primary bg-primary-light font-medium text-primary' : 'border-border text-content hover:border-muted'}`}
-          >
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
   );
 }
 

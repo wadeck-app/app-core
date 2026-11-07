@@ -6,7 +6,11 @@ import { DateSettingsProvider } from '../../dates/DateFormatContext.js';
 import { AppLayout } from '../AppLayout.js';
 import { FIXTURE_NAV } from '../testFixtures.js';
 import { SAMPLE_TERTIARY, useTertiaryNav, type TertiaryNav } from './tertiaryModel.js';
-import { TertiaryColumn, TertiaryCrumb, TertiaryPills, TertiaryRail, TertiarySubBar, TertiaryTabs, accordionEntries } from './TertiaryViews.js';
+import { StyledColumn, StyledSubBar, StyledTabs } from './TertiaryStyles.js';
+import { TertiaryCrumb, TertiaryPills, TertiaryRail, accordionEntries } from './TertiaryViews.js';
+import { BreadcrumbTrail, type BreadcrumbVariant } from '../breadcrumb/BreadcrumbTrail.js';
+import { TertiaryPlacement } from './TertiaryPlacement.js';
+import type { TertiaryChoice } from './useTertiaryVariant.js';
 
 const nav = (activeId = 'activity'): TertiaryNav => ({ items: SAMPLE_TERTIARY, activeId, hrefFor: (id) => `/p?tertiary=${id}` });
 const inRouter = (ui: React.ReactElement, path = '/modules/billing') => render(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>);
@@ -38,9 +42,9 @@ describe('placements', () => {
   it('tabs, pills and sub-bar are a named navigation of links', () => {
     inRouter(
       <>
-        <TertiaryTabs nav={nav()} label="Tabs" />
+        <StyledTabs nav={nav()} label="Tabs" style="line" />
         <TertiaryPills nav={nav('alerts')} label="Pills" />
-        <TertiarySubBar nav={nav('settings')} label="Bar" title="Overview" />
+        <StyledSubBar nav={nav('settings')} label="Bar" style="chips" lead="Overview" />
       </>,
     );
     expectEntries(screen.getByRole('navigation', { name: 'Tabs' }));
@@ -51,9 +55,9 @@ describe('placements', () => {
   it('column and rail wrap the page and keep it', () => {
     inRouter(
       <>
-        <TertiaryColumn nav={nav()} label="Column" title="Overview">
+        <StyledColumn nav={nav()} label="Column" title="Overview" style="plain">
           <p>page one</p>
-        </TertiaryColumn>
+        </StyledColumn>
         <TertiaryRail nav={nav()} label="Rail">
           <p>page two</p>
         </TertiaryRail>
@@ -94,6 +98,126 @@ describe('placements', () => {
     fireEvent.click(button);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }));
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+});
+
+// The looks of the three families keep the same entries, links and current mark.
+describe('looks', () => {
+  const entries = (root: HTMLElement) => within(root).getAllByRole('link');
+
+  it.each(['line', 'count', 'band', 'sticky'] as const)('tabs %s', (style) => {
+    inRouter(<StyledTabs nav={nav('alerts')} label="Tabs" style={style} lead={<p>the trail</p>} />);
+    const links = entries(screen.getByRole('navigation', { name: 'Tabs' }));
+    expect(links.map((l) => l.getAttribute('href'))).toEqual(SAMPLE_TERTIARY.map((i) => `/p?tertiary=${i.id}`));
+    expect(links.filter((l) => l.getAttribute('aria-current') === 'page').map((l) => l.textContent?.replace(/\d+$/, ''))).toEqual(['Alerts']);
+    // Counts only in the look that shows them.
+    expect(links.some((l) => /\d/.test(l.textContent ?? ''))).toBe(style === 'count');
+  });
+
+  it.each(['chips', 'merged', 'segmented', 'tabs'] as const)('sub-bar %s', (style) => {
+    inRouter(<StyledSubBar nav={nav()} label="Bar" style={style} lead={<span>the lead</span>} />);
+    const bar = screen.getByRole('navigation', { name: 'Bar' });
+    expect(within(bar).getByText('the lead')).toBeInTheDocument();
+    expect(entries(bar).map((l) => l.textContent)).toEqual(SAMPLE_TERTIARY.map((i) => i.label));
+    expect(entries(bar).filter((l) => l.getAttribute('aria-current') === 'page').map((l) => l.textContent)).toEqual(['Activity']);
+  });
+
+  it.each(['plain', 'collapsible', 'card', 'headed'] as const)('column %s', (style) => {
+    window.localStorage.clear();
+    inRouter(
+      <StyledColumn nav={nav()} label="Column" title="Overview" style={style}>
+        <p>the page</p>
+      </StyledColumn>,
+    );
+    const links = entries(screen.getByRole('navigation', { name: 'Column' }));
+    expect(links).toHaveLength(SAMPLE_TERTIARY.length);
+    expect(links.filter((l) => l.getAttribute('aria-current') === 'page')).toHaveLength(1);
+    expect(screen.getByText('the page')).toBeInTheDocument();
+    // The second line only in the look that has it.
+    expect(screen.queryByText('Latest events') !== null).toBe(style === 'headed');
+  });
+
+  it('the collapsible column folds to initials, names the entries for assistive technology and remembers it', () => {
+    window.localStorage.clear();
+    const view = inRouter(
+      <StyledColumn nav={nav()} label="Column" title="Overview" style="collapsible">
+        <p>page</p>
+      </StyledColumn>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Column' }));
+    const folded = entries(screen.getByRole('navigation', { name: 'Column' }));
+    expect(folded.map((l) => l.textContent)).toEqual(['Su', 'Ac', 'Al', 'Se']);
+    expect(folded.map((l) => l.getAttribute('aria-label'))).toEqual(SAMPLE_TERTIARY.map((i) => i.label));
+    expect(window.localStorage.getItem('app-core.tertiary-column-collapsed')).toBe('true');
+    view.unmount();
+    inRouter(
+      <StyledColumn nav={nav()} label="Column" title="Overview" style="collapsible">
+        <p>page</p>
+      </StyledColumn>,
+    );
+    expect(screen.getByRole('button', { name: 'Expand Column' })).toHaveAttribute('aria-expanded', 'false');
+    window.localStorage.clear();
+  });
+});
+
+describe('breadcrumb variants', () => {
+  const crumbs = [{ label: 'Queue', href: '/modules/queue' }, { label: 'Events', href: '/modules/queue/events' }, { label: 'Event 42' }];
+
+  it.each(['classic', 'sticky', 'path', 'back', 'right', 'bar'] as BreadcrumbVariant[])('%s names the trail, links the parents and marks the current page', (variant) => {
+    inRouter(<BreadcrumbTrail variant={variant} crumbs={crumbs} moduleId="queue" />);
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(trail).getByText('Event 42')).toBeInTheDocument();
+    expect(trail.querySelector('[aria-current="page"]')?.textContent).toBe('Event 42');
+    // Every link points at a parent, never at the current page.
+    const hrefs = within(trail).queryAllByRole('link').map((l) => l.getAttribute('href'));
+    expect(hrefs.length).toBeGreaterThan(0);
+    expect(hrefs.every((h) => h === '/modules/queue' || h === '/modules/queue/events')).toBe(true);
+  });
+
+  it('back keeps only the nearest parent and the current page', () => {
+    inRouter(<BreadcrumbTrail variant="back" crumbs={crumbs} />);
+    const trail = within(screen.getByRole('navigation', { name: 'Breadcrumb' }));
+    expect(trail.getAllByRole('link').map((l) => l.textContent)).toEqual(['Events']);
+  });
+
+  it('path starts with the logo of the module and writes slashes between names', () => {
+    const { container } = inRouter(<BreadcrumbTrail variant="path" crumbs={crumbs} moduleId="queue" />);
+    expect(container.querySelector('[data-initials]')?.getAttribute('data-initials')).toBe('QU');
+    expect(container.textContent).toContain('/Events');
+  });
+
+  it('shows nothing for an empty trail', () => {
+    const { container } = inRouter(<BreadcrumbTrail variant="path" crumbs={[]} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('sticky trail with a sticky bar', () => {
+  const crumbs = [{ label: 'Queue', href: '/modules/queue' }, { label: 'Overview' }];
+  const place = (choice: Partial<TertiaryChoice>) =>
+    inRouter(
+      <TertiaryPlacement choice={{ placement: 'tabs', tabs: 'sticky', subbar: 'chips', column: 'plain', ...choice }} breadcrumb="sticky" nav={nav()} title="Overview" moduleId="queue" crumbs={crumbs}>
+        <p>the page</p>
+      </TertiaryPlacement>,
+    );
+
+  it('sticks the trail and the tabs together, in one block, so that one does not hide the other', () => {
+    place({});
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    const tabs = screen.getByRole('navigation', { name: 'Overview sections' });
+    const block = trail.closest('.sticky');
+    expect(block).not.toBeNull();
+    expect(tabs.closest('.sticky')).toBe(block);
+    // Neither of them sticks on its own inside the block.
+    expect(block?.querySelectorAll('.sticky')).toHaveLength(0);
+  });
+
+  it('does the same for the sub-bar, the bar above the trail', () => {
+    place({ placement: 'subbar' });
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    const bar = screen.getByRole('navigation', { name: 'Overview sections' });
+    expect(trail.parentElement).toBe(bar.parentElement);
+    expect(bar.compareDocumentPosition(trail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
