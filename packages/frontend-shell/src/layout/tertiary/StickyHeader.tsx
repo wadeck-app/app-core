@@ -3,17 +3,23 @@ import { Link } from 'react-router-dom';
 import { useAbTest, useRegisterAbTests } from '@wadeck-app/dsl-ui';
 import { Breadcrumb } from '../Breadcrumb.js';
 import { BreadcrumbTrail } from '../breadcrumb/BreadcrumbTrail.js';
-import { Logo } from '../Logo.js';
 import type { Crumb } from '../navHelpers.js';
+import { CountBadge } from './CountBadge.js';
 import type { TertiaryNav } from './tertiaryModel.js';
-import { StyledColumn } from './TertiaryStyles.js';
-import { TertiaryCrumb, TertiaryPills, TertiaryRail } from './TertiaryViews.js';
+import { TertiaryPills } from './TertiaryViews.js';
 
-// The trail and the third level in ONE sticky header, under the top bar (the trail and the level stay in view while the page
-// scrolls). Each variant is a way to lay the two out; when one is chosen it replaces the separate "Third menu level" and
-// "Breadcrumb" tests of the dock.
+// The trail and the third level in ONE sticky header, under the top bar: they stay in view while the page scrolls, as a single block
+// (two sticky bars would stick at the same place and hide each other). When one variant is chosen it replaces the separate
+// "Third menu level" and "Breadcrumb" tests of the dock.
+//
+// What these variants are built on (design-system documentation, read in November 2026; see the notes of the A/B test):
+// - the third level is a horizontal row of links to distinct addresses inside the page (Carbon: "use tabs within the page"; PatternFly:
+//   "secondary horizontal navigation"; Primer: tabs "directly above the content" they affect);
+// - the trail stays above the page title, top left (Atlassian, Carbon);
+// - never two tab bars stacked to express levels (Primer, NN/g);
+// - a sticky header costs screen height (NN/g: "minimize the vertical height"), so some variants take one row, or fall to one.
 
-export type HeaderVariant = 'off' | 'stack' | 'inline' | 'title' | 'condense' | 'path' | 'crumb' | 'column' | 'rail' | 'tinted' | 'headroom';
+export type HeaderVariant = 'off' | 'stack' | 'inline' | 'title' | 'condense' | 'path' | 'headroom';
 
 export function useHeaderVariant(): HeaderVariant {
   const test = useAbTest<HeaderVariant>({
@@ -22,16 +28,12 @@ export function useHeaderVariant(): HeaderVariant {
     initial: 'off',
     options: {
       off: { label: 'Off', hint: 'Use the separate tests below (third menu level, breadcrumb). The reference.' },
-      stack: { label: 'Stack', hint: 'The trail, then the tabs, two rows in one sticky block (the way repository pages of code hosts do it).' },
-      inline: { label: 'Inline', hint: 'One row: the trail on the left, the tabs on the right. Takes the least height.' },
-      title: { label: 'Title row', hint: 'The trail, then a row with the page name on the left and a segmented control on the right (Linear, Notion). The page keeps its own heading.' },
-      condense: { label: 'Condense', hint: 'Two rows at the top of the page, one row as soon as the page is scrolled (like the top bar does).' },
+      stack: { label: 'Stack', hint: 'The trail, then the tabs: two rows in one sticky block. The trail stays above the title, top left.' },
+      inline: { label: 'Inline', hint: 'One row: the trail on the left, the tabs on the right. The least sticky height.' },
+      title: { label: 'Title row', hint: 'The trail, then a row with the page name followed by the chosen entry, and a segmented control: the title follows the selected entry.' },
+      condense: { label: 'Condense', hint: 'Two rows at the top of the page, one row as soon as the page is scrolled: full information at rest, least height while reading.' },
       path: { label: 'Path chips', hint: 'One row: the module logo and the path in a monospace font, the entries as chips on the right.' },
-      crumb: { label: 'Crumb only', hint: 'One row: the last crumb is the switcher of the third level. Nothing else takes room.' },
-      column: { label: 'Trail + column', hint: 'The trail is sticky, and the third level is a sticky column under it.' },
-      rail: { label: 'Trail + rail', hint: 'The trail is sticky, and the third level is a sticky list on the right under it.' },
-      tinted: { label: 'Tinted', hint: 'Two tiers: the trail on a band tinted with the color of the module, the tabs under it (Salesforce-like).' },
-      headroom: { label: 'Headroom', hint: 'The two rows hide when scrolling down and come back as soon as you scroll up a little (Medium, many mobile apps).' },
+      headroom: { label: 'Headroom', hint: 'The two rows hide when scrolling down and come back when you scroll up a little: no sticky height while reading.' },
     },
   });
   useRegisterAbTests([test]);
@@ -39,8 +41,6 @@ export function useHeaderVariant(): HeaderVariant {
 }
 
 const STICKY = 'sticky top-shell-bar z-10 bg-bg';
-// The height of a one-row trail, for what sticks under it.
-const TRAIL_HEIGHT = '2.75rem';
 
 const LINK = 'rounded-md text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
@@ -55,9 +55,10 @@ function RowTabs({ nav, label }: { nav: TertiaryNav; label: string }): React.Rea
             key={item.id}
             to={nav.hrefFor(item.id)}
             aria-current={current ? 'page' : undefined}
-            className={`${LINK} border-b-2 px-1 py-2 ${current ? 'border-primary font-medium text-primary' : 'border-transparent text-muted hover:text-content'}`}
+            className={`${LINK} flex items-center border-b-2 px-1 py-2 ${current ? 'border-primary font-medium text-primary' : 'border-transparent text-muted hover:text-content'}`}
           >
             {item.label}
+            <CountBadge count={item.count} current={current} />
           </Link>
         );
       })}
@@ -75,13 +76,23 @@ function RowChips({ nav, label }: { nav: TertiaryNav; label: string }): React.Re
             key={item.id}
             to={nav.hrefFor(item.id)}
             aria-current={current ? 'page' : undefined}
-            className={`${LINK} shrink-0 border px-3 py-0.5 ${current ? 'border-primary bg-primary-light font-medium text-primary' : 'border-border text-content hover:border-muted'}`}
+            className={`${LINK} flex shrink-0 items-center border px-3 py-0.5 ${current ? 'border-primary bg-primary-light font-medium text-primary' : 'border-border text-content hover:border-muted'}`}
           >
             {item.label}
+            <CountBadge count={item.count} current={current} />
           </Link>
         );
       })}
     </nav>
+  );
+}
+
+// RowTabs with the page's side padding, to sit under a padded trail.
+function RowTabsPadded({ nav, label }: { nav: TertiaryNav; label: string }): React.ReactElement {
+  return (
+    <div className="px-4 pt-1">
+      <RowTabs nav={nav} label={label} />
+    </div>
   );
 }
 
@@ -143,25 +154,32 @@ export function StickyHeader({
   const hidden = useHeadroom();
   const trail = <Breadcrumb crumbs={crumbs} />;
   const bareTrail = <Breadcrumb crumbs={crumbs} bare />;
+  const activeLabel = nav.items.find((i) => i.id === nav.activeId)?.label;
+  const oneRow = (
+    <div className={`${STICKY} flex items-end justify-between gap-4 overflow-x-auto border-b border-border px-4`}>
+      <div className="shrink-0 pb-2">{bareTrail}</div>
+      <RowTabs nav={nav} label={label} />
+    </div>
+  );
+  const twoRows = (extraClass = ''): React.ReactElement => (
+    <div className={`${STICKY} border-b border-border ${extraClass}`}>
+      {trail}
+      <RowTabsPadded nav={nav} label={label} />
+    </div>
+  );
 
   switch (variant) {
     case 'stack':
       return (
         <>
-          <div className={`${STICKY} border-b border-border`}>
-            {trail}
-            <RowTabsPadded nav={nav} label={label} />
-          </div>
+          {twoRows()}
           {children}
         </>
       );
     case 'inline':
       return (
         <>
-          <div className={`${STICKY} flex items-end justify-between gap-4 overflow-x-auto border-b border-border px-4`}>
-            <div className="shrink-0 pb-2">{bareTrail}</div>
-            <RowTabs nav={nav} label={label} />
-          </div>
+          {oneRow}
           {children}
         </>
       );
@@ -171,7 +189,10 @@ export function StickyHeader({
           <div className={`${STICKY} border-b border-border pb-2`}>
             {trail}
             <div className="flex items-center justify-between gap-4 px-4 pt-1">
-              <p className="truncate text-lg font-semibold text-content">{title}</p>
+              <p className="truncate text-lg font-semibold text-content">
+                {title}
+                {activeLabel === undefined ? null : <span className="font-normal text-muted"> · {activeLabel}</span>}
+              </p>
               <TertiaryPills nav={nav} label={label} bare />
             </div>
           </div>
@@ -182,17 +203,7 @@ export function StickyHeader({
       return (
         <>
           <div ref={scroll.sentinel} aria-hidden="true" className="h-px" />
-          {scroll.scrolled ? (
-            <div className={`${STICKY} flex items-end justify-between gap-4 overflow-x-auto border-b border-border px-4`}>
-              <div className="shrink-0 pb-2">{bareTrail}</div>
-              <RowTabs nav={nav} label={label} />
-            </div>
-          ) : (
-            <div className={`${STICKY} border-b border-border`}>
-              {trail}
-              <RowTabsPadded nav={nav} label={label} />
-            </div>
-          )}
+          {scroll.scrolled ? oneRow : twoRows()}
           {children}
         </>
       );
@@ -208,69 +219,12 @@ export function StickyHeader({
           {children}
         </>
       );
-    case 'crumb':
-      return (
-        <>
-          <div className={`${STICKY} border-b border-border pb-2`}>
-            <Breadcrumb crumbs={crumbs} trailing={<TertiaryCrumb nav={nav} />} />
-          </div>
-          {children}
-        </>
-      );
-    case 'column':
-      return (
-        <>
-          <div className={`${STICKY} border-b border-border pb-2`}>{trail}</div>
-          <StyledColumn nav={nav} label={label} title={title} style="plain" stickyOffset={TRAIL_HEIGHT}>
-            {children}
-          </StyledColumn>
-        </>
-      );
-    case 'rail':
-      return (
-        <>
-          <div className={`${STICKY} border-b border-border pb-2`}>{trail}</div>
-          <TertiaryRail nav={nav} label={label} stickyOffset={TRAIL_HEIGHT}>
-            {children}
-          </TertiaryRail>
-        </>
-      );
-    case 'tinted':
-      return (
-        <>
-          <div className={`${STICKY} border-b border-border`}>
-            <div className="flex items-center gap-2 bg-primary-light px-4 py-1.5">
-              {moduleId === undefined ? null : (
-                <span aria-hidden="true" className="flex">
-                  <Logo title={crumbs[0]?.label ?? moduleId} moduleId={moduleId} />
-                </span>
-              )}
-              {bareTrail}
-            </div>
-            <RowTabsPadded nav={nav} label={label} />
-          </div>
-          {children}
-        </>
-      );
     case 'headroom':
       return (
         <>
-          <div className={`${STICKY} border-b border-border transition-transform duration-200 ${hidden ? '-translate-y-full' : 'translate-y-0'}`}>
-            {trail}
-            <RowTabsPadded nav={nav} label={label} />
-          </div>
+          {twoRows(`transition-transform duration-200 ${hidden ? '-translate-y-full' : 'translate-y-0'}`)}
           {children}
         </>
       );
   }
 }
-
-// RowTabs with the page's side padding, to sit under a padded trail.
-function RowTabsPadded({ nav, label }: { nav: TertiaryNav; label: string }): React.ReactElement {
-  return (
-    <div className="px-4 pt-1">
-      <RowTabs nav={nav} label={label} />
-    </div>
-  );
-}
-

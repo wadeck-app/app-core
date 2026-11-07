@@ -6,9 +6,10 @@ import { Logo } from '../Logo.js';
 import type { Crumb } from '../navHelpers.js';
 import { useAbTest, useRegisterAbTests } from '@wadeck-app/dsl-ui';
 
-export type BreadcrumbVariant = 'classic' | 'sticky' | 'path' | 'back' | 'right' | 'bar';
+export type BreadcrumbVariant = 'classic' | 'sticky' | 'path' | 'back';
 
-// One row of the A/B dock: where and how the trail of nested pages is drawn.
+// One row of the A/B dock: how the trail of nested pages is drawn. It stays at the top left, above the page title (Atlassian: "Place
+// breadcrumbs at the top left corner of the screen, above the page title"; Carbon: under the header, above the page title).
 // `replaced`: a sticky header (shell-header) lays out the trail itself, so this row is left out of the dock.
 export function useBreadcrumbVariant(replaced = false): BreadcrumbVariant {
   const test = useAbTest<BreadcrumbVariant>({
@@ -20,8 +21,6 @@ export function useBreadcrumbVariant(replaced = false): BreadcrumbVariant {
       sticky: { label: 'Sticky', hint: 'GitHub: a band stuck under the top bar, so the trail stays in view while the page scrolls.' },
       path: { label: 'Path', hint: 'Vercel, GitHub paths: the module logo, then names separated by slashes in a monospace font.' },
       back: { label: 'Back', hint: 'Linear, iOS: only a "back to the parent" link and the name of the current page.' },
-      right: { label: 'Right', hint: 'Stripe: the trail on the right of the page, out of the way of the title.' },
-      bar: { label: 'Bottom bar', hint: 'macOS Finder path bar: the trail in a bar at the bottom of the content area.' },
     },
   });
   useRegisterAbTests(replaced ? [] : [test]);
@@ -92,22 +91,6 @@ export function BreadcrumbTrail({ variant, crumbs, moduleId, trailing }: { varia
         </nav>
       );
     }
-    case 'right':
-      return (
-        <div className="flex justify-end">
-          <Breadcrumb crumbs={crumbs} trailing={trailing} />
-        </div>
-      );
-    case 'bar':
-      return (
-        <>
-          {/* Room for the bar, so it never hides the end of the page. */}
-          <div aria-hidden="true" className="h-10" />
-          <div className="fixed bottom-0 left-[var(--app-shell-menu-width,15rem)] right-0 z-10 flex items-center border-t border-border bg-bg-secondary px-4 py-1.5">
-            <Breadcrumb crumbs={crumbs} trailing={trailing} bare />
-          </div>
-        </>
-      );
     default:
       return <Breadcrumb crumbs={crumbs} trailing={trailing} />;
   }
