@@ -40,6 +40,8 @@ describe('Logo', () => {
     const boxes = ['Q', 'Modules', 'Task'].map((title) => render(<Logo title={title} moduleId={title} />).container.querySelector('[data-logo-box]')!.className);
     expect(new Set(boxes).size).toBe(1);
     expect(boxes[0]).toContain('w-7');
+    // The tile itself fills the box (its own width follows its letters): without this, "MO" is wider than "FL" inside an equal box.
+    expect(boxes[0]).toContain('[&>span]:w-full');
   });
 
   it('keeps the color of the id when the title changes', () => {
