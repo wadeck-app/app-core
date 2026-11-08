@@ -82,8 +82,8 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
         // The dashboard menu lists modules: each gets its logo.
         icon: onDashboard ? <Logo title={p.label} moduleId={p.moduleId} /> : undefined,
         current: isPageCurrent(pathname, p) ? ('page' as const) : undefined,
-        // dsl-ui's menu entry shows a number only for now; an icon or a tone waits for a release of dsl-ui that draws them.
-        badge: (pushed[p.entryId] ?? read[`menu:${p.entryId}`])?.count,
+        // The whole indicator (number or icon, tone, label): dsl-ui draws it and gives it its tooltip.
+        badge: pushed[p.entryId] ?? read[`menu:${p.entryId}`],
       },
     ]),
   };

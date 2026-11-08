@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -252,5 +252,23 @@ describe('the figures next to the entries', () => {
     await waitFor(() => expect(link('Jobs sections', /^Logs/).textContent).toMatch(/3$/));
     expect(fetchMock).toHaveBeenCalledWith('/api/modules/jobs/jobs/42/logs/count', expect.anything());
     expect(link('Jobs sections', /^Overview/).textContent).toBe('Overview');
+  });
+
+  it('shows in the menu the icon, the tone and the tooltip that a page component sets, not only a number', async () => {
+    const { container } = renderAt('/modules/jobs/dlq');
+    act(() => window.dispatchEvent(new CustomEvent('app-core:entry-indicator', { detail: { id: 'jobs/pending', indicator: { icon: 'warning', label: 'Daemon down' } } })));
+    await waitFor(() => expect(link('Jobs pages', /^Pending/)).toHaveTextContent('Daemon down'));
+    expect(container.querySelector('[data-menu-badge][title="Daemon down"]')).not.toBeNull();
+    act(() => window.dispatchEvent(new CustomEvent('app-core:entry-indicator', { detail: { id: 'jobs/pending', indicator: null } })));
+    await waitFor(() => expect(link('Jobs pages', /^Pending/).textContent).toBe('Pending'));
+  });
+
+  it('drops the row of tabs when the page hides the only other tab, and brings it back', async () => {
+    renderAt('/modules/jobs/jobs/42');
+    await waitFor(() => expect(link('Jobs sections', /^Logs/)).toBeInTheDocument());
+    act(() => window.dispatchEvent(new CustomEvent('app-core:entry-hidden', { detail: { id: 'jobs/jobs/:id/logs', hidden: true } })));
+    await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Jobs sections' })).not.toBeInTheDocument());
+    act(() => window.dispatchEvent(new CustomEvent('app-core:entry-hidden', { detail: { id: 'jobs/jobs/:id/logs', hidden: false } })));
+    await waitFor(() => expect(link('Jobs sections', /^Logs/)).toBeInTheDocument());
   });
 });
