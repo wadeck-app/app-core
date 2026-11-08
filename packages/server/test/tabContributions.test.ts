@@ -93,6 +93,21 @@ describe('tab groups joined by another module', () => {
     expect(res.json().error).toContain('with the parameters [name] but its pages take [id]');
   });
 
+  it('keeps the module that was registered when an update of it is refused: nothing disappears from the shell', async () => {
+    await register('prov', writeModule('prov', PROVIDER_PAGES));
+    expect((await register('contrib', writeModule('contrib', [{ path: '/c/:id', tab: { group: 'prov:g', label: 'Chart' } }], { requires: { prov: '*' } }))).statusCode).toBe(201);
+    // The new version names a group the provider does not declare: refused.
+    const refused = await register('contrib', writeModule('contrib', [{ path: '/c/:id', tab: { group: 'prov:nope', label: 'Chart' } }], { requires: { prov: '*' } }));
+    expect(refused.statusCode).toBeGreaterThanOrEqual(400);
+    const after = await listing();
+    const contrib = after.modules.find((m) => m.id === 'contrib');
+    expect(contrib?.extensionPoints[0]?.tab?.group).toBe('prov:g');
+    // The refusal is visible (GET /api/modules, failed), the registry entry is unchanged, and the running version keeps serving.
+    expect(after.failed.find((m) => m.id === 'contrib')?.error).toContain('declares no tab group "nope"');
+    expect(refused.json().retained).toBe(false);
+    expect(refused.json().error).toContain('version 1.0.0 of "contrib" keeps serving and its registry entry is unchanged');
+  });
+
   it('with an optional provider: loads without it, the page waiting with its reason, and is active once the provider is there', async () => {
     const contrib = writeModule('contrib', [{ path: '/c/:id', tab: { group: 'prov:g', label: 'Chart' } }], { optionalRequires: { prov: '*' } });
     expect((await register('contrib', contrib)).statusCode).toBe(201);
