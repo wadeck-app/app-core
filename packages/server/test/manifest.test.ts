@@ -241,10 +241,30 @@ describe('parseManifest: figures next to menu entries and tabs (count)', () => {
     expect(message(tabs('/tasks/:other/count'))).toContain('uses ":other" but the page "/tasks/:project/:id/history" has no such parameter (it has [id, project])');
   });
 
+  it('accepts a tone, an icon and a label, as defaults for what the route answers', () => {
+    const parsed = parseManifest(manifest([{ label: 'DLQ', path: '/dlq', count: { route: '/status', field: 'dlqCount', tone: 'danger', icon: 'warning', label: 'Dead letters' } }]));
+    expect(parsed.extensionPoints[0]?.count).toEqual({ route: '/status', field: 'dlqCount', tone: 'danger', icon: 'warning', label: 'Dead letters' });
+  });
+
+  it('refuses a tone or an icon that is not in the lists, naming them', () => {
+    const tone = message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', tone: 'purple' } }]));
+    expect(tone).toContain('count.tone');
+    expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', icon: 'star' } }]))).toContain('count.icon');
+  });
+
+  it('lets a page set the indicator by itself with refreshSeconds -1 and no route, and refuses -1 with a route', () => {
+    expect(() => parseManifest(manifest([{ label: 'A', path: '/a', count: { refreshSeconds: -1, tone: 'info' } }]))).not.toThrow();
+    expect(message(manifest([{ label: 'A', path: '/a', count: { refreshSeconds: -1, route: '/a/count' } }]))).toContain('nothing is read from the server');
+  });
+
+  it('refuses a count without a route unless the page sets it, and says how', () => {
+    expect(message(manifest([{ label: 'A', path: '/a', count: { field: 'total' } }]))).toContain('"refreshSeconds": -1');
+  });
+
   it('refuses a malformed count: no route, a bad field, a refresh out of range, an unknown key', () => {
     expect(message(manifest([{ label: 'A', path: '/a', count: { field: 'total' } }]))).toContain('count.route');
     expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', field: 'a b' } }]))).toContain('count.field must be a path of names separated by "."');
-    expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', refreshSeconds: 4000 } }]))).toContain('count.refreshSeconds must be between 0');
+    expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', refreshSeconds: 4000 } }]))).toContain('count.refreshSeconds must be -1');
     expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', every: 5 } }]))).toContain('Unrecognized key');
   });
 });

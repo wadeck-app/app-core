@@ -16,6 +16,7 @@
     "./port": { "import": "./dist/port.js", "types": "./dist/port.d.ts" },
     "./portFile": { "import": "./dist/portFile.js", "types": "./dist/portFile.d.ts" },
     "./contributions": { "import": "./dist/contributions.js", "types": "./dist/contributions.d.ts" },
+    "./indicator": { "import": "./dist/indicator.js", "types": "./dist/indicator.d.ts" },
     "./slotIds": { "import": "./dist/slotIds.js", "types": "./dist/slotIds.d.ts" },
     "./moduleId": { "import": "./dist/moduleId.js", "types": "./dist/moduleId.d.ts" },
     "./server": { "import": "./dist/server.js", "types": "./dist/server.d.ts" },

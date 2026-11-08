@@ -9,7 +9,17 @@ const mod = (id: string, ...extensionPoints: LoadedModuleSummary['extensionPoint
 describe('navPagesFor (base slot page/nav)', () => {
   it('lists a page/nav extensionPoint, reachable by index when it has no path', () => {
     const pages = navPagesFor([mod('module-b', page('nav', 'Fixture B Page'))]);
-    expect(pages).toEqual([{ moduleId: 'module-b', routePath: '/modules/module-b/0', label: 'Fixture B Page', exact: false }]);
+    expect(pages).toMatchObject([{ moduleId: 'module-b', routePath: '/modules/module-b/0', label: 'Fixture B Page', exact: false }]);
+  });
+
+  it('names each entry for the pages that set its indicator: the module id and the path, or the index without a path', () => {
+    const pages = navPagesFor([mod('billing', page('nav', 'Overview', '/'), page('nav', 'Invoices', '/invoices'), page('nav', 'By index'))]);
+    expect(pages.map((p) => p.entryId)).toEqual(['billing/', 'billing/invoices', 'billing#2']);
+  });
+
+  it('carries the source of the indicator a page declared, for the menu entry', () => {
+    const pages = navPagesFor([mod('queue', { ...page('nav', 'DLQ', '/dlq'), count: { route: '/status', field: 'dlqCount', tone: 'danger' } })]);
+    expect(pages[0]?.countSource).toEqual({ route: '/status', field: 'dlqCount', tone: 'danger' });
   });
 
   it('does not list widget/dashboard extensionPoints', () => {

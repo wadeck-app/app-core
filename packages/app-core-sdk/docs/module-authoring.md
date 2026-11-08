@@ -520,20 +520,23 @@ When a page opens something (a task from a list, a job) and that thing has sever
 - Other tabs of a group can be the pages of a list: `/tasks/p/:project` (Tasks) and `/tree/p/:project` (Tree) as the views of one project.
 - A figure next to a tab: `tab.count`, see "Figures next to entries" below.
 
-### Figures next to entries (`count`)
+### Indicators next to entries (`count`)
 
-A number next to a side-menu entry or a tab (open items, entries in the dead-letter queue, alerts): a live figure, read from a route of your own module.
+A number, or an icon in place of it, next to a side-menu entry or a tab: open items, entries in the dead-letter queue, a daemon that is down. It can be colored. Read from a route of your own module, or set by a component of the page.
 
 ```json
-{ "kind": "page", "slot": "nav", "label": "DLQ", "path": "/dlq", "count": { "route": "/dlq/count", "field": "total" }, "view": { ... } }
+{ "kind": "page", "slot": "nav", "label": "DLQ", "path": "/dlq", "count": { "route": "/status", "field": "dlqCount", "tone": "danger" }, "view": { ... } }
 { "kind": "page", "slot": "route", "label": "Task history", "path": "/tasks/p/:project/:id/history", "tab": { "group": "task", "label": "History", "count": { "route": "/tasks/p/:project/:id/history/count" } }, "view": { ... } }
+{ "kind": "page", "slot": "nav", "label": "Daemon", "path": "/daemon", "count": { "refreshSeconds": -1 }, "view": { ... } }
 ```
 
-- `count` on a page of the menu (slot `nav` or `<module>:nav`) is the figure of its menu entry; `tab.count` is the figure of its tab. Same shape: `route` (a route your backend registers; the shell calls `GET /api/modules/<your id><route>`), `field` and `refreshSeconds`.
-- The route answers JSON: a whole number of 0 or more, or an object with one at `field` (`"total"`, `"counts.open"`; a path of names separated by `.`). Anything else shows no figure and logs why once in the browser console, with the route; it is never shown as 0.
-- A menu entry has no parameters, so its route has none. The route of a tab may use the `:params` of its page (the figure of *this* task), no others; `check` and `package` fail otherwise.
-- `refreshSeconds` (0 to 3600, default 60; 0 reads once) is how often it is read again. Not while the browser tab is hidden; read at once when it is shown again. Keep the route cheap, and send an ETag (`ctx.unchanged`, see "Data that changes rarely (ETag and 304)"): the shell reads it often.
-- 0 is shown: an entry that says "0" is an answer. An entry without `count` shows nothing.
+- `count` on a page of the menu (slot `nav` or `<module>:nav`) is the indicator of its menu entry; `tab.count` is the one of its tab. Same shape.
+- **From a route.** `route` is a route your backend registers; the shell calls `GET /api/modules/<your id><route>`. It answers JSON: a whole number, or an indicator object `{ "count": 3, "tone": "warning", "icon": "warning", "label": "3 failing" }` (every key optional, but `count` or `icon` is needed). `field` is where it is in the answer (`"total"`, `"counts.open"`; names separated by `.`; absent: the answer itself). A wrong answer shows nothing, never 0, and logs why once in the browser console with the route.
+- **Look.** `tone`: `neutral` (default), `info`, `success`, `warning`, `danger`, colors of the theme (light and dark), never a fixed color. `icon`: `info`, `success`, `warning`, `error`; it replaces the number (the number stays in the tooltip), colored by its tone, by default the one of the icon. `label`: the text for assistive technology and the tooltip ("3 failing"); without it an icon says "Information", "OK", "Warning" or "Error". `tone`, `icon` and `label` in the manifest are the defaults for what the answer does not say; the answer wins.
+- **Refresh.** `refreshSeconds` 1 to 3600 (default 60): read again that often, not while the browser tab is hidden, and at once when it is shown again. 0: read once. Keep the route cheap and send an ETag (`ctx.unchanged`, see "Data that changes rarely (ETag and 304)").
+- **From a component of the page.** `"refreshSeconds": -1` reads nothing from the server (no `route`); a component of the page sets the indicator with the SDK: `useEntryIndicator("queue/daemon", { icon: "error", label: "Daemon down" })` or `setEntryIndicator(id, indicator | null)`, from `@wadeck-app/app-core-sdk/indicators` (browser code; React is the shell's). The id of an entry is `<moduleId><path>` as in the manifest (the module home is `<moduleId>/`). The hook clears the indicator when the component goes away; `setEntryIndicator` keeps it until it is cleared. What a component sets wins over what a route answered. A wrong value throws in the component. A module's components run in the shell's page with full access (see the note on trust below): any component can set any entry, so only install modules you trust.
+- A menu entry has no parameters, so its route has none. The route of a tab may use the `:params` of its page (the figure of *this* task), no others; `check` and `package` fail otherwise. 0 is shown: an entry that says "0" is an answer. An entry without `count` shows nothing.
+- In the side menu the shell shows the number now; the icon and the tone there need the release of dsl-ui that draws them. On tabs, all of it is shown.
 
 ### Dates and times
 

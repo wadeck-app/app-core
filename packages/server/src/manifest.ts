@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { INDICATOR_ICONS, INDICATOR_TONES } from './indicator.js';
 import { MODULE_ID_PATTERN, MODULE_ID_RULE } from './moduleId.js';
 import { MENU_SLOT_LOCAL, SLOT_LOCAL_PATTERN, SLOT_LOCAL_RULE, menuSlotProvider, slotIdProblem } from './slotIds.js';
 
@@ -21,20 +22,34 @@ const SpanSchema = z.number().int().min(1, 'must be between 1 and ' + WIDGET_MAX
 
 // A group is `name` (the module's own) or `<providerId>:name`: this page joins the group `name` of the module `providerId`, which
 // has to be required (or optionally required) like for any contribution.
-// A figure next to a menu entry or a tab (open items, alerts), read from a route of the module itself:
-// `GET /api/modules/<id><route>` answers JSON, `field` ("total", "counts.open") is the path to a whole number in it (absent: the
-// answer is the number). The shell reads it again every `refreshSeconds` (default 60; 0: once), not while the browser tab is hidden.
+// An indicator next to a menu entry or a tab: a number (open items, alerts), or an icon in place of it, in a tone (color). It comes
+// from a route of the module itself, `GET /api/modules/<id><route>`, which answers JSON: a whole number, or an object
+// {count?, tone?, icon?, label?} (at `field` when given: "total", "counts.open"). `tone`, `icon` and `label` here are the defaults
+// when the answer does not say. Read again every `refreshSeconds` (default 60; 0: once), not while the browser tab is hidden;
+// -1: nothing is read, a component of the page sets it (the SDK's setEntryIndicator), `route` is then absent.
 // On a tab, `route` may use the ":params" of the page it is on ("/tasks/:id/history/count").
 const CountSchema = z
   .object({
-    route: z.string().regex(PAGE_PATH_PATTERN, 'count.route must look like "/jobs/count" or "/jobs/:id/count": segments of letters, digits, "_" or "-", or ":param"'),
+    route: z.string().regex(PAGE_PATH_PATTERN, 'count.route must look like "/jobs/count" or "/jobs/:id/count": segments of letters, digits, "_" or "-", or ":param"').optional(),
     field: z
       .string()
       .regex(/^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/, 'count.field must be a path of names separated by ".", for example "total" or "counts.open"')
       .optional(),
-    refreshSeconds: z.number().int().min(0, 'count.refreshSeconds must be between 0 (read once) and 3600').max(3600, 'count.refreshSeconds must be between 0 (read once) and 3600').optional(),
+    refreshSeconds: z.number().int().min(-1, 'count.refreshSeconds must be -1 (set by the page), 0 (read once) or 1 to 3600').max(3600, 'count.refreshSeconds must be -1 (set by the page), 0 (read once) or 1 to 3600').optional(),
+    tone: z.enum(INDICATOR_TONES).optional(),
+    icon: z.enum(INDICATOR_ICONS).optional(),
+    label: z.string().trim().min(1, 'count.label must not be empty').optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((count, ctx) => {
+    if (count.refreshSeconds === -1) {
+      if (count.route !== undefined || count.field !== undefined) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['route'], message: 'count.refreshSeconds -1 means nothing is read from the server (a component of the page sets the indicator): remove "route" and "field", or give a refreshSeconds of 0 or more.' });
+      }
+    } else if (count.route === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['route'], message: 'count.route is required: it is the route of the module that answers the figure (for example "/dlq/count"). A figure that only the page sets takes "refreshSeconds": -1 and no route.' });
+    }
+  });
 
 const TAB_GROUP_PATTERN = /^(?:[A-Za-z0-9][A-Za-z0-9_-]*:)?[a-z][a-z0-9-]*$/;
 
@@ -145,13 +160,13 @@ const ExtensionPointSchema = z
     if (ep.count !== undefined) {
       if (!inMenu) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['count'], message: `"count" is the figure of an entry of the side menu (kind "page", slot "nav" or "<module>:nav"); this is kind "${ep.kind}" on slot "${ep.slot}". Remove it, or use "tab.count" for a tab.` });
-      } else if (ep.count.route.includes(':')) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['count', 'route'], message: `count.route "${ep.count.route}" has a ":param", but a menu entry has no parameters to give it. Use a fixed route.` });
+      } else if (ep.count.route?.includes(':')) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['count', 'route'], message: `count.route "${ep.count.route ?? ''}" has a ":param", but a menu entry has no parameters to give it. Use a fixed route.` });
       }
     }
     if (ep.tab?.count !== undefined && ep.path !== undefined) {
       const own = paramsOfPath(ep.path);
-      for (const param of paramsOfPath(ep.tab.count.route)) {
+      for (const param of paramsOfPath(ep.tab.count.route ?? '')) {
         if (!own.includes(param)) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['tab', 'count', 'route'], message: `tab.count.route "${ep.tab.count.route}" uses ":${param}" but the page "${ep.path}" has no such parameter (it has [${own.join(', ')}]).` });
         }

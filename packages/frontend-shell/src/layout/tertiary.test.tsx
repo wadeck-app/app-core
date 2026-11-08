@@ -6,7 +6,6 @@ import { DateSettingsProvider } from '../dates/DateFormatContext.js';
 import type { LoadedModuleSummary } from '../types.js';
 import { AppLayout } from './AppLayout.js';
 import { navModulesFor } from './navModel.js';
-import { CountBadge } from './CountBadge.js';
 import { tertiaryFor, type TertiaryNav } from './tertiaryModel.js';
 import { TertiaryTabs } from './TertiaryTabs.js';
 
@@ -112,25 +111,8 @@ describe('tertiaryFor', () => {
   });
 });
 
-// Any menu entry may carry a figure; the tabs show it.
-describe('the figure of an entry', () => {
-  it('is shown with its number, 0 included, and not at all when the entry has none', () => {
-    const { container, rerender } = render(<CountBadge count={7} />);
-    expect(container.textContent).toBe(', 7');
-    rerender(<CountBadge count={0} />);
-    expect(container.textContent).toBe(', 0');
-    rerender(<CountBadge count={undefined} />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('is read after the label, not glued to it: the separator is for assistive technology only', () => {
-    const { container } = render(<CountBadge count={3} />);
-    expect(container.querySelector('.sr-only')?.textContent).toBe(', ');
-  });
-});
-
 describe('the tabs of the third level', () => {
-  const nav = (activeId = '/b', items = [{ id: '/a', label: 'Alpha', href: '/m/a', count: 5 }, { id: '/b', label: 'Beta', href: '/m/b', count: 0 }, { id: '/c', label: 'Gamma', href: '/m/c' }]): TertiaryNav => ({ items, activeId });
+  const nav = (activeId = '/b', items = [{ id: '/a', entryId: 'm/a', label: 'Alpha', href: '/m/a', indicator: { count: 5 } }, { id: '/b', entryId: 'm/b', label: 'Beta', href: '/m/b', indicator: { count: 0 } }, { id: '/c', entryId: 'm/c', label: 'Gamma', href: '/m/c' }]): TertiaryNav => ({ items, activeId });
   const inRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
   it('are a named navigation of links to the pages, the current one marked', () => {

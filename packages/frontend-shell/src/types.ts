@@ -1,10 +1,14 @@
 // Mirrors the response shape of GET /api/modules in ../../src/routes/modules.ts.
-// Where a figure comes from: GET /api/modules/<module><route>, JSON; `field` is the path to a whole number in the answer (absent: the
-// answer is the number); read again every `refreshSeconds` (default 60, 0: once).
+// Where the indicator of an entry comes from: GET /api/modules/<module><route>, JSON, a whole number or an indicator object at `field`
+// (absent: the answer itself); read again every `refreshSeconds` (default 60, 0: once, -1: never, a component of the page sets it, no
+// route). `tone`, `icon` and `label` are the defaults for what the answer does not say.
 export interface CountSource {
-  route: string;
+  route?: string;
   field?: string;
   refreshSeconds?: number;
+  tone?: 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+  icon?: 'info' | 'success' | 'warning' | 'error';
+  label?: string;
 }
 
 export interface ResolvedExtensionPoint {

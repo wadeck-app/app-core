@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CountBadge } from './CountBadge.js';
+import { IndicatorBadge } from './IndicatorBadge.js';
 import type { TertiaryNav } from './tertiaryModel.js';
 
 // The tabs of the third level, under the trail, in the sticky block at the top of the page. They say "current" the way dsl-ui's AppShell
@@ -24,7 +24,7 @@ export function TertiaryTabs({ nav, label }: { nav: TertiaryNav; label: string }
             className={`flex items-center px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary ${current ? 'bg-muted-bg font-medium text-content shadow-[inset_0_-3px_0_0_var(--color-primary)]' : 'text-muted hover:bg-muted-bg hover:text-content'}`}
           >
             {item.label}
-            <CountBadge count={item.count} current={current} />
+            <IndicatorBadge indicator={item.indicator} current={current} />
           </Link>
         );
       })}

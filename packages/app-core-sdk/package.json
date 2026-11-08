@@ -15,6 +15,11 @@
       "import": "./dist/register.bundle.js",
       "default": "./dist/register.bundle.js"
     },
+    "./indicators": {
+      "types": "./dist/indicators.bundle.d.ts",
+      "import": "./dist/indicators.bundle.js",
+      "default": "./dist/indicators.bundle.js"
+    },
     "./violations": {
       "types": "./dist/violations.bundle.d.ts",
       "import": "./dist/violations.bundle.js",
@@ -25,6 +30,7 @@
   "typesVersions": {
     "*": {
       "register": ["dist/register.bundle.d.ts"],
+      "indicators": ["dist/indicators.bundle.d.ts"],
       "violations": ["dist/violations.bundle.d.ts"]
     }
   },
@@ -33,6 +39,8 @@
     "dist/index.bundle.d.ts",
     "dist/register.bundle.js",
     "dist/register.bundle.d.ts",
+    "dist/indicators.bundle.js",
+    "dist/indicators.bundle.d.ts",
     "dist/violations.bundle.js",
     "dist/violations.bundle.d.ts",
     "README.md",
@@ -47,6 +55,14 @@
     "build": "tsc --build tsconfig.json && node scripts/bundle.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "dependencies": {
     "fastify": "^5.0.0",

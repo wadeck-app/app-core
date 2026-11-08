@@ -4,6 +4,8 @@ import type { CountSource, LoadedModuleSummary } from '../types.js';
 export interface NavPage {
   moduleId: string;
   routePath: string;
+  // The id of the entry for the pages that set its indicator themselves: `<moduleId><path>` (`<moduleId>#<index>` without a path).
+  entryId: string;
   label: string;
   // A module home page ("/") must not stay highlighted on the module's other pages.
   exact: boolean;
@@ -23,6 +25,7 @@ export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
         moduleId: m.id,
         // A nav page with a static path is linked there; one with route params can only be reached by index.
         routePath: ep.path !== undefined && !ep.path.includes(':') ? modulePagePath(m.id, ep.path) : `/modules/${m.id}/${i}`,
+        entryId: ep.path === undefined ? `${m.id}#${i}` : `${m.id}${ep.path}`,
         label: ep.label ?? `${m.id} #${i}`,
         exact: ep.path === '/',
         separatorBefore: ep.separatorBefore,
@@ -59,7 +62,7 @@ function contributedPagesFor(modules: LoadedModuleSummary[]): ContributedPage[] 
         if (provider === undefined || provider === m.id || !loaded.has(provider) || ep.kind !== 'page' || ep.path === undefined || ep.inactive !== undefined) {
           return [];
         }
-        return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), label: ep.label ?? ep.path, exact: ep.path === '/', separatorBefore: ep.separatorBefore, groupLabel: ep.groupLabel, countSource: ep.count } }];
+        return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), entryId: `${m.id}${ep.path}`, label: ep.label ?? ep.path, exact: ep.path === '/', separatorBefore: ep.separatorBefore, groupLabel: ep.groupLabel, countSource: ep.count } }];
       }),
     )
     .map((entry, seq) => ({ entry, seq }))
@@ -114,11 +117,11 @@ export function homeNavModule(navModules: NavModule[]): NavModule {
     title: 'Dashboard',
     basePath: '/',
     pages: [
-      { moduleId: HOME_MODULE_ID, routePath: '/', label: 'Dashboard', exact: true },
-      ...listedNavModules(navModules).map((m) => ({ moduleId: m.id, routePath: m.pages[0].routePath, label: m.title, exact: false })),
+      { moduleId: HOME_MODULE_ID, routePath: '/', entryId: `${HOME_MODULE_ID}/dashboard`, label: 'Dashboard', exact: true },
+      ...listedNavModules(navModules).map((m) => ({ moduleId: m.id, routePath: m.pages[0].routePath, entryId: `${HOME_MODULE_ID}/module/${m.id}`, label: m.title, exact: false })),
       // Tools of the app itself, apart from the modules.
-      { moduleId: HOME_MODULE_ID, routePath: MODULES_PATH, label: 'Modules', exact: true, separatorBefore: true, groupLabel: 'Tools' },
-      { moduleId: HOME_MODULE_ID, routePath: AB_TESTS_PATH, label: 'A/B tests', exact: true },
+      { moduleId: HOME_MODULE_ID, routePath: MODULES_PATH, entryId: `${HOME_MODULE_ID}/modules`, label: 'Modules', exact: true, separatorBefore: true, groupLabel: 'Tools' },
+      { moduleId: HOME_MODULE_ID, routePath: AB_TESTS_PATH, entryId: `${HOME_MODULE_ID}/ab-tests`, label: 'A/B tests', exact: true },
     ],
     listed: true,
   };

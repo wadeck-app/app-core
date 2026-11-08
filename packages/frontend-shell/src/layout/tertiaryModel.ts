@@ -1,16 +1,19 @@
 import { generatePath, matchPath, useLocation } from 'react-router-dom';
 import { modulePagePath } from '../modulePaths.js';
 import type { LoadedModuleSummary, ResolvedExtensionPoint } from '../types.js';
-import { countRequest, type CountRequest } from './useCounts.js';
+import type { Indicator } from './indicator.js';
+import { indicatorRequest, type IndicatorRequest } from './useIndicators.js';
 
 export interface TertiaryItem {
   id: string;
   label: string;
   href: string;
-  // A figure next to the label (open items, unread alerts), once read from `countRequest`.
-  count?: number;
+  // The id of the entry for the pages that set its indicator themselves: `<moduleId><path>`.
+  entryId: string;
+  // A number or an icon next to the label (open items, an alert), once read from `indicatorRequest` or set by the page.
+  indicator?: Indicator;
   // Where to read it: the `tab.count` of the page, its route filled with the parameters of the page shown.
-  countRequest?: CountRequest;
+  indicatorRequest?: IndicatorRequest;
 }
 
 export interface TertiaryNav {
@@ -63,7 +66,8 @@ export function tertiaryFor(modules: readonly LoadedModuleSummary[], pathname: s
       id: idOf(c),
       label: c.ep.tab!.label,
       href: generatePath(modulePagePath(c.module.id, c.path), shown.match!.params),
-      ...(c.ep.tab!.count === undefined ? {} : { countRequest: countRequest(`tab:${idOf(c)}`, c.module.id, c.ep.tab!.count, shown.match!.params) }),
+      entryId: idOf(c),
+      ...(c.ep.tab!.count === undefined ? {} : { indicatorRequest: indicatorRequest(`tab:${idOf(c)}`, c.module.id, c.ep.tab!.count, shown.match!.params) }),
     })),
     activeId: idOf(shown.c),
   };

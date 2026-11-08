@@ -22,15 +22,16 @@ const external = ['zod', 'fastify'];
 // Three published entries: the main one (types and schemas, importable from browser code), the node-only `register`
 // subpath (a daemon telling app-core about its module) and the node-only `violations` subpath (a rule for the violations
 // runner that checks manifest.json with the same schemas).
-for (const entry of ['index', 'register', 'violations']) {
+// The `indicators` subpath is browser code (components of a page): React stays the shell's, it is external.
+for (const entry of ['index', 'register', 'violations', 'indicators']) {
   await build({
     entryPoints: [path.join(root, `dist/${entry}.js`)],
     bundle: true,
-    platform: 'node',
-    target: 'node22',
+    platform: entry === 'indicators' ? 'browser' : 'node',
+    target: entry === 'indicators' ? 'es2022' : 'node22',
     format: 'esm',
     outfile: path.join(root, `dist/${entry}.bundle.js`),
-    external,
+    external: entry === 'indicators' ? ['react'] : external,
     logLevel: 'warning',
   });
   console.log(`Bundled dist/${entry}.bundle.js`);
@@ -56,6 +57,7 @@ async function bundleTypes(entry) {
 await bundleTypes('index');
 await bundleTypes('register');
 await bundleTypes('violations');
+await bundleTypes('indicators');
 
 // app-core-sdk is the "base" package every app-module depends on -- it must have
 // ZERO internal cross-package references in what actually gets published, runtime
@@ -85,6 +87,8 @@ function assertNoInternalReferences() {
     'dist/register.bundle.d.ts',
     'dist/violations.bundle.js',
     'dist/violations.bundle.d.ts',
+    'dist/indicators.bundle.js',
+    'dist/indicators.bundle.d.ts',
   ].map((f) => path.join(root, f));
 
   for (const file of publishedFiles) {
