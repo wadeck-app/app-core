@@ -10,6 +10,7 @@ import { TopBarActions } from './TopBarActions.js';
 import { applyTabOrder, useTabOrder } from './useTabOrder.js';
 import { useTertiaryNav } from './tertiaryModel.js';
 import { TertiaryTabs } from './TertiaryTabs.js';
+import { countRequest, useCounts } from './useCounts.js';
 import type { LayoutProps } from './types.js';
 
 const routerLink = ({ href, children, ...rest }: ShellLinkProps): React.ReactElement => (
@@ -57,6 +58,12 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   const currentPage = menuModule.pages.find((p) => isPageCurrent(pathname, p));
   const pageTitle = currentPage === undefined ? menuModule.title : trimModulePrefix(currentPage.label, menuModule.title);
   const crumbs = trimmedTrail(breadcrumbFor(pathname, navModules, modules));
+  // The figures next to the entries of the side menu and next to the tabs: routes of the modules, read and kept up to date here.
+  const counts = useCounts([
+    ...menuModule.pages.flatMap((p) => (p.countSource === undefined ? [] : [countRequest(`menu:${p.routePath}`, p.moduleId, p.countSource)])),
+    ...tertiary.items.flatMap((i) => (i.countRequest === undefined ? [] : [i.countRequest])),
+  ]);
+  const tertiaryWithCounts = { ...tertiary, items: tertiary.items.map((i) => ({ ...i, count: counts[`tab:${i.id}`] })) };
   const menu: ShellMenu = {
     title: menuModule.title,
     label: `${menuModule.title} pages`,
@@ -71,7 +78,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
         // The dashboard menu lists modules: each gets its logo.
         icon: onDashboard ? <Logo title={p.label} moduleId={p.moduleId} /> : undefined,
         current: isPageCurrent(pathname, p) ? ('page' as const) : undefined,
-        badge: p.count,
+        badge: counts[`menu:${p.routePath}`],
       },
     ]),
   };
@@ -106,7 +113,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
       {crumbs.length > 0 || tabsOn ? (
         <div className={`sticky top-shell-bar z-10 border-b border-border bg-bg ${tabsOn ? '' : 'pb-2'}`}>
           <Breadcrumb crumbs={crumbs} />
-          {tabsOn ? <TertiaryTabs nav={tertiary} label={`${pageTitle} sections`} /> : null}
+          {tabsOn ? <TertiaryTabs nav={tertiaryWithCounts} label={`${pageTitle} sections`} /> : null}
         </div>
       ) : null}
       {children}

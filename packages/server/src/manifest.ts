@@ -21,6 +21,21 @@ const SpanSchema = z.number().int().min(1, 'must be between 1 and ' + WIDGET_MAX
 
 // A group is `name` (the module's own) or `<providerId>:name`: this page joins the group `name` of the module `providerId`, which
 // has to be required (or optionally required) like for any contribution.
+// A figure next to a menu entry or a tab (open items, alerts), read from a route of the module itself:
+// `GET /api/modules/<id><route>` answers JSON, `field` ("total", "counts.open") is the path to a whole number in it (absent: the
+// answer is the number). The shell reads it again every `refreshSeconds` (default 60; 0: once), not while the browser tab is hidden.
+// On a tab, `route` may use the ":params" of the page it is on ("/tasks/:id/history/count").
+const CountSchema = z
+  .object({
+    route: z.string().regex(PAGE_PATH_PATTERN, 'count.route must look like "/jobs/count" or "/jobs/:id/count": segments of letters, digits, "_" or "-", or ":param"'),
+    field: z
+      .string()
+      .regex(/^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/, 'count.field must be a path of names separated by ".", for example "total" or "counts.open"')
+      .optional(),
+    refreshSeconds: z.number().int().min(0, 'count.refreshSeconds must be between 0 (read once) and 3600').max(3600, 'count.refreshSeconds must be between 0 (read once) and 3600').optional(),
+  })
+  .strict();
+
 const TAB_GROUP_PATTERN = /^(?:[A-Za-z0-9][A-Za-z0-9_-]*:)?[a-z][a-z0-9-]*$/;
 
 export function splitTabGroup(group: string): { providerId: string | undefined; name: string } {
@@ -63,6 +78,8 @@ const TabSchema = z
     group: z.string().regex(TAB_GROUP_PATTERN, 'tab.group must be a name of lower case letters, digits or "-", starting with a letter (for example "task"), or "<moduleId>:<name>" to join the group of another module (for example "flow:execution")'),
     label: z.string().trim().min(1, 'tab.label must not be empty: it is the text of the tab (for example "History")'),
     order: z.number().optional(),
+    // The figure next to the tab (see CountSchema); the route may use the ":params" of the page.
+    count: CountSchema.optional(),
   })
   .strict();
 
@@ -84,6 +101,8 @@ const ExtensionPointSchema = z
     // A rule above this entry of the side menu, to set groups of pages apart; `groupLabel` is the caption of the group that follows.
     separatorBefore: z.boolean().optional(),
     groupLabel: z.string().trim().min(1, 'groupLabel must not be empty').optional(),
+    // A figure next to this page's entry in the side menu (see CountSchema); the route has no ":params", the entry has none.
+    count: CountSchema.optional(),
     // This page is a tab of the third level of navigation: the pages of the module that share a `group` are shown as tabs under the
     // trail, on each of them. `label` is the text of the tab (`History`, not the page label `Task history`), `order` sorts the tabs
     // (declaration order when absent).
@@ -117,6 +136,26 @@ const ExtensionPointSchema = z
     }
     if (ep.groupLabel !== undefined && ep.separatorBefore !== true) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['groupLabel'], message: '"groupLabel" is the caption of the separator: add "separatorBefore": true, or remove "groupLabel".' });
+    }
+  })
+  // `count` on a page is the figure of its entry in the side menu: a page of the menu (slot `nav` or `<providerId>:nav`) only, and the
+  // entry has no ":params" to give the route. On a tab (`tab.count`) the route may use the page's own ":params", no others.
+  .superRefine((ep, ctx) => {
+    const inMenu = ep.kind === 'page' && (ep.slot === MENU_SLOT_LOCAL || menuSlotProvider(ep.slot) !== undefined);
+    if (ep.count !== undefined) {
+      if (!inMenu) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['count'], message: `"count" is the figure of an entry of the side menu (kind "page", slot "nav" or "<module>:nav"); this is kind "${ep.kind}" on slot "${ep.slot}". Remove it, or use "tab.count" for a tab.` });
+      } else if (ep.count.route.includes(':')) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['count', 'route'], message: `count.route "${ep.count.route}" has a ":param", but a menu entry has no parameters to give it. Use a fixed route.` });
+      }
+    }
+    if (ep.tab?.count !== undefined && ep.path !== undefined) {
+      const own = paramsOfPath(ep.path);
+      for (const param of paramsOfPath(ep.tab.count.route)) {
+        if (!own.includes(param)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['tab', 'count', 'route'], message: `tab.count.route "${ep.tab.count.route}" uses ":${param}" but the page "${ep.path}" has no such parameter (it has [${own.join(', ')}]).` });
+        }
+      }
     }
   })
   // `tab` makes a page a tab of the third level: a page of the module (slot `nav` or `route`) that has an address.

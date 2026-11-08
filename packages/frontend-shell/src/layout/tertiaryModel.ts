@@ -1,13 +1,16 @@
 import { generatePath, matchPath, useLocation } from 'react-router-dom';
 import { modulePagePath } from '../modulePaths.js';
 import type { LoadedModuleSummary, ResolvedExtensionPoint } from '../types.js';
+import { countRequest, type CountRequest } from './useCounts.js';
 
 export interface TertiaryItem {
   id: string;
   label: string;
   href: string;
-  // A figure next to the label (open items, unread alerts). No manifest field fills it yet; the tabs show it when it is there.
+  // A figure next to the label (open items, unread alerts), once read from `countRequest`.
   count?: number;
+  // Where to read it: the `tab.count` of the page, its route filled with the parameters of the page shown.
+  countRequest?: CountRequest;
 }
 
 export interface TertiaryNav {
@@ -60,6 +63,7 @@ export function tertiaryFor(modules: readonly LoadedModuleSummary[], pathname: s
       id: idOf(c),
       label: c.ep.tab!.label,
       href: generatePath(modulePagePath(c.module.id, c.path), shown.match!.params),
+      ...(c.ep.tab!.count === undefined ? {} : { countRequest: countRequest(`tab:${idOf(c)}`, c.module.id, c.ep.tab!.count, shown.match!.params) }),
     })),
     activeId: idOf(shown.c),
   };

@@ -518,7 +518,22 @@ When a page opens something (a task from a list, a job) and that thing has sever
 - Only a page of the module (slot `nav` or `route`) that has a `path`. A page that is not a tab, or has no sibling, shows no third level: nothing is drawn.
 - A module can add a page to the group of another module: `"group": "<moduleId>:<name>"` (for example `"flow:execution"`). It has to `require` that module (or list it in `optionalRequires`: the page then waits, inactive and with its reason in `GET /api/modules`, until the module is loaded), the module has to declare the group `name`, and the page takes the same `:params`. The tabs then appear on the pages of both modules. A page that joins a group can be alone in its module; a group you declare yourself still needs two pages.
 - Other tabs of a group can be the pages of a list: `/tasks/p/:project` (Tasks) and `/tree/p/:project` (Tree) as the views of one project.
-- A figure next to a tab (open items, alerts) is supported by the shell (`count`) but no manifest field fills it yet.
+- A figure next to a tab: `tab.count`, see "Figures next to entries" below.
+
+### Figures next to entries (`count`)
+
+A number next to a side-menu entry or a tab (open items, entries in the dead-letter queue, alerts): a live figure, read from a route of your own module.
+
+```json
+{ "kind": "page", "slot": "nav", "label": "DLQ", "path": "/dlq", "count": { "route": "/dlq/count", "field": "total" }, "view": { ... } }
+{ "kind": "page", "slot": "route", "label": "Task history", "path": "/tasks/p/:project/:id/history", "tab": { "group": "task", "label": "History", "count": { "route": "/tasks/p/:project/:id/history/count" } }, "view": { ... } }
+```
+
+- `count` on a page of the menu (slot `nav` or `<module>:nav`) is the figure of its menu entry; `tab.count` is the figure of its tab. Same shape: `route` (a route your backend registers; the shell calls `GET /api/modules/<your id><route>`), `field` and `refreshSeconds`.
+- The route answers JSON: a whole number of 0 or more, or an object with one at `field` (`"total"`, `"counts.open"`; a path of names separated by `.`). Anything else shows no figure and logs why once in the browser console, with the route; it is never shown as 0.
+- A menu entry has no parameters, so its route has none. The route of a tab may use the `:params` of its page (the figure of *this* task), no others; `check` and `package` fail otherwise.
+- `refreshSeconds` (0 to 3600, default 60; 0 reads once) is how often it is read again. Not while the browser tab is hidden; read at once when it is shown again. Keep the route cheap, and send an ETag (`ctx.unchanged`, see "Data that changes rarely (ETag and 304)"): the shell reads it often.
+- 0 is shown: an entry that says "0" is an answer. An entry without `count` shows nothing.
 
 ### Dates and times
 

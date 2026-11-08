@@ -194,3 +194,57 @@ describe('parseManifest: tabs of the third level', () => {
     expect(message(manifest([{ ...tabs[0]!, tab: { group: 'task', label: 'A', icon: 'x' } }, tabs[1]!]))).toContain('Unrecognized key');
   });
 });
+
+describe('parseManifest: figures next to menu entries and tabs (count)', () => {
+  const view = { type: 'inline', value: { $type: 'TextBox' } };
+  const manifest = (pages: Array<Record<string, unknown>>) => ({
+    id: 'queue',
+    version: '1.0.0',
+    backendEntryPath: './backend.mjs',
+    extensionPoints: pages.map((p) => ({ kind: 'page', slot: 'nav', view, ...p })),
+  });
+  const message = (input: unknown): string => {
+    try {
+      parseManifest(input);
+    } catch (err) {
+      return (err as ZodError).issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(' | ');
+    }
+    return '';
+  };
+
+  it('accepts a count on a menu entry, with or without a field and a refresh', () => {
+    const parsed = parseManifest(manifest([{ label: 'DLQ', path: '/dlq', count: { route: '/dlq/count', field: 'total', refreshSeconds: 30 } }, { label: 'Pending', path: '/pending', count: { route: '/pending/count' } }]));
+    expect(parsed.extensionPoints[0]?.count).toEqual({ route: '/dlq/count', field: 'total', refreshSeconds: 30 });
+    expect(parsed.extensionPoints[1]?.count).toEqual({ route: '/pending/count' });
+  });
+
+  it('accepts a count on a page of another module\'s menu', () => {
+    expect(() => parseManifest(manifest([{ slot: 'flow:nav', label: 'Charts', path: '/charts', count: { route: '/charts/count' } }]))).not.toThrow();
+  });
+
+  it('refuses a count on a page that is not an entry of the menu, and says where it goes', () => {
+    expect(message(manifest([{ slot: 'route', label: 'Item', path: '/items/:id', count: { route: '/n' } }]))).toContain('"count" is the figure of an entry of the side menu');
+    expect(message(manifest([{ slot: 'route', label: 'Item', path: '/items/:id', count: { route: '/n' } }]))).toContain('use "tab.count" for a tab');
+  });
+
+  it('refuses a ":param" in the route of a menu entry, which has no parameters to give it', () => {
+    expect(message(manifest([{ label: 'DLQ', path: '/dlq', count: { route: '/dlq/:id/count' } }]))).toContain('has a ":param", but a menu entry has no parameters');
+  });
+
+  it('accepts a count on a tab whose route uses the parameters of the page, and refuses a parameter the page does not have', () => {
+    const tabs = (route: string) =>
+      manifest([
+        { slot: 'route', label: 'Task', path: '/tasks/:project/:id', tab: { group: 'task', label: 'Details' } },
+        { slot: 'route', label: 'History', path: '/tasks/:project/:id/history', tab: { group: 'task', label: 'History', count: { route, field: 'total' } } },
+      ]);
+    expect(() => parseManifest(tabs('/tasks/:project/:id/history/count'))).not.toThrow();
+    expect(message(tabs('/tasks/:other/count'))).toContain('uses ":other" but the page "/tasks/:project/:id/history" has no such parameter (it has [id, project])');
+  });
+
+  it('refuses a malformed count: no route, a bad field, a refresh out of range, an unknown key', () => {
+    expect(message(manifest([{ label: 'A', path: '/a', count: { field: 'total' } }]))).toContain('count.route');
+    expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', field: 'a b' } }]))).toContain('count.field must be a path of names separated by "."');
+    expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', refreshSeconds: 4000 } }]))).toContain('count.refreshSeconds must be between 0');
+    expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', every: 5 } }]))).toContain('Unrecognized key');
+  });
+});

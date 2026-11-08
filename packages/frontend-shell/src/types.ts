@@ -1,4 +1,12 @@
 // Mirrors the response shape of GET /api/modules in ../../src/routes/modules.ts.
+// Where a figure comes from: GET /api/modules/<module><route>, JSON; `field` is the path to a whole number in the answer (absent: the
+// answer is the number); read again every `refreshSeconds` (default 60, 0: once).
+export interface CountSource {
+  route: string;
+  field?: string;
+  refreshSeconds?: number;
+}
+
 export interface ResolvedExtensionPoint {
   kind: string;
   slot: string;
@@ -20,7 +28,9 @@ export interface ResolvedExtensionPoint {
   groupLabel?: string;
   // This page is a tab of the third level: the pages that share its `group` are the tabs shown under the trail. "<module>:<name>" joins
   // the group `name` of another module.
-  tab?: { group: string; label: string; order?: number };
+  tab?: { group: string; label: string; order?: number; count?: CountSource };
+  // A figure next to the entry of this page in the side menu.
+  count?: CountSource;
   // A contribution to a module this one can do without (`optionalRequires`) that is not used now: the reason. The shell leaves it out.
   inactive?: string;
 }

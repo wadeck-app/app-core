@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DateSettingsProvider } from '../dates/DateFormatContext.js';
 import type { LoadedModuleSummary } from '../types.js';
 import { AppLayout } from './AppLayout.js';
@@ -201,5 +201,51 @@ describe('the layout', () => {
   it('shows nothing on the dashboard', () => {
     renderAt('/');
     expect(screen.queryByRole('navigation', { name: /sections$/ })).not.toBeInTheDocument();
+  });
+});
+
+// The figures, from the manifest to the screen: declared by a module, read from its routes, shown next to the menu entry and the tab.
+describe('the figures next to the entries', () => {
+  const JOBS: LoadedModuleSummary = {
+    id: 'jobs',
+    version: '1',
+    extensionPoints: [
+      page('nav', '/dlq', 'DLQ', { count: { route: '/dlq/count', field: 'total' } }),
+      page('nav', '/pending', 'Pending'),
+      page('route', '/jobs/:id', 'Job', tab('job', 'Overview')),
+      page('route', '/jobs/:id/logs', 'Job logs', { tab: { group: 'job', label: 'Logs', count: { route: '/jobs/:id/logs/count' } } }),
+    ] as LoadedModuleSummary['extensionPoints'],
+  };
+  const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify(url.endsWith('/dlq/count') ? { total: 7 } : 3), { status: 200 }));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockClear();
+  });
+  const renderAt = (pathname: string) => {
+    vi.stubGlobal('fetch', fetchMock);
+    return render(
+      <MemoryRouter initialEntries={[pathname]}>
+        <DateSettingsProvider>
+          <AppLayout modules={[JOBS]} navModules={navModulesFor([JOBS])}>
+            <p>content</p>
+          </AppLayout>
+        </DateSettingsProvider>
+      </MemoryRouter>,
+    );
+  };
+  const link = (nav: string, name: RegExp) => within(screen.getByRole('navigation', { name: nav })).getByRole('link', { name });
+
+  it('shows the figure of a menu entry read from the route its module declared, and none on an entry without one', async () => {
+    renderAt('/modules/jobs/dlq');
+    await waitFor(() => expect(link('Jobs pages', /^DLQ/).textContent).toMatch(/7$/));
+    expect(fetchMock).toHaveBeenCalledWith('/api/modules/jobs/dlq/count', expect.anything());
+    expect(link('Jobs pages', /^Pending/).textContent).toBe('Pending');
+  });
+
+  it('shows the figure of a tab, read from a route filled with the parameters of the page', async () => {
+    renderAt('/modules/jobs/jobs/42');
+    await waitFor(() => expect(link('Jobs sections', /^Logs/).textContent).toMatch(/3$/));
+    expect(fetchMock).toHaveBeenCalledWith('/api/modules/jobs/jobs/42/logs/count', expect.anything());
+    expect(link('Jobs sections', /^Overview/).textContent).toBe('Overview');
   });
 });

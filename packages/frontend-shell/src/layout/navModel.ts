@@ -1,5 +1,5 @@
 import { modulePagePath } from '../modulePaths.js';
-import type { LoadedModuleSummary } from '../types.js';
+import type { CountSource, LoadedModuleSummary } from '../types.js';
 
 export interface NavPage {
   moduleId: string;
@@ -10,8 +10,8 @@ export interface NavPage {
   // A rule above the entry in the side menu, and the caption of the group that follows (from the manifest).
   separatorBefore?: boolean;
   groupLabel?: string;
-  // A figure next to the label in the side menu (unread alerts, open items). No module declares one yet: nothing fills it.
-  count?: number;
+  // Where the figure next to the label comes from (unread alerts, open items): a route of the module that owns the page.
+  countSource?: CountSource;
 }
 
 // Base slot: page/nav -> a navigation entry routing to a full-page render (frontend-shell.md "Base slots").
@@ -27,6 +27,7 @@ export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
         exact: ep.path === '/',
         separatorBefore: ep.separatorBefore,
         groupLabel: ep.groupLabel,
+        countSource: ep.count,
       })),
   );
 }
@@ -58,7 +59,7 @@ function contributedPagesFor(modules: LoadedModuleSummary[]): ContributedPage[] 
         if (provider === undefined || provider === m.id || !loaded.has(provider) || ep.kind !== 'page' || ep.path === undefined || ep.inactive !== undefined) {
           return [];
         }
-        return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), label: ep.label ?? ep.path, exact: ep.path === '/', separatorBefore: ep.separatorBefore, groupLabel: ep.groupLabel } }];
+        return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), label: ep.label ?? ep.path, exact: ep.path === '/', separatorBefore: ep.separatorBefore, groupLabel: ep.groupLabel, countSource: ep.count } }];
       }),
     )
     .map((entry, seq) => ({ entry, seq }))
