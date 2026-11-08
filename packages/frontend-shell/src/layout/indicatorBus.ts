@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ENTRY_INDICATOR_EVENT, ENTRY_INDICATORS_STORE, parseIndicator, type Indicator } from './indicator.js';
+import { ENTRY_HIDDEN_EVENT, ENTRY_HIDDEN_STORE, ENTRY_INDICATOR_EVENT, ENTRY_INDICATORS_STORE, parseIndicator, type Indicator } from './indicator.js';
 
 // A component of a page sets the indicator of an entry (a menu entry or a tab, by its id `<moduleId><path>`) without going through the
 // server: the SDK's setEntryIndicator(id, indicator | null) writes it in a map on globalThis and fires a window event. A module's bundle
@@ -25,6 +25,39 @@ function accept(id: string, raw: unknown): Indicator | undefined {
     return undefined;
   }
   return read.indicator;
+}
+
+// The tabs that page components hide, by entry id. Whatever was hidden before the shell listened is read from the store.
+export function useHiddenEntries(): ReadonlySet<string> {
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => {
+    const store: unknown = Reflect.get(globalThis, ENTRY_HIDDEN_STORE);
+    return new Set(store instanceof Set ? [...store].filter((id): id is string => typeof id === 'string') : []);
+  });
+  useEffect(() => {
+    const onHide = (event: Event): void => {
+      const detail = (event as CustomEvent<{ id?: unknown; hidden?: unknown }>).detail;
+      if (typeof detail?.id !== 'string' || detail.id === '' || typeof detail.hidden !== 'boolean') {
+        console.warn('[app-core] an entry hidden event without an entry id and a boolean was ignored. setEntryHidden(id, hidden) needs the id of the tab: "<moduleId><path>".');
+        return;
+      }
+      const { id, hidden: isHidden } = detail;
+      setHidden((prev) => {
+        if (prev.has(id) === isHidden) {
+          return prev;
+        }
+        const next = new Set(prev);
+        if (isHidden) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+    };
+    window.addEventListener(ENTRY_HIDDEN_EVENT, onHide);
+    return () => window.removeEventListener(ENTRY_HIDDEN_EVENT, onHide);
+  }, []);
+  return hidden;
 }
 
 // The indicators set by page components, by entry id. Whatever was set before the shell listened is read from the store.

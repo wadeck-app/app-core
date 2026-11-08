@@ -6,7 +6,7 @@
 // The entry is named by its id: `<moduleId><path>` as in the manifest ("queue/dlq", "task/tasks/p/:project/:id/history"; the module
 // home is "<moduleId>/"). In the manifest the entry takes `"count": { "refreshSeconds": -1 }` so that nothing is read from a route.
 import { useEffect } from 'react';
-import { ENTRY_INDICATOR_EVENT, ENTRY_INDICATORS_STORE, parseIndicator, type Indicator } from '@wadeck-app/app-core-server/indicator';
+import { ENTRY_HIDDEN_EVENT, ENTRY_HIDDEN_STORE, ENTRY_INDICATOR_EVENT, ENTRY_INDICATORS_STORE, parseIndicator, type Indicator } from '@wadeck-app/app-core-server/indicator';
 
 export type { Indicator, IndicatorIcon, IndicatorTone } from '@wadeck-app/app-core-server/indicator';
 
@@ -29,6 +29,32 @@ export function setEntryIndicator(entryId: string, indicator: Indicator | null):
   Reflect.set(globalThis, ENTRY_INDICATORS_STORE, store);
   store.set(entryId, indicator);
   window.dispatchEvent(new CustomEvent(ENTRY_INDICATOR_EVENT, { detail: { id: entryId, indicator } }));
+}
+
+// Hides a tab of the third level (or shows it again) from the page: the manifest says which tabs can exist, the page knows which of them
+// make sense for the item shown. The tab you are on stays visible: a page that hides itself says why in its own body.
+export function setEntryHidden(entryId: string, hidden: boolean): void {
+  if (entryId.trim() === '') {
+    throw new Error('setEntryHidden needs the id of the tab: "<moduleId><path>", for example "user/users/p/:id/preferences".');
+  }
+  const existing: unknown = Reflect.get(globalThis, ENTRY_HIDDEN_STORE);
+  const store: Set<string> = existing instanceof Set ? existing : new Set();
+  Reflect.set(globalThis, ENTRY_HIDDEN_STORE, store);
+  if (hidden) {
+    store.add(entryId);
+  } else {
+    store.delete(entryId);
+  }
+  window.dispatchEvent(new CustomEvent(ENTRY_HIDDEN_EVENT, { detail: { id: entryId, hidden } }));
+}
+
+// The tab is hidden for as long as the component is mounted and `hidden` is true; it comes back when the component goes away. The
+// component must be one that lives on every tab of the group (the header of the item), or the tab comes back when you leave the page.
+export function useEntryHidden(entryId: string, hidden: boolean): void {
+  useEffect(() => {
+    setEntryHidden(entryId, hidden);
+    return () => setEntryHidden(entryId, false);
+  }, [entryId, hidden]);
 }
 
 // The indicator of an entry for as long as the component is mounted: set when the value changes, cleared when it goes away.

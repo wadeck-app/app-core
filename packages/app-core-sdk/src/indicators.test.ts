@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ENTRY_INDICATORS_STORE } from '@wadeck-app/app-core-server/indicator';
-import { setEntryIndicator } from './indicators.js';
+import { ENTRY_HIDDEN_STORE, ENTRY_INDICATORS_STORE } from '@wadeck-app/app-core-server/indicator';
+import { setEntryHidden, setEntryIndicator } from './indicators.js';
 
 // A page component runs in a browser; here a window made of an event target is enough to see what it sends.
 describe('setEntryIndicator', () => {
@@ -43,5 +43,32 @@ describe('setEntryIndicator', () => {
 
   it('refuses an empty entry id and says what an id looks like', () => {
     expect(() => setEntryIndicator(' ', { count: 1 })).toThrow('"<moduleId><path>", for example "queue/dlq"');
+  });
+});
+
+describe('setEntryHidden', () => {
+  const heard: Array<{ id: string; hidden: boolean }> = [];
+  beforeEach(() => {
+    heard.length = 0;
+    const target = new EventTarget();
+    target.addEventListener('app-core:entry-hidden', (event) => heard.push((event as CustomEvent).detail));
+    vi.stubGlobal('window', Object.assign(target, { dispatchEvent: target.dispatchEvent.bind(target) }));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(globalThis, ENTRY_HIDDEN_STORE);
+  });
+
+  it('tells the shell which tab is hidden, keeps the set for a shell that listens later, and shows the tab again', () => {
+    setEntryHidden('user/users/:id/preferences', true);
+    expect(heard).toEqual([{ id: 'user/users/:id/preferences', hidden: true }]);
+    expect([...(Reflect.get(globalThis, ENTRY_HIDDEN_STORE) as Set<string>)]).toEqual(['user/users/:id/preferences']);
+    setEntryHidden('user/users/:id/preferences', false);
+    expect([...(Reflect.get(globalThis, ENTRY_HIDDEN_STORE) as Set<string>)]).toEqual([]);
+    expect(heard.at(-1)).toEqual({ id: 'user/users/:id/preferences', hidden: false });
+  });
+
+  it('refuses an empty id and says what an id looks like', () => {
+    expect(() => setEntryHidden('', true)).toThrow('"<moduleId><path>", for example "user/users/p/:id/preferences"');
   });
 });

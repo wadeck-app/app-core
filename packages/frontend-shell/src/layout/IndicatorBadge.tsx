@@ -24,11 +24,14 @@ const ICON_COLOR: Record<IndicatorTone, string> = {
 
 // The indicator of an entry: an icon (in place of the number) or a number in a pill, in a tone. Read aloud after the label:
 // "Alerts, 3" or "Alerts, Warning".
-export function IndicatorBadge({ indicator, current = false }: { indicator: Indicator | undefined; current?: boolean }): React.ReactElement | null {
+// The tooltip is always there: the label of the module when it gave one ("3 failures"), else the name of the entry and the figure
+// ("Executions: 3"), so a bare number never has to be guessed.
+export function IndicatorBadge({ indicator, current = false, name }: { indicator: Indicator | undefined; current?: boolean; name?: string }): React.ReactElement | null {
   if (indicator === undefined) {
     return null;
   }
-  const text = describeIndicator(indicator);
+  const described = describeIndicator(indicator);
+  const text = indicator.label === undefined && indicator.icon === undefined && name !== undefined ? `${name}: ${described}` : described;
   if (indicator.icon !== undefined) {
     const Icon = ICONS[indicator.icon];
     const tone = indicator.tone ?? DEFAULT_ICON_TONE[indicator.icon];
@@ -41,7 +44,7 @@ export function IndicatorBadge({ indicator, current = false }: { indicator: Indi
   }
   const tone = indicator.tone ?? 'neutral';
   return (
-    <span className={`ml-1.5 rounded-full px-1.5 text-xs ${tone === 'neutral' && current ? PILL_NEUTRAL_CURRENT : PILL[tone]}`} title={indicator.label === undefined ? undefined : text}>
+    <span className={`ml-1.5 rounded-full px-1.5 text-xs ${tone === 'neutral' && current ? PILL_NEUTRAL_CURRENT : PILL[tone]}`} title={text}>
       <span className="sr-only">, {indicator.label === undefined ? '' : `${indicator.label} `}</span>
       {indicator.count}
     </span>

@@ -24,7 +24,7 @@ export function TertiaryTabs({ nav, label }: { nav: TertiaryNav; label: string }
             className={`flex items-center px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary ${current ? 'bg-muted-bg font-medium text-content shadow-[inset_0_-3px_0_0_var(--color-primary)]' : 'text-muted hover:bg-muted-bg hover:text-content'}`}
           >
             {item.label}
-            <IndicatorBadge indicator={item.indicator} current={current} />
+            <IndicatorBadge indicator={item.indicator} current={current} name={item.label} />
           </Link>
         );
       })}

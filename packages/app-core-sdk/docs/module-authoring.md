@@ -518,7 +518,9 @@ When a page opens something (a task from a list, a job) and that thing has sever
 - Only a page of the module (slot `nav` or `route`) that has a `path`. A page that is not a tab, or has no sibling, shows no third level: nothing is drawn.
 - A module can add a page to the group of another module: `"group": "<moduleId>:<name>"` (for example `"flow:execution"`). It has to `require` that module (or list it in `optionalRequires`: the page then waits, inactive and with its reason in `GET /api/modules`, until the module is loaded), the module has to declare the group `name`, and the page takes the same `:params`. The tabs then appear on the pages of both modules. A page that joins a group can be alone in its module; a group you declare yourself still needs two pages.
 - Other tabs of a group can be the pages of a list: `/tasks/p/:project` (Tasks) and `/tree/p/:project` (Tree) as the views of one project.
-- A figure next to a tab: `tab.count`, see "Figures next to entries" below.
+- A figure next to a tab: `tab.count`, see "Indicators next to entries" below.
+- A tab that makes no sense for the item shown (no "Preferences" for a robot): the manifest keeps declaring it, the page hides it with `useEntryHidden("user/users/p/:id/preferences", isRobot)` from `@wadeck-app/app-core-sdk/indicators` (or `setEntryHidden(id, hidden)`). Use it in a component that lives on every tab of the group (the header of the item), because the tab comes back as soon as that component goes away. The tab you are on stays visible, so the page it hides says why in its own body; when only one tab is left, the row disappears. Tabs only, not menu entries.
+- The tooltip of a figure is the `label` you give (`3 failures`); without one it is the name of the entry and the figure (`Executions: 3`).
 
 ### Indicators next to entries (`count`)
 

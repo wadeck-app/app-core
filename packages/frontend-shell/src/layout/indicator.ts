@@ -16,6 +16,8 @@ export interface Indicator {
 
 export const ENTRY_INDICATOR_EVENT = 'app-core:entry-indicator';
 export const ENTRY_INDICATORS_STORE = '__appCoreEntryIndicators';
+export const ENTRY_HIDDEN_EVENT = 'app-core:entry-hidden';
+export const ENTRY_HIDDEN_STORE = '__appCoreHiddenEntries';
 
 // What the icon says when the module gave no label.
 export const DEFAULT_ICON_LABEL: Record<IndicatorIcon, string> = { info: 'Information', success: 'OK', warning: 'Warning', error: 'Error' };

@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as shell from './indicator.js';
 import { IndicatorBadge } from './IndicatorBadge.js';
-import { usePushedIndicators } from './indicatorBus.js';
+import { useHiddenEntries, usePushedIndicators } from './indicatorBus.js';
 
 // The shell keeps its own copy of the words of packages/server/src/indicator.ts (the manifest schema and the SDK use that one): the
 // lists and the names must stay equal, and each side tests the same cases with explicit expectations.
@@ -21,6 +21,9 @@ describe('indicator: the words of the shell are the words of the server', () => 
     expect(constIn(shellSource, 'ENTRY_INDICATOR_EVENT')).toBe(constIn(serverSource, 'ENTRY_INDICATOR_EVENT'));
     expect(constIn(shellSource, 'ENTRY_INDICATORS_STORE')).toBe(constIn(serverSource, 'ENTRY_INDICATORS_STORE'));
     expect(constIn(shellSource, 'ENTRY_INDICATOR_EVENT')).toBe(shell.ENTRY_INDICATOR_EVENT);
+    expect(constIn(shellSource, 'ENTRY_HIDDEN_EVENT')).toBe(constIn(serverSource, 'ENTRY_HIDDEN_EVENT'));
+    expect(constIn(shellSource, 'ENTRY_HIDDEN_STORE')).toBe(constIn(serverSource, 'ENTRY_HIDDEN_STORE'));
+    expect(constIn(shellSource, 'ENTRY_HIDDEN_EVENT')).toBe(shell.ENTRY_HIDDEN_EVENT);
   });
 
   it('judges values like the server (the server tests the same cases with the same expectations)', () => {
@@ -117,6 +120,15 @@ describe('IndicatorBadge', () => {
     expect(container.firstElementChild?.getAttribute('title')).toBe('Warning (3)');
   });
 
+  it('always has a tooltip on a number: the label of the module, else the name of the entry and the figure', () => {
+    const named = render(<IndicatorBadge indicator={{ count: 3 }} name="Executions" />).container;
+    expect(named.firstElementChild?.getAttribute('title')).toBe('Executions: 3');
+    const labelled = render(<IndicatorBadge indicator={{ count: 3, label: 'failures' }} name="Executions" />).container;
+    expect(labelled.firstElementChild?.getAttribute('title')).toBe('3 failures');
+    const bare = render(<IndicatorBadge indicator={{ count: 3 }} />).container;
+    expect(bare.firstElementChild?.getAttribute('title')).toBe('3');
+  });
+
   it('takes the tone it is given over the one of the icon, and the label it is given over the default', () => {
     const { container } = render(<IndicatorBadge indicator={{ icon: 'info', tone: 'danger', label: 'Daemon down' }} />);
     expect(container.firstElementChild?.className).toContain('text-danger');
@@ -126,6 +138,42 @@ describe('IndicatorBadge', () => {
   it('draws the four icons differently', () => {
     const markup = (icon: shell.IndicatorIcon) => render(<IndicatorBadge indicator={{ icon }} />).container.querySelector('svg')?.innerHTML;
     expect(new Set(shell.INDICATOR_ICONS.map(markup)).size).toBe(4);
+  });
+});
+
+describe('useHiddenEntries', () => {
+  const hide = (detail: unknown) => window.dispatchEvent(new CustomEvent(shell.ENTRY_HIDDEN_EVENT, { detail }));
+  let warn: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    warn.mockRestore();
+    Reflect.deleteProperty(globalThis, shell.ENTRY_HIDDEN_STORE);
+  });
+
+  it('holds the tabs a page hides and releases them when it shows them again', () => {
+    const { result } = renderHook(() => useHiddenEntries());
+    expect([...result.current]).toEqual([]);
+    act(() => hide({ id: 'user/users/:id/preferences', hidden: true }));
+    expect([...result.current]).toEqual(['user/users/:id/preferences']);
+    act(() => hide({ id: 'user/users/:id/preferences', hidden: false }));
+    expect([...result.current]).toEqual([]);
+  });
+
+  it('starts with what was hidden before the shell listened', () => {
+    Reflect.set(globalThis, shell.ENTRY_HIDDEN_STORE, new Set(['user/users/:id/preferences']));
+    const { result } = renderHook(() => useHiddenEntries());
+    expect([...result.current]).toEqual(['user/users/:id/preferences']);
+  });
+
+  it('warns, saying what to fix, about an event without an id or a boolean', () => {
+    const { result } = renderHook(() => useHiddenEntries());
+    act(() => hide({ hidden: true }));
+    act(() => hide({ id: 'x', hidden: 'yes' }));
+    expect([...result.current]).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(String(warn.mock.calls[0]?.[0])).toContain('setEntryHidden(id, hidden)');
   });
 });
 

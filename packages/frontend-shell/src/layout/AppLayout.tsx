@@ -10,7 +10,7 @@ import { TopBarActions } from './TopBarActions.js';
 import { applyTabOrder, useTabOrder } from './useTabOrder.js';
 import { useTertiaryNav } from './tertiaryModel.js';
 import { TertiaryTabs } from './TertiaryTabs.js';
-import { usePushedIndicators } from './indicatorBus.js';
+import { useHiddenEntries, usePushedIndicators } from './indicatorBus.js';
 import { indicatorRequest, useIndicators, type IndicatorRequest } from './useIndicators.js';
 import type { LayoutProps } from './types.js';
 
@@ -54,7 +54,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   const onDashboard = menuModule.id === HOME_MODULE_ID;
   // The third level: the pages of the module that share a `tab.group` with the page shown, as tabs under the trail, in the same sticky
   // block. A page without one shows nothing.
-  const tertiary = useTertiaryNav(modules);
+  const tertiary = useTertiaryNav(modules, useHiddenEntries());
   const tabsOn = tertiary.items.length > 0;
   const currentPage = menuModule.pages.find((p) => isPageCurrent(pathname, p));
   const pageTitle = currentPage === undefined ? menuModule.title : trimModulePrefix(currentPage.label, menuModule.title);

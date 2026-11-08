@@ -25,6 +25,11 @@ export interface Indicator {
 export const ENTRY_INDICATOR_EVENT = 'app-core:entry-indicator';
 export const ENTRY_INDICATORS_STORE = '__appCoreEntryIndicators';
 
+// Same bus for a tab that a page hides (a data-dependent tab: no "preferences" for a robot): the event carries `{ id, hidden }`, the
+// set of the hidden ids is kept on globalThis.
+export const ENTRY_HIDDEN_EVENT = 'app-core:entry-hidden';
+export const ENTRY_HIDDEN_STORE = '__appCoreHiddenEntries';
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const KEYS = new Set(['count', 'tone', 'icon', 'label']);

@@ -65,6 +65,29 @@ describe('tertiaryFor', () => {
     expect(tertiaryFor(MODULES, '/modules/task/tasks/p/web/new').items).toEqual([]);
   });
 
+  // A user of kind "robot" has a profile, settings and no preferences: the page hides the tab it has no use for.
+  const USER: LoadedModuleSummary = {
+    id: 'user',
+    version: '1',
+    extensionPoints: [
+      page('route', '/users/:id', 'Profile', tab('user', 'Profile', 1)),
+      page('route', '/users/:id/settings', 'Settings', tab('user', 'Settings', 2)),
+      page('route', '/users/:id/preferences', 'Preferences', tab('user', 'Preferences', 3)),
+    ] as LoadedModuleSummary['extensionPoints'],
+  };
+
+  it('leaves out a tab that the page hides, and keeps the others in order', () => {
+    expect(labels(tertiaryFor([USER], '/modules/user/users/7', new Set(['user/users/:id/preferences'])))).toEqual(['Profile', 'Settings']);
+  });
+
+  it('keeps the tab you are on even if it is hidden: the page says why in its own body', () => {
+    expect(labels(tertiaryFor([USER], '/modules/user/users/7/preferences', new Set(['user/users/:id/preferences'])))).toEqual(['Profile', 'Settings', 'Preferences']);
+  });
+
+  it('shows no tabs when hiding leaves a single one', () => {
+    expect(tertiaryFor([USER], '/modules/user/users/7', new Set(['user/users/:id/settings', 'user/users/:id/preferences'])).items).toEqual([]);
+  });
+
   it('shows nothing for an address no page has, for the dashboard and for a group left with one page', () => {
     expect(tertiaryFor(MODULES, '/').items).toEqual([]);
     expect(tertiaryFor(MODULES, '/modules/task/nowhere/1').items).toEqual([]);

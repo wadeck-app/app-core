@@ -40,7 +40,7 @@ interface Candidate {
 // "<module>:<group>", so the tabs can be pages of several modules. Each tab is the address of its page with the ":params" of the page
 // shown filled in (the manifest checks that a group's pages take the same ones). A page that is not a tab, or whose group has no
 // other page, has no third level: nothing is shown.
-export function tertiaryFor(modules: readonly LoadedModuleSummary[], pathname: string): TertiaryNav {
+export function tertiaryFor(modules: readonly LoadedModuleSummary[], pathname: string, hidden: ReadonlySet<string> = new Set()): TertiaryNav {
   const pages: Candidate[] = modules.flatMap((module) =>
     module.extensionPoints.filter((ep) => ep.kind === 'page' && ep.path !== undefined && ep.inactive === undefined).map((ep) => ({ module, ep, path: ep.path as string })),
   );
@@ -57,12 +57,14 @@ export function tertiaryFor(modules: readonly LoadedModuleSummary[], pathname: s
     .map((c, index) => ({ c, index }))
     .filter(({ c }) => c.ep.tab !== undefined && (({ owner: o, name: n }) => o === owner && n === name)(ownerOfGroup(c.module.id, c.ep.tab.group)))
     .sort((a, b) => (a.c.ep.tab!.order ?? Number.POSITIVE_INFINITY) - (b.c.ep.tab!.order ?? Number.POSITIVE_INFINITY) || a.index - b.index);
-  if (members.length < 2) {
+  const idOf = (c: Candidate): string => `${c.module.id}${c.path}`;
+  // A page can hide the tabs that make no sense for the item shown (`useEntryHidden`); the tab you are on stays.
+  const visible = members.filter(({ c }) => c === shown.c || !hidden.has(idOf(c)));
+  if (visible.length < 2) {
     return NO_TERTIARY;
   }
-  const idOf = (c: Candidate): string => `${c.module.id}${c.path}`;
   return {
-    items: members.map(({ c }) => ({
+    items: visible.map(({ c }) => ({
       id: idOf(c),
       label: c.ep.tab!.label,
       href: generatePath(modulePagePath(c.module.id, c.path), shown.match!.params),
@@ -73,7 +75,7 @@ export function tertiaryFor(modules: readonly LoadedModuleSummary[], pathname: s
   };
 }
 
-export function useTertiaryNav(modules: readonly LoadedModuleSummary[]): TertiaryNav {
+export function useTertiaryNav(modules: readonly LoadedModuleSummary[], hidden?: ReadonlySet<string>): TertiaryNav {
   const { pathname } = useLocation();
-  return tertiaryFor(modules, pathname);
+  return tertiaryFor(modules, pathname, hidden);
 }
