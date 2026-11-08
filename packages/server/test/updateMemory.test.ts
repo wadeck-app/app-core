@@ -20,7 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const [loaderPath, dir, extension, updates, holdMb] = process.argv.slice(2);
+const [loaderPath, dir, extension, updates, holdMb, forceGc] = process.argv.slice(2);
 const { ModuleManager } = await import(pathToFileURL(loaderPath).href);
 
 const backend = path.join(dir, 'api-backend', 'backend.' + extension);
@@ -40,22 +40,27 @@ const writeBackend = (n) => fs.writeFileSync(backend, hold + (extension === 'cjs
 
 const manager = new ModuleManager({ configDir: path.join(dir, 'cfg') });
 const entry = { id: 'leaky', source: { type: 'file', path: manifest } };
-const mb = () => { global.gc(); global.gc(); return Math.round(process.memoryUsage().heapUsed / 1048576); };
+const mb = () => { if (forceGc === 'yes') { global.gc(); global.gc(); } return Math.round(process.memoryUsage().heapUsed / 1048576); };
+// A turn of the event loop, as between two requests: the loader's own collection runs then.
+const turn = () => new Promise((resolve) => setTimeout(resolve, 30));
 
 writeBackend(0);
 const first = await manager.loadFromEntry(entry);
 const afterFirst = mb();
 let lastHeld = first.held;
+let peakMb = 0;
 for (let n = 1; n <= Number(updates); n++) {
   writeBackend(n);
   lastHeld = (await manager.loadFromEntry(entry)).held;
+  await turn();
+  peakMb = Math.max(peakMb, Math.round(process.memoryUsage().heapUsed / 1048576));
 }
 const afterUpdates = mb();
 await manager.shutdown();
-console.log(JSON.stringify({ firstHeld: first.held, lastHeld, grewMb: afterUpdates - afterFirst }));
+console.log(JSON.stringify({ firstHeld: first.held, lastHeld, grewMb: afterUpdates - afterFirst, peakMb: peakMb - afterFirst }));
 `;
 
-function run(dir: string, extension: 'cjs' | 'mjs'): { firstHeld: string[]; lastHeld: string[]; grewMb: number } {
+function run(dir: string, extension: 'cjs' | 'mjs', forceGc: 'yes' | 'no' = 'yes', updates = UPDATES): { firstHeld: string[]; lastHeld: string[]; grewMb: number; peakMb: number } {
   if (!fs.existsSync(loaderDist)) {
     throw new Error(`${loaderDist} not found: this test runs the compiled server. Run "npm run build" from the repository root first.`);
   }
@@ -66,12 +71,12 @@ function run(dir: string, extension: 'cjs' | 'mjs'): { firstHeld: string[]; last
     fs.writeFileSync(script, CHILD_SCRIPT);
     let stdout: string;
     try {
-      stdout = execFileSync(process.execPath, ['--expose-gc', script, loaderDist, path.join(dir, 'module'), extension, String(UPDATES), String(HOLD_MB)], { encoding: 'utf8', stdio: 'pipe' });
+      stdout = execFileSync(process.execPath, ['--expose-gc', script, loaderDist, path.join(dir, 'module'), extension, String(updates), String(HOLD_MB), forceGc], { encoding: 'utf8', stdio: 'pipe' });
     } catch (err) {
       const failure = err as { stdout?: string; stderr?: string };
       throw new Error(`child node process failed:\n${failure.stdout ?? ''}${failure.stderr ?? ''}`);
     }
-    return JSON.parse(stdout.trim().split('\n').at(-1)!) as { firstHeld: string[]; lastHeld: string[]; grewMb: number };
+    return JSON.parse(stdout.trim().split('\n').at(-1)!) as { firstHeld: string[]; lastHeld: string[]; grewMb: number; peakMb: number };
   } finally {
     fs.rmSync(scriptDir, { recursive: true, force: true });
   }
@@ -93,6 +98,13 @@ describe('updating a module does not keep the previous copy of its backend (comp
     // Before the fix this was about HOLD_MB * UPDATES; the live copy is the first one, replaced each time.
     expect(result.grewMb, `the heap grew by ${result.grewMb} MB over ${UPDATES} updates`).toBeLessThan(HOLD_MB * 3);
     expect(result.lastHeld).toEqual([]);
+  });
+
+  it('the loader takes back the memory of the replaced copy by itself: no collection forced by the test, the heap does not climb', () => {
+    // Enough updates to pass the point where V8 collects by itself (about 200 MB of heap here): without the loader's own collection
+    // the peak is that large; with it the peak is a few copies.
+    const result = run(dir, 'cjs', 'no', 40);
+    expect(result.peakMb, `the heap peaked ${result.peakMb} MB above its first value over 40 updates with no collection forced`).toBeLessThan(HOLD_MB * 4);
   });
 
   it('an ES module backend cannot be let go of: the update says so, naming the file and the way out', () => {

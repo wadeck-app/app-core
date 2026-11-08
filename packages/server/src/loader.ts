@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import { collectGarbage } from './collectGarbage.js';
 import { getErrorMessage } from './errors.js';
 import {
   createModuleContext,
@@ -170,6 +171,7 @@ export class ModuleManager {
   // loaded modules is refused at load).
   private queues = new Map<string, Promise<void>>();
   private shuttingDown = false;
+  private gcWarned = false;
   // Shared across all modules so routes stay scoped by moduleId (enforced in
   // ModuleRouteRegistry itself) and so server.ts's single catch-all dispatcher
   // route can look up any module's registered routes.
@@ -222,6 +224,8 @@ export class ModuleManager {
   // are loaded; both are listed in `report`.
   async loadFromEntry(entry: RegistryEntry, report: ChangeReport = newChangeReport()): Promise<LoadedModule> {
     let loaded: LoadedModule;
+    // A copy of the module is replaced (or torn down by a failed update): its memory can be taken back at the end.
+    const replaces = this.loaded.has(entry.id);
     try {
       loaded = await this.serialize(entry.id, () => this.attempt(entry, report));
     } catch (err) {
@@ -229,10 +233,16 @@ export class ModuleManager {
       if (report.failure === 'failed' && !this.loaded.has(entry.id)) {
         await this.cascadeUnload(entry.id, { kind: 'failed', detail: firstLine(this.failed.get(entry.id)?.error ?? getErrorMessage(err)) }, report);
       }
+      if (replaces) {
+        this.collectReleased();
+      }
       throw err;
     }
     await this.revalidateDependents(entry.id, report);
     await this.recoverFailed(report);
+    if (replaces) {
+      this.collectReleased();
+    }
     return loaded;
   }
 
@@ -503,6 +513,18 @@ export class ModuleManager {
     }
   }
 
+  // The copy of a backend that was let go of is garbage that V8 would keep until its heap limit is near. Called once the operation
+  // is over (while it runs, the update still refers to the old module). The collection itself runs on the next turn of the event loop.
+  // A Node that cannot do it costs memory, not the update: said once.
+  private collectReleased(): void {
+    collectGarbage((err) => {
+      if (!this.gcWarned) {
+        this.gcWarned = true;
+        (this.options.onWarning ?? writeWarning)(`the memory of a replaced module is left to V8 (no garbage collection after an update): ${getErrorMessage(err)}`);
+      }
+    });
+  }
+
   private serialize<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const run = (this.queues.get(id) ?? Promise.resolve()).then(fn);
     const tail = run.then(
@@ -706,6 +728,9 @@ export class ModuleManager {
       return wasKnown;
     });
     await this.recoverFailed(report);
+    if (known) {
+      this.collectReleased();
+    }
     return known;
   }
 
