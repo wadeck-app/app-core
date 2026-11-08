@@ -97,7 +97,9 @@ describe('the GET routes of a module, on the real server', () => {
   ctx.registerRoute('GET', '/text', (req, reply) => reply.type('text/plain').send('hello'));
   ctx.registerRoute('GET', '/own', (req, reply) => reply.header('ETag', 'W/"mine"').header('Cache-Control', 'max-age=5').send({ own: true }));
   ctx.registerRoute('GET', '/versioned', (req, reply) => {
-    if (ctx.unchanged(req, reply, version)) return reply;
+    if (ctx.unchanged(req, reply, version)) {
+      return reply;
+    }
     computed++;
     return reply.send({ version, computed });
   });

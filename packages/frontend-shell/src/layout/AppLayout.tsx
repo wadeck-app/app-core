@@ -8,8 +8,8 @@ import { breadcrumbFor, trimModulePrefix, type Crumb } from './navHelpers.js';
 import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent, listedNavModules } from './navModel.js';
 import { TopBarActions } from './TopBarActions.js';
 import { applyTabOrder, useTabOrder } from './useTabOrder.js';
-import { useTertiaryNav } from './tertiary/tertiaryModel.js';
-import { TertiaryTabs } from './tertiary/TertiaryTabs.js';
+import { useTertiaryNav } from './tertiaryModel.js';
+import { TertiaryTabs } from './TertiaryTabs.js';
 import type { LayoutProps } from './types.js';
 
 const routerLink = ({ href, children, ...rest }: ShellLinkProps): React.ReactElement => (

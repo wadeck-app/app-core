@@ -1,6 +1,6 @@
 import { generatePath, matchPath, useLocation } from 'react-router-dom';
-import { modulePagePath } from '../../modulePaths.js';
-import type { LoadedModuleSummary } from '../../types.js';
+import { modulePagePath } from '../modulePaths.js';
+import type { LoadedModuleSummary } from '../types.js';
 
 export interface TertiaryItem {
   id: string;

@@ -10,7 +10,7 @@ export function AbTestsSection(): React.ReactElement {
   return (
     <>
       <h4 className="mb-1 mt-3 font-semibold text-content">A/B tests</h4>
-      {state.state === 'loading' ? <p className="text-muted">Counting…</p> : null}
+      {state.state === 'loading' ? <p className="text-muted">Counting...</p> : null}
       {state.state === 'error' ? <p className="text-danger">Cannot count the A/B tests: {state.message}</p> : null}
       {state.state === 'ready' ? (
         <>

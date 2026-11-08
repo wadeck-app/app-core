@@ -14,7 +14,7 @@ export function AbTestsPage({ modules }: { modules: LoadedModuleSummary[] }): Re
   const data = useMemo(() => (state.state === 'ready' ? { abTests: abTestsViewData(state.inventory, modules, seen, dockOn) } : undefined), [state, modules, seen, dockOn]);
 
   if (state.state === 'loading') {
-    return <p className="p-4 text-muted">Counting…</p>;
+    return <p className="p-4 text-muted">Counting...</p>;
   }
   if (state.state === 'error' || data === undefined) {
     return (

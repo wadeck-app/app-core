@@ -81,7 +81,7 @@ function settleRejection(id: string, entry: RegistryEntry, report: ChangeReport,
 // (a Git Bash path, a relative one), it also names what was sent and the form that works.
 function withReceivedPath(err: ManifestFileError, received: string, resolved: string): ManifestFileError {
   const hint = receivedPathHint(received, resolved);
-  return hint === '' ? err : new ManifestFileError(`${err.message} ${hint}`);
+  return hint === '' ? err : new ManifestFileError(`${getErrorMessage(err)} ${hint}`);
 }
 
 async function handleRegisterOrUpdate(

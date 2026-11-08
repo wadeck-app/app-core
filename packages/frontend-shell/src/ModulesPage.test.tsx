@@ -27,8 +27,8 @@ const modules: LoadedModuleSummary[] = [
 ];
 
 const failed: FailedModuleSummary[] = [
-  { id: 'queue', source: 'C:/mods/queue/manifest.json', error: 'module "queue" cannot load: requires "orch", which is not loaded', failedAt: '2026-10-31T10:00:00Z', cause: 'requirement' },
-  { id: 'task', source: 'C:/mods/task/manifest.json', error: 'setup threw', failedAt: '2026-10-31T10:05:00Z', cause: 'error' },
+  { id: 'queue', source: 'mods/queue/manifest.json', error: 'module "queue" cannot load: requires "orch", which is not loaded', failedAt: '2026-10-31T10:00:00Z', cause: 'requirement' },
+  { id: 'task', source: 'mods/task/manifest.json', error: 'setup threw', failedAt: '2026-10-31T10:05:00Z', cause: 'error' },
 ];
 
 describe('modulesViewData', () => {
@@ -44,13 +44,13 @@ describe('modulesViewData', () => {
       title: 'Project',
       href: '/modules/project',
       version: '2026.10.31-026',
-      needs: '—',
+      needs: '-',
       optional: 'task *, queue ^1.0.0 (not loaded)',
       offers: 'project:project-panels',
       neededBy: 'task',
       brings: '2 pages, 1 widget',
     });
-    expect(rows[1]).toMatchObject({ title: 'task', needs: 'project *', optional: '—', offers: '—', neededBy: 'project', brings: '1 page, components' });
+    expect(rows[1]).toMatchObject({ title: 'task', needs: 'project *', optional: '-', offers: '-', neededBy: 'project', brings: '1 page, components' });
   });
 
   it('counts the components of a module once its bundle is loaded, and says when that is not known yet', () => {

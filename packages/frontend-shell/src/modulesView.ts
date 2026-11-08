@@ -73,14 +73,18 @@ export interface ModulesViewData {
   installedRows: Array<{ title: string; href: string; version: string; needs: string; optional: string; offers: string; neededBy: string; brings: string }>;
 }
 
-const NOTHING = '—';
+const NOTHING = '-';
 
 // How many components a module's bundle registered, or why that is not known: still loading, or failed to load.
 export type ComponentCount = number | 'loading' | 'error' | undefined;
 
 function components(count: ComponentCount): string {
-  if (count === 'loading') return 'components (loading)';
-  if (count === 'error') return 'components (failed to load)';
+  if (count === 'loading') {
+    return 'components (loading)';
+  }
+  if (count === 'error') {
+    return 'components (failed to load)';
+  }
   return count === undefined ? 'components' : `${count} component${count === 1 ? '' : 's'}`;
 }
 
