@@ -19,10 +19,48 @@ const PAGE_PATH_PATTERN = /^(?:\/|(?:\/(?:[A-Za-z0-9_-]+|:[A-Za-z_][A-Za-z0-9_]*
 export const WIDGET_MAX_SPAN = 12;
 const SpanSchema = z.number().int().min(1, 'must be between 1 and ' + WIDGET_MAX_SPAN).max(WIDGET_MAX_SPAN, 'must be between 1 and ' + WIDGET_MAX_SPAN).optional();
 
-const TAB_GROUP_PATTERN = /^[a-z][a-z0-9-]*$/;
+// A group is `name` (the module's own) or `<providerId>:name`: this page joins the group `name` of the module `providerId`, which
+// has to be required (or optionally required) like for any contribution.
+const TAB_GROUP_PATTERN = /^(?:[A-Za-z0-9][A-Za-z0-9_-]*:)?[a-z][a-z0-9-]*$/;
+
+export function splitTabGroup(group: string): { providerId: string | undefined; name: string } {
+  const at = group.indexOf(':');
+  return at < 0 ? { providerId: undefined, name: group } : { providerId: group.slice(0, at), name: group.slice(at + 1) };
+}
+
+const paramsOfPath = (pagePath: string): string[] =>
+  pagePath
+    .split('/')
+    .filter((segment) => segment.startsWith(':'))
+    .map((segment) => segment.slice(1))
+    .sort();
+
+type TabbedPoint = { path?: string; tab?: { group: string; label: string } };
+
+// The tab groups a module declares itself (the unqualified ones): name -> the ":params" of its pages, as a key.
+export function tabGroupsOf(extensionPoints: readonly TabbedPoint[]): Record<string, string> {
+  const groups: Record<string, string> = {};
+  for (const ep of extensionPoints) {
+    if (ep.tab !== undefined && ep.path !== undefined && splitTabGroup(ep.tab.group).providerId === undefined && groups[ep.tab.group] === undefined) {
+      groups[ep.tab.group] = paramsOfPath(ep.path).join(',');
+    }
+  }
+  return groups;
+}
+
+// The pages a module adds to the tab group of another module: index in extensionPoints, provider, group name, ":params" key.
+export function tabContributionsOf(extensionPoints: readonly TabbedPoint[]): Array<{ index: number; providerId: string; group: string; params: string }> {
+  return extensionPoints.flatMap((ep, index) => {
+    if (ep.tab === undefined || ep.path === undefined) {
+      return [];
+    }
+    const { providerId, name } = splitTabGroup(ep.tab.group);
+    return providerId === undefined ? [] : [{ index, providerId, group: name, params: paramsOfPath(ep.path).join(',') }];
+  });
+}
 const TabSchema = z
   .object({
-    group: z.string().regex(TAB_GROUP_PATTERN, 'tab.group must be lower case letters, digits or "-", starting with a letter (for example "task")'),
+    group: z.string().regex(TAB_GROUP_PATTERN, 'tab.group must be a name of lower case letters, digits or "-", starting with a letter (for example "task"), or "<moduleId>:<name>" to join the group of another module (for example "flow:execution")'),
     label: z.string().trim().min(1, 'tab.label must not be empty: it is the text of the tab (for example "History")'),
     order: z.number().optional(),
   })
@@ -188,16 +226,9 @@ function checkOptionalRequires(manifest: { id: string; requires?: Record<string,
   }
 }
 
-const paramsOf = (pagePath: string): string[] =>
-  pagePath
-    .split('/')
-    .filter((segment) => segment.startsWith(':'))
-    .map((segment) => segment.slice(1))
-    .sort();
-
 // The pages that share a tab group are the tabs of one thing (a task, a job): on each of them the shell links the others, filling the
 // ":params" of their address from the current page. So they must have the same parameters, be at least two, and not repeat a label.
-function checkTabGroups(manifest: { extensionPoints: Array<{ path?: string; tab?: { group: string; label: string } }> }, ctx: z.RefinementCtx): void {
+function checkTabGroups(manifest: { id: string; extensionPoints: TabbedPoint[] }, ctx: z.RefinementCtx): void {
   const groups = new Map<string, Array<{ index: number; path: string; label: string }>>();
   manifest.extensionPoints.forEach((ep, index) => {
     if (ep.tab !== undefined && ep.path !== undefined) {
@@ -206,17 +237,23 @@ function checkTabGroups(manifest: { extensionPoints: Array<{ path?: string; tab?
   });
   for (const [group, members] of groups) {
     const at = (member: { index: number }): (string | number)[] => ['extensionPoints', member.index, 'tab'];
-    if (members.length < 2) {
+    const { providerId } = splitTabGroup(group);
+    if (providerId === manifest.id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: at(members[0]!), message: `tab group "${group}" names this very module: use \`"group": "${splitTabGroup(group).name}"\` for the tabs of your own pages; "<moduleId>:<name>" is for joining the group of another module.` });
+      continue;
+    }
+    // A page that joins the group of another module can be alone: the tabs are the other module's pages and this one.
+    if (providerId === undefined && members.length < 2) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: at(members[0]!), message: `tab group "${group}" has one page ("${members[0]!.path}"): tabs need at least two. Add the other page(s) to the group, or remove "tab".` });
       continue;
     }
-    const expected = paramsOf(members[0]!.path).join(',');
+    const expected = paramsOfPath(members[0]!.path).join(',');
     for (const member of members.slice(1)) {
-      if (paramsOf(member.path).join(',') !== expected) {
+      if (paramsOfPath(member.path).join(',') !== expected) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: at(member),
-          message: `tab group "${group}": "${member.path}" has the parameters [${paramsOf(member.path).join(', ')}] but "${members[0]!.path}" has [${expected.split(',').filter(Boolean).join(', ')}]. The tabs of a group are pages of the same thing, so they take the same ":params"; use the same names.`,
+          message: `tab group "${group}": "${member.path}" has the parameters [${paramsOfPath(member.path).join(', ')}] but "${members[0]!.path}" has [${expected.split(',').filter(Boolean).join(', ')}]. The tabs of a group are pages of the same thing, so they take the same ":params"; use the same names.`,
         });
       }
     }

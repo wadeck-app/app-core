@@ -1,6 +1,6 @@
 import { generatePath, matchPath, useLocation } from 'react-router-dom';
 import { modulePagePath } from '../modulePaths.js';
-import type { LoadedModuleSummary } from '../types.js';
+import type { LoadedModuleSummary, ResolvedExtensionPoint } from '../types.js';
 
 export interface TertiaryItem {
   id: string;
@@ -17,37 +17,52 @@ export interface TertiaryNav {
 
 export const NO_TERTIARY: TertiaryNav = { items: [], activeId: '' };
 
-// The third level of the page at `pathname`: the pages of its module that share the `tab.group` of the page shown, as tabs, in the order
-// of `tab.order` (declaration order when absent). Each tab is the address of its page with the ":params" of the page shown filled in
-// (the manifest checks that a group's pages take the same ones). A page that is not a tab, or whose group has no other page, has no
-// third level: nothing is shown.
+// "flow:execution" is the group "execution" of the module "flow"; "execution" in the module "task" is the group of "task".
+function ownerOfGroup(moduleId: string, group: string): { owner: string; name: string } {
+  const at = group.indexOf(':');
+  return at < 0 ? { owner: moduleId, name: group } : { owner: group.slice(0, at), name: group.slice(at + 1) };
+}
+
+interface Candidate {
+  module: LoadedModuleSummary;
+  ep: ResolvedExtensionPoint;
+  path: string;
+}
+
+// The third level of the page at `pathname`: the pages that share the tab group of the page shown, as tabs, in the order of
+// `tab.order` (declaration order when absent). A group belongs to the module that declares it; other modules can join it with
+// "<module>:<group>", so the tabs can be pages of several modules. Each tab is the address of its page with the ":params" of the page
+// shown filled in (the manifest checks that a group's pages take the same ones). A page that is not a tab, or whose group has no
+// other page, has no third level: nothing is shown.
 export function tertiaryFor(modules: readonly LoadedModuleSummary[], pathname: string): TertiaryNav {
-  for (const module of modules) {
-    const pages = module.extensionPoints.filter((ep) => ep.kind === 'page' && ep.path !== undefined && ep.inactive === undefined);
-    // The page shown is the one whose address fits the URL with the fewest parameters ("/tasks/new" before "/tasks/:id").
-    const shown = pages
-      .map((ep) => ({ ep, match: matchPath({ path: modulePagePath(module.id, ep.path as string), end: true }, pathname) }))
-      .filter((c) => c.match !== null)
-      .sort((a, b) => Object.keys(a.match!.params).length - Object.keys(b.match!.params).length)[0];
-    if (shown?.ep.tab === undefined || shown.match === null) {
-      continue;
-    }
-    const group = shown.ep.tab.group;
-    const tabs = pages
-      .map((ep, index) => ({ ep, index }))
-      .filter(({ ep }) => ep.tab?.group === group)
-      .sort((a, b) => (a.ep.tab!.order ?? Number.POSITIVE_INFINITY) - (b.ep.tab!.order ?? Number.POSITIVE_INFINITY) || a.index - b.index);
-    if (tabs.length < 2) {
-      return NO_TERTIARY;
-    }
-    const items = tabs.map(({ ep }) => ({
-      id: ep.path as string,
-      label: ep.tab!.label,
-      href: generatePath(modulePagePath(module.id, ep.path as string), shown.match!.params),
-    }));
-    return { items, activeId: shown.ep.path as string };
+  const pages: Candidate[] = modules.flatMap((module) =>
+    module.extensionPoints.filter((ep) => ep.kind === 'page' && ep.path !== undefined && ep.inactive === undefined).map((ep) => ({ module, ep, path: ep.path as string })),
+  );
+  // The page shown is the one whose address fits the URL with the fewest parameters ("/tasks/new" before "/tasks/:id").
+  const shown = pages
+    .map((c) => ({ c, match: matchPath({ path: modulePagePath(c.module.id, c.path), end: true }, pathname) }))
+    .filter((x) => x.match !== null)
+    .sort((a, b) => Object.keys(a.match!.params).length - Object.keys(b.match!.params).length)[0];
+  if (shown?.c.ep.tab === undefined || shown.match === null) {
+    return NO_TERTIARY;
   }
-  return NO_TERTIARY;
+  const { owner, name } = ownerOfGroup(shown.c.module.id, shown.c.ep.tab.group);
+  const members = pages
+    .map((c, index) => ({ c, index }))
+    .filter(({ c }) => c.ep.tab !== undefined && (({ owner: o, name: n }) => o === owner && n === name)(ownerOfGroup(c.module.id, c.ep.tab.group)))
+    .sort((a, b) => (a.c.ep.tab!.order ?? Number.POSITIVE_INFINITY) - (b.c.ep.tab!.order ?? Number.POSITIVE_INFINITY) || a.index - b.index);
+  if (members.length < 2) {
+    return NO_TERTIARY;
+  }
+  const idOf = (c: Candidate): string => `${c.module.id}${c.path}`;
+  return {
+    items: members.map(({ c }) => ({
+      id: idOf(c),
+      label: c.ep.tab!.label,
+      href: generatePath(modulePagePath(c.module.id, c.path), shown.match!.params),
+    })),
+    activeId: idOf(shown.c),
+  };
 }
 
 export function useTertiaryNav(modules: readonly LoadedModuleSummary[]): TertiaryNav {

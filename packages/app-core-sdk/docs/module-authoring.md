@@ -516,6 +516,7 @@ When a page opens something (a task from a list, a job) and that thing has sever
 - Pages of the module with the same `group` are the tabs; `label` is the text of the tab (short: "History", not "Task history"); `order` sorts them (declaration order when absent, after those with an `order`).
 - Each tab is a page with its own address: the shell links it by filling the `:params` of the page shown. So all pages of a group take **the same `:params`** and there are **at least two**; `check` and `package` fail otherwise, with the fix in the message.
 - Only a page of the module (slot `nav` or `route`) that has a `path`. A page that is not a tab, or has no sibling, shows no third level: nothing is drawn.
+- A module can add a page to the group of another module: `"group": "<moduleId>:<name>"` (for example `"flow:execution"`). It has to `require` that module (or list it in `optionalRequires`: the page then waits, inactive and with its reason in `GET /api/modules`, until the module is loaded), the module has to declare the group `name`, and the page takes the same `:params`. The tabs then appear on the pages of both modules. A page that joins a group can be alone in its module; a group you declare yourself still needs two pages.
 - Other tabs of a group can be the pages of a list: `/tasks/p/:project` (Tasks) and `/tree/p/:project` (Tree) as the views of one project.
 - A figure next to a tab (open items, alerts) is supported by the shell (`count`) but no manifest field fills it yet.
 

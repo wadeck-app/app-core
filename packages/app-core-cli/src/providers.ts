@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import type { ProviderInfo, ProviderLookup } from '@wadeck-app/app-core-server/contributions';
+import { tabGroupsOf } from '@wadeck-app/app-core-server/manifest';
 import type { Manifest } from '@wadeck-app/app-core-sdk';
 import { OUTPUT_DIR } from './outputDir.js';
 import { validateManifestFile } from './validate.js';
@@ -167,6 +168,6 @@ export function findProvider(moduleDir: string, providerId: string, links: Links
     return { found: false, why: location.why, fix: location.fix };
   }
   const { manifest } = location.located;
-  const provider: ProviderInfo = { version: manifest.version, expose: manifest.expose };
+  const provider: ProviderInfo = { version: manifest.version, expose: manifest.expose, tabGroups: tabGroupsOf(manifest.extensionPoints) };
   return { found: true, provider };
 }

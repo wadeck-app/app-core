@@ -190,7 +190,7 @@ describe('parseManifest: tabs of the third level', () => {
 
   it('refuses an empty label, a bad group name and an unknown key', () => {
     expect(message(manifest([{ ...tabs[0]!, tab: { group: 'task', label: ' ' } }, tabs[1]!]))).toContain('tab.label must not be empty');
-    expect(message(manifest([{ ...tabs[0]!, tab: { group: 'Task Group', label: 'A' } }, tabs[1]!]))).toContain('tab.group must be lower case');
+    expect(message(manifest([{ ...tabs[0]!, tab: { group: 'Task Group', label: 'A' } }, tabs[1]!]))).toContain('tab.group must be a name of lower case');
     expect(message(manifest([{ ...tabs[0]!, tab: { group: 'task', label: 'A', icon: 'x' } }, tabs[1]!]))).toContain('Unrecognized key');
   });
 });

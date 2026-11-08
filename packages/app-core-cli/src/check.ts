@@ -6,6 +6,7 @@ import { load as parseYaml } from 'js-yaml';
 import type { SourceManifest } from '@wadeck-app/app-core-sdk';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { evaluateOptionalContributions, rootTypeOf, validateContributions } from '@wadeck-app/app-core-server/contributions';
+import { tabContributionsOf } from '@wadeck-app/app-core-server/manifest';
 import { OUTPUT_DIR } from './outputDir.js';
 import { findProvider, type Links } from './providers.js';
 import { validateSourceManifestFile } from './validate.js';
@@ -528,6 +529,7 @@ function checkContributions(moduleDir: string, manifest: SourceManifest, links: 
     requires: manifest.requires,
     optionalRequires: manifest.optionalRequires,
     contributions: manifest.extensionPoints.map((ep, index) => ({ index, slot: ep.slot, rootType: views[index]?.rootType })),
+    tabs: tabContributionsOf(manifest.extensionPoints),
     selfExpose: manifest.expose,
     lookup: (providerId: string) => findProvider(moduleDir, providerId, links),
     mode: 'package' as const,

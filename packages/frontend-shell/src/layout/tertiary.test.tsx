@@ -36,13 +36,13 @@ describe('tertiaryFor', () => {
     const nav = tertiaryFor(MODULES, '/modules/task/tasks/p/web/7');
     expect(labels(nav)).toEqual(['Details', 'History']);
     expect(nav.items.map((i) => i.href)).toEqual(['/modules/task/tasks/p/web/7', '/modules/task/tasks/p/web/7/history']);
-    expect(nav.activeId).toBe('/tasks/p/:project/:id');
+    expect(nav.activeId).toBe('task/tasks/p/:project/:id');
   });
 
   it('marks the other page of the group as current when it is the one shown', () => {
     const nav = tertiaryFor(MODULES, '/modules/task/tasks/p/web/7/history');
     expect(labels(nav)).toEqual(['Details', 'History']);
-    expect(nav.activeId).toBe('/tasks/p/:project/:id/history');
+    expect(nav.activeId).toBe('task/tasks/p/:project/:id/history');
   });
 
   it('handles a second group in the same module: the views of a project', () => {
@@ -71,6 +71,35 @@ describe('tertiaryFor', () => {
     expect(tertiaryFor(MODULES, '/modules/task/nowhere/1').items).toEqual([]);
     const single: LoadedModuleSummary = { id: 'm', version: '1', extensionPoints: [page('route', '/a/:id', 'A', tab('g', 'Only'))] as LoadedModuleSummary['extensionPoints'] };
     expect(tertiaryFor([single], '/modules/m/a/1').items).toEqual([]);
+  });
+
+  // flow declares the group "execution"; flow-chart adds its own page to it with "flow:execution".
+  const FLOW: LoadedModuleSummary = {
+    id: 'flow',
+    version: '1',
+    extensionPoints: [page('route', '/executions/:id', 'Execution', tab('execution', 'Summary', 10)), page('route', '/executions/:id/logs', 'Logs', tab('execution', 'Logs', 20))] as LoadedModuleSummary['extensionPoints'],
+  };
+  const CHART: LoadedModuleSummary = {
+    id: 'flow-chart',
+    version: '1',
+    extensionPoints: [page('route', '/flows/runs/:id', 'Execution chart', tab('flow:execution', 'Chart', 30))] as LoadedModuleSummary['extensionPoints'],
+  };
+
+  it('joins the pages of several modules into one group: the tabs of the provider and of the module that joined it', () => {
+    const nav = tertiaryFor([FLOW, CHART], '/modules/flow/executions/42');
+    expect(labels(nav)).toEqual(['Summary', 'Logs', 'Chart']);
+    expect(nav.items.map((i) => i.href)).toEqual(['/modules/flow/executions/42', '/modules/flow/executions/42/logs', '/modules/flow-chart/flows/runs/42']);
+  });
+
+  it('shows the same tabs on the page that joined the group, with that page as the current one', () => {
+    const nav = tertiaryFor([FLOW, CHART], '/modules/flow-chart/flows/runs/42');
+    expect(labels(nav)).toEqual(['Summary', 'Logs', 'Chart']);
+    expect(nav.activeId).toBe('flow-chart/flows/runs/:id');
+  });
+
+  it('falls back to the provider alone when the module that joined is not there, and shows nothing for a lone page that joined', () => {
+    expect(labels(tertiaryFor([FLOW], '/modules/flow/executions/42'))).toEqual(['Summary', 'Logs']);
+    expect(tertiaryFor([CHART], '/modules/flow-chart/flows/runs/42').items).toEqual([]);
   });
 
   it('leaves out a page the module cannot use now (its optional provider is missing)', () => {

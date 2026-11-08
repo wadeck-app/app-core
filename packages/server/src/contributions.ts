@@ -8,6 +8,16 @@ import { MENU_SLOT_LOCAL, splitCustomSlot } from './slotIds.js';
 export interface ProviderInfo {
   version?: string;
   expose?: ModuleExpose;
+  // The tab groups it declares: name -> the ":params" of its pages, as a key (see tabGroupsOf in manifest.ts).
+  tabGroups?: Record<string, string>;
+}
+
+// A page that joins a tab group of another module ("tab": { "group": "<providerId>:<group>" }).
+export interface TabContribution {
+  index: number;
+  providerId: string;
+  group: string;
+  params: string;
 }
 
 export type ProviderLookup = { found: true; provider: ProviderInfo } | { found: false; why: string; fix: string };
@@ -34,6 +44,8 @@ export interface ValidateContributionsInput {
   // Modules this one can do without: their slots are served by `evaluateOptionalContributions`, never by the checks that fail a module.
   optionalRequires?: Record<string, string> | undefined;
   contributions: Contribution[];
+  // Pages of this module that join a tab group of another module.
+  tabs?: TabContribution[];
   // The module's own `expose`, for contributions to its own slots.
   selfExpose?: ModuleExpose;
   lookup: (providerId: string) => ProviderLookup;
@@ -167,6 +179,51 @@ function checkContribution(contribution: Contribution, input: ValidateContributi
   }
 }
 
+// A page that joins the tab group of another module: that module must be required (or optionally required), loaded, declare the
+// group, and its pages must take the same ":params" (the tabs are filled from the same address).
+function checkTabContribution(tab: TabContribution, input: ValidateContributionsInput, unusable: Set<string>, problems: ContributionProblem[]): void {
+  const where = `extensionPoints[${tab.index}]`;
+  const joined = `${tab.providerId}:${tab.group}`;
+  if (input.requires?.[tab.providerId] === undefined) {
+    if (input.optionalRequires?.[tab.providerId] === undefined) {
+      problems.push({
+        about: 'manifest',
+        extensionPointIndex: tab.index,
+        problem: `${where} joins the tab group "${joined}" but "requires" does not list "${tab.providerId}"`,
+        fix: `Add "requires": { "${tab.providerId}": "^1.0.0" } to manifest.json, or "optionalRequires" if this module can work without ${tab.providerId}.`,
+      });
+    }
+    return;
+  }
+  if (unusable.has(tab.providerId)) {
+    return;
+  }
+  const result = input.lookup(tab.providerId);
+  if (!result.found) {
+    problems.push({ about: 'manifest', extensionPointIndex: tab.index, problem: `${where} joins the tab group "${joined}" but ${result.why}`, fix: result.fix });
+    return;
+  }
+  const groups = result.provider.tabGroups ?? {};
+  if (groups[tab.group] === undefined) {
+    const declared = Object.keys(groups);
+    problems.push({
+      about: 'manifest',
+      extensionPointIndex: tab.index,
+      problem: `${where} joins the tab group "${joined}" but module "${tab.providerId}" declares no tab group "${tab.group}"`,
+      fix: declared.length === 0 ? `Module "${tab.providerId}" declares no tab group: it has to give its pages a "tab" with "group": "${tab.group}".` : `Join one of the groups "${tab.providerId}" declares (${declared.map((g) => `${tab.providerId}:${g}`).join(', ')}), or have it declare "${tab.group}".`,
+    });
+    return;
+  }
+  if (groups[tab.group] !== tab.params) {
+    problems.push({
+      about: 'manifest',
+      extensionPointIndex: tab.index,
+      problem: `${where} joins the tab group "${joined}" with the parameters [${tab.params.split(',').filter(Boolean).join(', ')}] but its pages take [${groups[tab.group]!.split(',').filter(Boolean).join(', ')}]`,
+      fix: 'The tabs of a group are pages of the same thing and are linked with the same ":params": give the page the same parameter names as the pages of that group.',
+    });
+  }
+}
+
 // Checks the `requires` of a module and its contributions to custom slots. Returns every problem found,
 // each with its fix, so one run shows the whole to-do list.
 export function validateContributions(input: ValidateContributionsInput): ContributionProblem[] {
@@ -198,6 +255,9 @@ export function validateContributions(input: ValidateContributionsInput): Contri
 
   for (const contribution of input.contributions) {
     checkContribution(contribution, input, unusable, problems);
+  }
+  for (const tab of input.tabs ?? []) {
+    checkTabContribution(tab, input, unusable, problems);
   }
   return problems;
 }
@@ -264,7 +324,26 @@ export function evaluateOptionalContributions(input: ValidateContributionsInput)
       inactive.set(contribution.index, { kind: 'violation', reason: found[0].problem, fix: found[0].fix, about: found[0].about });
     }
   }
-  const warnings = [...inactive].map(([index, why]) => `extensionPoints[${index}] (slot "${input.contributions.find((c) => c.index === index)?.slot ?? '?'}") is inactive: ${why.reason}`);
+  for (const tab of input.tabs ?? []) {
+    if (input.requires?.[tab.providerId] !== undefined || optional[tab.providerId] === undefined) {
+      continue;
+    }
+    const why = unusable.get(tab.providerId);
+    if (why !== undefined) {
+      inactive.set(tab.index, why);
+      continue;
+    }
+    const found: ContributionProblem[] = [];
+    checkTabContribution(tab, asRequired, new Set(), found);
+    if (found[0] !== undefined) {
+      inactive.set(tab.index, { kind: 'violation', reason: found[0].problem, fix: found[0].fix, about: found[0].about });
+    }
+  }
+  const warnings = [...inactive].map(([index, why]) => {
+    const tab = input.tabs?.find((t) => t.index === index);
+    const what = tab === undefined ? `slot "${input.contributions.find((c) => c.index === index)?.slot ?? '?'}"` : `tab group "${tab.providerId}:${tab.group}"`;
+    return `extensionPoints[${index}] (${what}) is inactive: ${why.reason}`;
+  });
   return { inactive, warnings };
 }
 

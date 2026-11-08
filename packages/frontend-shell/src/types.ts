@@ -18,7 +18,8 @@ export interface ResolvedExtensionPoint {
   // A page of the side menu: a rule above its entry, with `groupLabel` as the caption of the group that follows.
   separatorBefore?: boolean;
   groupLabel?: string;
-  // This page is a tab of the third level: the pages of the module with the same `group` are the tabs shown under the trail.
+  // This page is a tab of the third level: the pages that share its `group` are the tabs shown under the trail. "<module>:<name>" joins
+  // the group `name` of another module.
   tab?: { group: string; label: string; order?: number };
   // A contribution to a module this one can do without (`optionalRequires`) that is not used now: the reason. The shell leaves it out.
   inactive?: string;

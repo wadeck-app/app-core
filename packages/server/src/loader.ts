@@ -14,7 +14,7 @@ import {
 } from './moduleContext.js';
 import { clearModuleState, readPreviousVersion, resolveDataDir, writeLoadedVersion } from './moduleState.js';
 import { resolveHookTimeoutMs, runWithTimeout } from './hookTimeout.js';
-import { ManifestIdMismatchError, parseManifest, type Manifest } from './manifest.js';
+import { ManifestIdMismatchError, parseManifest, tabContributionsOf, tabGroupsOf, type Manifest } from './manifest.js';
 import { checkSharedRanges, resolveDslLib, type DslLibUrls, type SharedVersions } from './dslLib.js';
 import { resolveView, resolveRawYaml } from './viewResolver.js';
 import type { RegistryEntry } from './registry.js';
@@ -196,6 +196,7 @@ export class ModuleManager {
       requires: mod.manifest.requires,
       optionalRequires: mod.manifest.optionalRequires,
       contributions: mod.resolvedViews.map((v, index) => ({ index, slot: v.slot, rootType: rootTypeOf(v.view) })),
+      tabs: tabContributionsOf(mod.manifest.extensionPoints),
       selfExpose: mod.manifest.expose,
       lookup: (providerId) => this.lookupLoaded(providerId),
       mode: 'load',
@@ -260,7 +261,7 @@ export class ModuleManager {
   private lookupLoaded(id: string): ProviderLookup {
     const provider = this.loaded.get(id);
     if (provider !== undefined) {
-      return { found: true, provider: { version: provider.manifest.version, expose: provider.manifest.expose } };
+      return { found: true, provider: { version: provider.manifest.version, expose: provider.manifest.expose, tabGroups: tabGroupsOf(provider.manifest.extensionPoints) } };
     }
     const failure = this.failed.get(id);
     return failure === undefined
@@ -525,6 +526,7 @@ export class ModuleManager {
       requires: manifest.requires,
       optionalRequires: manifest.optionalRequires,
       contributions: resolvedViews.map((v, index) => ({ index, slot: v.slot, rootType: rootTypeOf(v.view) })),
+      tabs: tabContributionsOf(manifest.extensionPoints),
       selfExpose: manifest.expose,
       lookup: (providerId) => this.lookupLoaded(providerId),
       mode: 'load',
