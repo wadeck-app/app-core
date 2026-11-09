@@ -9,7 +9,6 @@
 import { build } from 'esbuild';
 import { rollup } from 'rollup';
 import dts from 'rollup-plugin-dts';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
 import path from 'node:path';
 import fs from 'node:fs';
 import { builtinModules } from 'node:module';
@@ -44,10 +43,32 @@ for (const entry of ['index', 'register', 'violations', 'indicators']) {
 // locally at build time, not hand-copied, so there's no drift to keep in sync manually),
 // producing a single flattened declaration file with zero external
 // @wadeck-app/app-core-server references.
+//
+// `@wadeck-app/app-core-server/<subpath>` is found through the "types" condition of that package's own `exports`. This replaces
+// @rollup/plugin-node-resolve, whose dependency (deepmerge) has an advisory with no fixed version. Relative imports are rollup's,
+// registry packages (zod, fastify) stay external.
+const serverDir = path.join(root, '..', 'server');
+const serverExports = JSON.parse(fs.readFileSync(path.join(serverDir, 'package.json'), 'utf-8')).exports;
+const serverTypes = {
+  name: 'app-core-server-types',
+  resolveId(source) {
+    const match = /^@wadeck-app\/app-core-server(\/.+)?$/.exec(source);
+    if (match === null) {
+      return null;
+    }
+    const key = match[1] === undefined ? '.' : `.${match[1]}`;
+    const target = serverExports[key]?.types;
+    if (typeof target !== 'string') {
+      throw new Error(`"${source}" has no "types" entry in the exports of packages/server/package.json: add one, or the SDK declarations cannot inline it.`);
+    }
+    return path.join(serverDir, target);
+  },
+};
+
 async function bundleTypes(entry) {
   const bundle = await rollup({
     input: path.join(root, `dist/${entry}.d.ts`),
-    plugins: [nodeResolve(), dts()],
+    plugins: [serverTypes, dts()],
   });
   await bundle.write({ file: path.join(root, `dist/${entry}.bundle.d.ts`), format: 'es' });
   await bundle.close();

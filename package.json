@@ -34,5 +34,10 @@
   "dependencies": {
     "@wadeck-app/dsl-renderer": "latest",
     "@wadeck-app/dsl-ui": "latest"
+  },
+  "overrides": {
+    "@ts-morph/common": {
+      "minimatch": "^11.0.5"
+    }
   }
 }

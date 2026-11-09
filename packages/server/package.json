@@ -32,11 +32,11 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@fastify/static": "^8.0.0",
+    "@fastify/static": "^10.1.10",
     "fastify": "^5.0.0",
     "js-yaml": "^4.1.1",
     "semver": "^7.8.5",
-    "zod": "^3.24.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

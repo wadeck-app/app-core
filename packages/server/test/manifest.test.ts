@@ -16,6 +16,32 @@ describe('parseManifest', () => {
     expect(manifest.extensionPoints).toHaveLength(1);
   });
 
+  // zod 4 says "Invalid key in record" for a bad key of a record: the keys are checked by hand so that the author reads why.
+  it('says which module id of "requires" is wrong and what an id looks like, under the path of that key', () => {
+    const base = { id: 'queue', version: '1.0.0', backendEntryPath: './backend.mjs', extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: {} } }] };
+    let error: ZodError | undefined;
+    try {
+      parseManifest({ ...base, requires: { 'Not A Module': '^1.0.0' } });
+    } catch (err) {
+      error = err as ZodError;
+    }
+    expect(error?.issues.map((i) => ({ path: i.path.join('.'), message: i.message }))).toEqual([{ path: 'requires.Not A Module', message: expect.stringContaining('module id must') }]);
+  });
+
+  it('says why a slot name of "expose.slots" is refused: its pattern, and that "nav" is reserved', () => {
+    const base = { id: 'queue', version: '1.0.0', backendEntryPath: './backend.mjs', extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value: {} } }] };
+    const messages = (slots: Record<string, unknown>): string[] => {
+      try {
+        parseManifest({ ...base, expose: { slots } });
+      } catch (err) {
+        return (err as ZodError).issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+      }
+      return [];
+    };
+    expect(messages({ nav: { accepts: ['Badge'] } })).toEqual([expect.stringMatching(/^expose.slots.nav: slot name "nav" is reserved/)]);
+    expect(messages({ 'Bad Name': { accepts: ['Badge'] } })).toEqual([expect.stringMatching(/^expose.slots.Bad Name: slot name must/)]);
+  });
+
   it('rejects a manifest with zero extension points', () => {
     expect(() =>
       parseManifest({ id: 'queue', version: '1.0.0', backendEntryPath: './backend.mjs', extensionPoints: [] }),

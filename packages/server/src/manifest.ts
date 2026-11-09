@@ -132,7 +132,12 @@ const ExtensionPointSchema = z
     path: ['path'],
   })
   // A custom slot is always `<providerId>:<local>` (decision 82).
-  .refine((ep) => slotIdProblem(ep.slot) === undefined, (ep) => ({ message: slotIdProblem(ep.slot) ?? '', path: ['slot'] }))
+  .superRefine((ep, ctx) => {
+    const problem = slotIdProblem(ep.slot);
+    if (problem !== undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['slot'], message: problem });
+    }
+  })
   // `width` and `height` size a widget on the dashboard grid; anywhere else they would be silently ignored.
   .superRefine((ep, ctx) => {
     for (const field of ['width', 'height'] as const) {
@@ -208,7 +213,22 @@ export const ModuleIdSchema = z.string().regex(MODULE_ID_PATTERN, `module id mus
 
 // Modules this one needs loaded first: module id -> semver range of the version it accepts. The range
 // is validated where semver is available (contributions.ts), not here, to keep the SDK free of it.
-const RequiresSchema = z.record(ModuleIdSchema, z.string().min(1));
+// zod 4 reports a key of a record that fails its schema as "Invalid key in record", without why: the keys of the records below are checked
+// here, each problem under the path of its key and with its own message.
+function checkedKeys(keyProblem: (key: string) => string | undefined) {
+  return (record: Record<string, unknown>, ctx: z.RefinementCtx): void => {
+    for (const key of Object.keys(record)) {
+      const problem = keyProblem(key);
+      if (problem !== undefined) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: problem });
+      }
+    }
+  };
+}
+
+const RequiresSchema = z
+  .record(z.string(), z.string().min(1))
+  .superRefine(checkedKeys((id) => (MODULE_ID_PATTERN.test(id) ? undefined : `module id must ${MODULE_ID_RULE}`)));
 
 // What a module offers to others (decision 82). `types` is a path to its types-only file (a source path in
 // the source manifest, `./types/index.d.ts` in the packaged one); each slot lists the `$type`s it accepts.
@@ -216,14 +236,16 @@ const ExposeSchema = z
   .object({
     types: z.string().min(1).optional(),
     slots: z
-      .record(
-        z
-          .string()
-          .regex(SLOT_LOCAL_PATTERN, `slot name must ${SLOT_LOCAL_RULE} (no ":", the module id is added as the prefix)`)
-          .refine((name) => name !== MENU_SLOT_LOCAL, {
-            message: `slot name "${MENU_SLOT_LOCAL}" is reserved: every module's side menu is "<id>:${MENU_SLOT_LOCAL}" and accepts pages from the modules that require it, no declaration needed`,
-          }),
-        z.object({ accepts: z.array(z.string().min(1)).min(1, 'accepts must list at least one $type') }).strict(),
+      .record(z.string(), z.object({ accepts: z.array(z.string().min(1)).min(1, 'accepts must list at least one $type') }).strict())
+      .superRefine(
+        checkedKeys((name) => {
+          if (!SLOT_LOCAL_PATTERN.test(name)) {
+            return `slot name must ${SLOT_LOCAL_RULE} (no ":", the module id is added as the prefix)`;
+          }
+          return name === MENU_SLOT_LOCAL
+            ? `slot name "${MENU_SLOT_LOCAL}" is reserved: every module's side menu is "<id>:${MENU_SLOT_LOCAL}" and accepts pages from the modules that require it, no declaration needed`
+            : undefined;
+        }),
       )
       .optional(),
   })
@@ -263,7 +285,7 @@ const DslLibSchema = z.object({
   entry: DslLibFileSchema,
   css: DslLibFileSchema.optional(),
   // Shared singletons the bundle was built against: package name -> semver range.
-  shared: z.record(z.string().min(1)).default({}),
+  shared: z.record(z.string(), z.string().min(1)).default({}),
 });
 
 // Modules this one can do without: same shape as `requires`. A contribution to a slot of such a module is used when the module
@@ -345,7 +367,7 @@ export const SourceManifestSchema = z
   .object({
     id: ModuleIdSchema,
     extensionPoints: z.array(ExtensionPointSchema).min(1),
-    dslLib: z.object({ shared: z.record(z.string().min(1)).default({}) }).strict().optional(),
+    dslLib: z.object({ shared: z.record(z.string(), z.string().min(1)).default({}) }).strict().optional(),
     requires: RequiresSchema.optional(),
     optionalRequires: RequiresSchema.optional(),
     expose: ExposeSchema.optional(),
