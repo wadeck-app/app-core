@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { helpText, isHelpRequest, updatePlan } from './help.js';
+import { helpText, isHelpRequest, isVersionFlag, updatePlan } from './help.js';
 
 describe('isHelpRequest', () => {
   it('is a request for help with --help or -h anywhere, and with the word help', () => {
@@ -60,6 +60,21 @@ describe('helpText: the standalone application guide', () => {
     expect(list).toContain('Guides (app-core-cli help <guide>):');
     expect(list).toContain('standalone');
     expect(list).not.toContain('tray');
+  });
+});
+
+describe('isVersionFlag', () => {
+  it('accepts --version, -v and -V, and nothing else', () => {
+    for (const flag of ['--version', '-v', '-V']) {
+      expect(isVersionFlag(flag), flag).toBe(true);
+    }
+    for (const other of ['version', '--ver', '-version', '--v', undefined]) {
+      expect(isVersionFlag(other), String(other)).toBe(false);
+    }
+  });
+
+  it('is announced in the list of commands', () => {
+    expect(helpText(['--help'])).toContain('app-core-cli --version');
   });
 });
 

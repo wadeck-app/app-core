@@ -60,6 +60,10 @@ export function updatePlan(pkgName: string, installed: string): string {
 
 const HELP_FLAGS = new Set(['--help', '-h']);
 
+// `--version`, `-v` and `-V` as the first argument print the installed version and nothing else (offline, no update scheduled);
+// the `version` command also asks which one is published.
+export const isVersionFlag = (arg: string | undefined): boolean => arg === '--version' || arg === '-v' || arg === '-V';
+
 // Whether the user only asks how a command works. `--help` and `-h` never run the command, wherever they stand in the
 // arguments, and `help` / `--help` alone lists the commands. A flag used as the value of another one (`--title --help`) is
 // not told apart: asking for help wins, nothing is run.
@@ -96,5 +100,5 @@ export function helpText(argv: readonly string[]): string {
     .map(([name, c]) => `  ${name.padEnd(11)} ${c.summary}`);
   const guides = Object.entries(TOPICS).map(([topic, t]) => `  ${topic.padEnd(11)} ${t.summary}`);
   const unknown = name !== undefined && !HELP_FLAGS.has(name) ? `Unknown command "${name}".\n\n` : '';
-  return `${unknown}Usage: app-core-cli <command> [options]\n\nCommands:\n${lines.join('\n')}\n\nGuides (app-core-cli help <guide>):\n${guides.join('\n')}\n\nRun \`app-core-cli <command> --help\` for the usage of one command; it never runs the command.\n`;
+  return `${unknown}Usage: app-core-cli <command> [options]\n\nCommands:\n${lines.join('\n')}\n\nGuides (app-core-cli help <guide>):\n${guides.join('\n')}\n\nRun \`app-core-cli <command> --help\` for the usage of one command; it never runs the command.\n\`app-core-cli --version\` (-v, -V) prints the installed version.\n`;
 }

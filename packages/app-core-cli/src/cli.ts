@@ -18,7 +18,7 @@ import { readChannelFromConfig } from '@wadeck-app/shared-cli/ChannelConfig';
 import { runSelfCheck } from '@wadeck-app/shared-cli';
 import { startTray } from './tray/trayCommand.js';
 import { readTrayBuildInfo } from './tray/buildInfo.js';
-import { helpText, isHelpRequest, updatePlan } from './help.js';
+import { helpText, isHelpRequest, isVersionFlag, updatePlan } from './help.js';
 import { devBuildRefusalMessage, isReleaseVersion } from '@wadeck-app/shared-cli/ReleaseVersion';
 import { spawn } from 'node:child_process';
 
@@ -37,6 +37,11 @@ async function main(): Promise<void> {
   // Asking how a command works never runs it (nor schedules an update): `update --help` used to run the updater.
   if (isHelpRequest(process.argv.slice(2))) {
     process.stdout.write(helpText(process.argv.slice(2)));
+    return;
+  }
+  // The short way to ask for the version: no update is scheduled and nothing is read from the network.
+  if (isVersionFlag(process.argv[2])) {
+    process.stdout.write(`${VERSION}\n`);
     return;
   }
   const [command, target, ...rest] = process.argv.slice(2);
@@ -352,7 +357,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.error('Usage: app-core-cli <validate|init|check|package|dev|serve|tray|version|update|self-check> [path]');
+  console.error('Usage: app-core-cli <validate|init|check|package|dev|serve|tray|version|update|self-check> [path] (app-core-cli --version prints the installed version, app-core-cli --help lists the commands)');
   process.exitCode = 1;
 }
 
