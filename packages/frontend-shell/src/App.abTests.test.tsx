@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
 
-const settings = vi.hoisted(() => ({ abTests: false }));
+const settings = vi.hoisted(() => ({ abTests: false, standalone: null as { moduleId: string } | null }));
 vi.mock('./useShellSettings.js', () => ({ useShellSettings: () => settings }));
 
 const abTestView = [

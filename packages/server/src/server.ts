@@ -22,6 +22,8 @@ export interface BuildServerOptions {
   publicDir?: string;
   // Turns the A/B test dock on in the served shell (it is off outside development). `app-core-cli serve --ab-tests`.
   abTests?: boolean;
+  // An application made of one module: the shell shows no dashboard and opens on the first page of that module (`app-core-cli serve --module`).
+  standalone?: { moduleId: string };
   // Host names (without port) the server may be addressed by besides 127.0.0.1, localhost and [::1]; APP_CORE_ALLOWED_HOSTS adds more.
   allowedHosts?: string[];
 }
@@ -136,7 +138,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   await server.register(modulesRoutes, { modulesDir, manager });
   await server.register(slotsRoutes, { manager });
   // What the shell cannot know from its build: settings of this server process, read once per page load.
-  server.get('/api/shell-settings', { onSend: etagHook }, async () => ({ abTests: opts.abTests === true }));
+  server.get('/api/shell-settings', { onSend: etagHook }, async () => ({ abTests: opts.abTests === true, ...(opts.standalone === undefined ? {} : { standalone: { moduleId: opts.standalone.moduleId } }) }));
   // The A/B tests the installed modules declare, over all their pages (see abTestScan.ts for what is exact and what is estimated).
   server.get('/api/ab-tests', { onSend: etagHook }, async () => {
     const inventory = await inventoryAbTests(manager.list());

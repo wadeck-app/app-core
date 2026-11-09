@@ -33,3 +33,23 @@ describe('useShellSettings', () => {
     await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringContaining('older than this frontend')));
   });
 });
+
+describe('useShellSettings: standalone', () => {
+  it('is null for a server that was not started with --module, and follows the server when it was', async () => {
+    answer(200, { abTests: false });
+    const plain = renderHook(() => useShellSettings());
+    await waitFor(() => expect(plain.result.current.standalone).toBeNull());
+    vi.restoreAllMocks();
+    answer(200, { abTests: false, standalone: { moduleId: 'my-app' } });
+    const alone = renderHook(() => useShellSettings());
+    await waitFor(() => expect(alone.result.current.standalone).toEqual({ moduleId: 'my-app' }));
+  });
+
+  it('says so in the console when "standalone" has no module id, and stays a normal app-core', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    answer(200, { abTests: false, standalone: {} });
+    const { result } = renderHook(() => useShellSettings());
+    await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringContaining('"standalone" has no "moduleId"')));
+    expect(result.current.standalone).toBeNull();
+  });
+});

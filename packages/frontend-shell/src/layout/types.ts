@@ -7,5 +7,7 @@ export interface LayoutProps {
   modules: LoadedModuleSummary[];
   navModules: NavModule[];
   failed?: FailedModuleSummary[];
+  // An application made of one module: no dashboard tab, no module tabs, the menu is that module's.
+  standalone?: { moduleId: string };
   children: ReactNode;
 }

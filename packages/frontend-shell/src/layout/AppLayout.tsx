@@ -30,7 +30,7 @@ const trimmedTrail = (crumbs: Crumb[]): Crumb[] => crumbs.map((c, i) => (i === 0
 // module (colored 2-letter logo and name, in the order the user chose); left = the pages of the active module in an
 // always-visible menu, or the quick-launch list of modules on the dashboard; above the page, the trail of nested pages.
 // The accent color (dsl-ui's --color-primary*) follows the module being viewed; the dashboard keeps the default.
-export function AppLayout({ modules, navModules, failed = [], children }: LayoutProps): React.ReactElement {
+export function AppLayout({ modules, navModules, failed = [], standalone, children }: LayoutProps): React.ReactElement {
   const { pathname } = useLocation();
   const active = activeNavModule(pathname, navModules);
   const tabOrder = useTabOrder();
@@ -38,7 +38,8 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
   useRootAccent(active ? moduleColor(active.id) : undefined);
 
   const listed = applyTabOrder(listedNavModules(navModules), tabOrder.saved);
-  const tabs: ShellItem[] = [
+  // A standalone application has one module: nothing to switch between, so no tabs (the dashboard is not part of it either).
+  const tabs: ShellItem[] = standalone !== undefined ? [] : [
     { id: DASHBOARD_TAB_ID, label: 'Dashboard', href: '/', current: pathname === '/' ? 'page' : undefined },
     ...listed.map((m) => ({
       id: m.id,
@@ -50,7 +51,7 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
     })),
   ];
 
-  const menuModule = active ?? homeNavModule(navModules);
+  const menuModule = active ?? (standalone === undefined ? undefined : navModules.find((m) => m.id === standalone.moduleId)) ?? homeNavModule(navModules);
   const onDashboard = menuModule.id === HOME_MODULE_ID;
   // The third level: the pages of the module that share a `tab.group` with the page shown, as tabs under the trail, in the same sticky
   // block. A page without one shows nothing.
@@ -90,14 +91,14 @@ export function AppLayout({ modules, navModules, failed = [], children }: Layout
 
   const actions = (
     <>
-      <NavSettings modules={listed} customized={tabOrder.saved.length > 0} onSave={tabOrder.save} onReset={tabOrder.reset} />
+      {standalone === undefined ? <NavSettings modules={listed} customized={tabOrder.saved.length > 0} onSave={tabOrder.save} onReset={tabOrder.reset} /> : null}
       <TopBarActions modules={modules} failed={failed} />
     </>
   );
 
   return (
     <AppShell
-      brand="app-core"
+      brand={standalone === undefined ? 'app-core' : menuModule.title}
       tabs={tabs}
       tabsLabel="Modules"
       menu={menu}

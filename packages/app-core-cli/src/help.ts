@@ -30,8 +30,9 @@ const COMMANDS: Record<string, CommandHelp> = {
     summary: 'Starts a real app-core server with the module and what it requires, then prints the address. Keeps its data in <module-dir>/.app-core-dev.',
   },
   serve: {
-    usage: 'app-core-cli serve [--no-tray] [--ab-tests]',
-    summary: 'Runs the app-core server and the bundled frontend in the foreground (port from APP_CORE_PORT, default 4850).',
+    usage: 'app-core-cli serve [--module <built-module-dir|manifest.json> [--config-dir <dir>]] [--port <n>] [--no-tray] [--no-update] [--ab-tests]',
+    summary:
+      'Runs the app-core server and the bundled frontend in the foreground (port from --port or APP_CORE_PORT, default 4850). --module makes the application one module with no dashboard; --no-update stops every update check (APP_CORE_CLI_NO_UPDATE=1 too). Details: docs/serve.md.',
   },
   tray: {
     usage: 'app-core-cli tray --url <address "Open app-core" goes to>',

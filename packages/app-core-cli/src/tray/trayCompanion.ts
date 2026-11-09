@@ -19,6 +19,8 @@ export interface TrayCompanionOptions {
   cliConfigDir: string;
   /** The server's config dir, only shown in the menu. */
   serverConfigDir: string;
+  /** `--no-update`: no check, no install, whatever the menu is asked. */
+  noUpdate?: boolean;
   /** Path of the tray binary to spawn (already staged out of node_modules). */
   binaryPath: string;
   /** Address "Open app-core" goes to; asked at click time, so a server that moved is followed. */
@@ -62,6 +64,7 @@ export class TrayCompanion {
       nodePid: process.pid,
       trayPid: null,
       canRestart: opts.onRestart !== undefined,
+      noUpdate: opts.noUpdate === true,
     };
   }
 
@@ -171,12 +174,12 @@ export class TrayCompanion {
         this.opts.openFolder(path.dirname(this.logFile));
         break;
       case 'check-update':
-        if (this.state.mode === 'prod' && this.state.update !== 'checking' && this.state.update !== 'updating') {
+        if (this.state.mode === 'prod' && this.state.noUpdate !== true && this.state.update !== 'checking' && this.state.update !== 'updating') {
           void this.checkForUpdate();
         }
         break;
       case 'update-install':
-        if (this.state.update === 'available') {
+        if (this.state.noUpdate !== true && this.state.update === 'available') {
           void this.installUpdate();
         }
         break;

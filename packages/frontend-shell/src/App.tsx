@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AbExperiments, RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { AbTestsPage } from './AbTestsPage.js';
 import { ModulesPage } from './ModulesPage.js';
@@ -7,7 +7,7 @@ import { AbTestsSeenRecorder } from './abTestsSeen.js';
 import { Dashboard } from './Dashboard.js';
 import { ModuleIndex } from './ModuleIndex.js';
 import { ModulePage } from './ModulePage.js';
-import { useShellSettings } from './useShellSettings.js';
+import { useShellSettings, type ShellSettings } from './useShellSettings.js';
 import { DateSettingsProvider } from './dates/DateFormatContext.js';
 import { OverlayWidgets } from './OverlayWidgets.js';
 import { ShellNotifier } from './ShellNotifier.js';
@@ -22,10 +22,10 @@ const NO_MODULES: LoadedModuleSummary[] = [];
 
 // Navigation chrome around the page content. No A/B test is open right now; to start one, render the dev-only `AbDock`
 // here with the test (see the A/B testing rule in the project CLAUDE.md).
-function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[]; children: React.ReactNode }): React.ReactElement {
+function AppFrame({ modules, failed, standalone, children }: { modules: LoadedModuleSummary[]; failed: FailedModuleSummary[]; standalone: ShellSettings['standalone']; children: React.ReactNode }): React.ReactElement {
   return (
     <>
-      <AppLayout modules={modules} navModules={navModulesFor(modules)} failed={failed}>
+      <AppLayout modules={modules} navModules={navModulesFor(modules)} failed={failed} standalone={standalone ?? undefined}>
         {children}
       </AppLayout>
       <OverlayWidgets modules={modules} />
@@ -33,9 +33,25 @@ function AppFrame({ modules, failed, children }: { modules: LoadedModuleSummary[
   );
 }
 
+// "/" of a standalone application: the first page the module adds to the menu. Said clearly when there is none.
+function StandaloneHome({ modules, moduleId, loaded }: { modules: LoadedModuleSummary[]; moduleId: string; loaded: boolean }): React.ReactElement {
+  const first = navModulesFor(modules).find((m) => m.id === moduleId)?.pages[0];
+  if (first !== undefined) {
+    return <Navigate to={first.routePath} replace />;
+  }
+  if (!loaded) {
+    return <p className="p-4 text-muted">Loading...</p>;
+  }
+  return (
+    <p role="alert" className="p-4 text-danger">
+      This application is the module "{moduleId}" but it adds no page to the menu (or it is not loaded: see the errors above). Add a page with "slot": "nav" to its manifest, or fix the module.
+    </p>
+  );
+}
+
 export default function App(): React.ReactElement {
   const { data, error } = useModules();
-  const { abTests } = useShellSettings();
+  const { abTests, standalone } = useShellSettings();
   const modules = data?.modules ?? NO_MODULES;
   const failedModules = data?.failed ?? [];
   const libStatuses = useModuleLibs(modules);
@@ -62,7 +78,7 @@ export default function App(): React.ReactElement {
           {/* The outcome of every module action (row/batch actions, forms, brains) is shown as a toast. */}
           <ShellNotifier>
           <ModuleLibsProvider value={libStatuses}>
-            <AppFrame modules={modules} failed={failedModules}>
+            <AppFrame modules={modules} failed={failedModules} standalone={standalone}>
               {error ? (
                 <p role="alert" className="px-4 py-3 text-danger">
                   Failed to load modules: {String(error)}
@@ -92,9 +108,16 @@ export default function App(): React.ReactElement {
                 </div>
               ) : null}
               <Routes>
-                <Route path="/" element={<Dashboard modules={modules} />} />
-                <Route path="/ab-tests" element={<AbTestsPage modules={modules} />} />
-                <Route path="/modules-overview" element={<ModulesPage modules={modules} failed={failedModules} />} />
+                {standalone === null ? (
+                  <>
+                    <Route path="/" element={<Dashboard modules={modules} />} />
+                    <Route path="/ab-tests" element={<AbTestsPage modules={modules} />} />
+                    <Route path="/modules-overview" element={<ModulesPage modules={modules} failed={failedModules} />} />
+                  </>
+                ) : (
+                  // No dashboard: the address "/" opens the first page of the module.
+                  <Route path="/" element={<StandaloneHome modules={modules} moduleId={standalone.moduleId} loaded={data !== undefined} />} />
+                )}
                 {pageRoutes.map((r) => (
                   <Route
                     key={`${r.moduleId}${r.path}`}

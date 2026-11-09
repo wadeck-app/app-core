@@ -20,6 +20,10 @@ export interface StartTrayOptions {
   onQuit: () => void;
   /** Given only where the tray's owner can start the server again. */
   onRestart?: () => void;
+  /** The config dir shown in the menu: the application's own when it is not the global app-core. */
+  serverConfigDir?: string;
+  /** `--no-update`: the menu offers no update check or install. */
+  noUpdate?: boolean;
 }
 
 export type StartTrayResult = { ok: true; companion: TrayCompanion } | { ok: false; reason: string };
@@ -105,7 +109,8 @@ export async function startTray(options: StartTrayOptions): Promise<StartTrayRes
     fs.chmodSync(binaryPath, 0o755);
   }
   const companion = new TrayCompanion({
-    serverConfigDir: resolveConfigDir(),
+    serverConfigDir: options.serverConfigDir ?? resolveConfigDir(),
+    noUpdate: options.noUpdate,
     cliConfigDir: options.cliConfigDir,
     version: options.version,
     dslVersion: options.dslVersion,

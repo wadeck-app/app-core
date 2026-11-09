@@ -46,7 +46,9 @@ async function main(): Promise<void> {
   // mid-verification). In dev mode (no bundled updater file) this is a
   // silent no-op, per UpdateManager's own documented behavior. A bundle built from the repository (not a CalVer release)
   // has its updater file too: the version is passed so that it spawns nothing and never starts an `npm install -g`.
-  if (command !== 'self-check') {
+  // `--no-update` (or APP_CORE_CLI_NO_UPDATE=1) is for an application that must stay on the version it was built with.
+  const noUpdate = process.argv.slice(2).includes('--no-update') || process.env['APP_CORE_CLI_NO_UPDATE'] === '1';
+  if (command !== 'self-check' && !noUpdate) {
     try {
       new UpdateManager(PKG_NAME).scheduleBackgroundUpdate(bundlePath, 'app-core-cli-updater.cjs', VERSION);
     } catch {
@@ -222,10 +224,41 @@ async function main(): Promise<void> {
 
   if (command === 'serve') {
     const args = [target, ...rest].filter((arg): arg is string => arg !== undefined);
-    warnUnknownArgs(args, ['--no-tray', '--ab-tests'], 'serve');
+    warnUnknownArgs(args, ['--no-tray', '--no-update', '--ab-tests', '--module', '--config-dir', '--port'], 'serve', new Set(['--module', '--config-dir', '--port']));
     try {
       const abTests = args.includes('--ab-tests');
-      const { port, stop } = await runServe({ abTests });
+      const valueOf = (flag: string, example: string): string | undefined => {
+        const at = args.indexOf(flag);
+        if (at === -1) {
+          return undefined;
+        }
+        const value = args[at + 1];
+        if (value === undefined || value.startsWith('--')) {
+          throw new Error(`${flag} needs a value, e.g. ${example}`);
+        }
+        return value;
+      };
+      const moduleArg = valueOf('--module', '--module ./dist-module');
+      const configDirArg = valueOf('--config-dir', '--config-dir ./data');
+      const portArg = valueOf('--port', '--port 4851');
+      const portNumber = portArg === undefined ? undefined : Number(portArg);
+      if (portNumber !== undefined && (!Number.isInteger(portNumber) || portNumber < 0 || portNumber > 65535)) {
+        throw new Error(`--port needs a port number between 0 and 65535, got "${portArg}", e.g. --port 4851.`);
+      }
+      const serveNoUpdate = args.includes('--no-update') || process.env['APP_CORE_CLI_NO_UPDATE'] === '1';
+      const { port, stop, configDir: servedConfigDir, moduleId } = await runServe({
+        abTests,
+        module: moduleArg,
+        configDir: configDirArg,
+        port: portNumber,
+        defaultStandaloneConfigDir: (id) => join(configDir, 'standalone', id),
+      });
+      if (moduleId !== undefined) {
+        console.log(`app-core-cli serve: application "${moduleId}" (--module): no dashboard, data in ${servedConfigDir}`);
+      }
+      if (serveNoUpdate) {
+        console.log('app-core-cli serve: no update (--no-update): no background check, no update in the tray');
+      }
       console.log(`app-core-cli serve: listening on http://127.0.0.1:${port}`);
       if (abTests) {
         console.log('app-core-cli serve: A/B test dock enabled (--ab-tests); it is off without the flag');
@@ -249,7 +282,7 @@ async function main(): Promise<void> {
         console.log('app-core-cli serve: no tray icon (--no-tray)');
       } else {
         // Green icon: the installed server.
-        tray = await startTray({ mode: 'prod', version: VERSION, dslVersion: readTrayBuildInfo(ownDir).dslLabel, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: isReleaseVersion(VERSION) ? join(ownDir, 'app-core-cli-updater.cjs') : '', getUrl: () => `http://127.0.0.1:${port}/`, onQuit: shutdown, onRestart: restart });
+        tray = await startTray({ mode: 'prod', version: VERSION, dslVersion: readTrayBuildInfo(ownDir).dslLabel, cliConfigDir: configDir, pkgName: PKG_NAME, updaterPath: isReleaseVersion(VERSION) && !serveNoUpdate ? join(ownDir, 'app-core-cli-updater.cjs') : '', getUrl: () => `http://127.0.0.1:${port}/`, onQuit: shutdown, onRestart: restart, serverConfigDir: servedConfigDir, noUpdate: serveNoUpdate });
         if (!tray.ok) {
           // The server keeps running; the icon is the part that is missing, and the reason says how to get it back.
           console.warn(`app-core-cli serve: no tray icon: ${tray.reason}. Hide this warning with --no-tray.`);

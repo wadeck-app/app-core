@@ -9,9 +9,10 @@ export interface RunningServer {
 
 // Single start sequence shared by the dev entry point (index.ts) and `app-core-cli serve`:
 // listen on the configured port, then publish server.port.json for Orchestrator's portFile liveness.
-export async function startServer(opts: BuildServerOptions = {}): Promise<RunningServer> {
+// `port` wins over APP_CORE_PORT (an application made of one module asks for its own, next to a global app-core on 4850).
+export async function startServer(opts: BuildServerOptions & { port?: number } = {}): Promise<RunningServer> {
   const { server, manager } = await buildServer(opts);
-  const port = resolvePort();
+  const port = opts.port ?? resolvePort();
   await server.listen({ port, host: '127.0.0.1' });
   writePortFile(port, opts.configDir);
   return {

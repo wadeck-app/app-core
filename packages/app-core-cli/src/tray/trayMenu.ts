@@ -25,6 +25,8 @@ export interface TrayState {
   trayPid: number | null;
   /** The tray can restart its server (`serve`). */
   canRestart: boolean;
+  /** `--no-update`: the menu shows the version and offers no check or install. */
+  noUpdate?: boolean;
 }
 
 const VERSION_TITLES: Partial<Record<UpdateStatus, (state: TrayState) => string>> = {
@@ -38,6 +40,9 @@ function versionTitle(state: TrayState): string {
   if (state.mode === 'dev') {
     // `version` is already a label here ("dev <commit>"): a dev server has no published version to prefix with v.
     return state.version;
+  }
+  if (state.noUpdate === true) {
+    return `v${state.version}`;
   }
   return VERSION_TITLES[state.update]?.(state) ?? `v${state.version}`;
 }
@@ -64,7 +69,7 @@ export function buildMenuSnapshot(state: TrayState): MenuSnapshot {
   const pids = state.trayPid === null ? `node:${state.nodePid}` : `node:${state.nodePid} tray:${state.trayPid}`;
   const items: MenuItemSnapshot[] = [
     { id: 'header', type: 'normal', title: `app-core (${state.mode}) [${pids}]`, enabled: false },
-    { id: 'check-update', type: 'normal', title: versionTitle(state), enabled: state.mode === 'prod' && !busy },
+    { id: 'check-update', type: 'normal', title: versionTitle(state), enabled: state.mode === 'prod' && state.noUpdate !== true && !busy },
     ...(state.dslVersion === null ? [] : [{ id: 'dsl-version', type: 'normal' as const, title: state.dslVersion, enabled: false }]),
     { id: 'config-dir', type: 'normal', title: `Config: ${state.configDir}`, enabled: false },
   ];

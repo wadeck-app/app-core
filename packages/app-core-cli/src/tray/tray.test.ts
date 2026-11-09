@@ -104,6 +104,11 @@ describe('tray menu', () => {
     expect(item(updating, 'update-install')).toMatchObject({ title: 'Updating...', enabled: false });
   });
 
+  it('has no update check with --no-update: the version alone, nothing to click', () => {
+    const menu = buildMenuSnapshot({ ...base, noUpdate: true });
+    expect(item(menu, 'check-update')).toMatchObject({ title: `v${base.version}`, enabled: false });
+  });
+
   it('has no update check in dev: a dev build has nothing to update to', () => {
     const menu = buildMenuSnapshot({ ...base, mode: 'dev', version: 'dev build 2026-10-24 11:34' });
     expect(item(menu, 'check-update')).toMatchObject({ title: 'dev build 2026-10-24 11:34', enabled: false });
@@ -264,6 +269,17 @@ describe('TrayCompanion', () => {
     await settle();
     expect(calls.update).toBe(1);
     expect(calls.restart).toBe(1);
+    await companion.stop();
+  });
+
+  it('does not check or install when the application runs with --no-update, even if asked', async () => {
+    const { companion, fake, calls } = setup({ noUpdate: true });
+    await companion.start();
+    fake.press('check-update');
+    fake.press('update-install');
+    await settle();
+    expect(companion.snapshotState().update).toBe('idle');
+    expect(calls.update).toBe(0);
     await companion.stop();
   });
 
