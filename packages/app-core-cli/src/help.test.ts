@@ -40,6 +40,29 @@ describe('helpText', () => {
   });
 });
 
+describe('helpText: the standalone application guide', () => {
+  it('is printed by "help standalone" and by "serve --module <dir> --help", not by the general page of serve', () => {
+    const guide = helpText(['help', 'standalone']);
+    expect(helpText(['serve', '--module', './dist-module', '--help'])).toBe(guide);
+    expect(helpText(['serve', '--help'])).not.toBe(guide);
+    expect(helpText(['serve', '--help'])).toContain('app-core-cli help standalone');
+  });
+
+  it('gives the steps, every option of the case, how it is shipped and what is not covered', () => {
+    const guide = helpText(['help', 'standalone']);
+    for (const part of ['app-core-cli check', 'app-core-cli package', 'serve --module', '--config-dir', '--port', '--no-tray', '--no-update', 'APP_CORE_CLI_NO_UPDATE=1', 'createRequire', 'dist-module', 'slot": "nav"', 'Not covered']) {
+      expect(guide, part).toContain(part);
+    }
+  });
+
+  it('is listed among the guides of the bare request, without naming the internal tray command', () => {
+    const list = helpText(['--help']);
+    expect(list).toContain('Guides (app-core-cli help <guide>):');
+    expect(list).toContain('standalone');
+    expect(list).not.toContain('tray');
+  });
+});
+
 describe('updatePlan', () => {
   it('says what update will do, which version it starts from, and how to read about it first', () => {
     const plan = updatePlan('@wadeck-app/app-core-cli', '2026.10.31-12-abc');

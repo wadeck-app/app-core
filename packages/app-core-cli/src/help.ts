@@ -1,5 +1,6 @@
 import { DEV_USAGE } from './dev.js';
 import { INIT_USAGE } from './init.js';
+import { STANDALONE_HELP, STANDALONE_SUMMARY } from './helpStandalone.js';
 import { LINK_USAGE } from './providers.js';
 
 interface CommandHelp {
@@ -32,7 +33,7 @@ const COMMANDS: Record<string, CommandHelp> = {
   serve: {
     usage: 'app-core-cli serve [--module <built-module-dir|manifest.json> [--config-dir <dir>]] [--port <n>] [--no-tray] [--no-update] [--ab-tests]',
     summary:
-      'Runs the app-core server and the bundled frontend in the foreground (port from --port or APP_CORE_PORT, default 4850). --module makes the application one module with no dashboard; --no-update stops every update check (APP_CORE_CLI_NO_UPDATE=1 too). Details: docs/serve.md.',
+      'Runs the app-core server and the bundled frontend in the foreground (port from --port or APP_CORE_PORT, default 4850). --module makes the application one module with no dashboard; --no-update stops every update check (APP_CORE_CLI_NO_UPDATE=1 too). The guide for that case: app-core-cli help standalone.',
   },
   tray: {
     usage: 'app-core-cli tray --url <address "Open app-core" goes to>',
@@ -70,10 +71,22 @@ export function isHelpRequest(argv: readonly string[]): boolean {
   return HELP_FLAGS.has(command) || args.some((arg) => HELP_FLAGS.has(arg));
 }
 
-// The text for a help request: the command's own page, or the list of commands.
+// Pages that are not a command: a case explained from start to end. `help <topic>`.
+const TOPICS: Record<string, { summary: string; text: string }> = {
+  standalone: { summary: STANDALONE_SUMMARY, text: STANDALONE_HELP },
+};
+
+// The text for a help request: the command's own page, a guide, or the list of commands. `serve --module <dir> --help` is the
+// guide of the standalone application, not the general page of serve.
 export function helpText(argv: readonly string[]): string {
   const [first, second] = argv;
   const name = first === 'help' || (first !== undefined && HELP_FLAGS.has(first)) ? second : first;
+  if (name !== undefined && TOPICS[name] !== undefined) {
+    return TOPICS[name].text;
+  }
+  if (name === 'serve' && argv.includes('--module')) {
+    return STANDALONE_HELP;
+  }
   const page = name === undefined ? undefined : COMMANDS[name];
   if (page !== undefined) {
     return `${page.usage}\n\n${page.summary}\n`;
@@ -81,6 +94,7 @@ export function helpText(argv: readonly string[]): string {
   const lines = Object.entries(COMMANDS)
     .filter(([name]) => name !== 'tray')
     .map(([name, c]) => `  ${name.padEnd(11)} ${c.summary}`);
+  const guides = Object.entries(TOPICS).map(([topic, t]) => `  ${topic.padEnd(11)} ${t.summary}`);
   const unknown = name !== undefined && !HELP_FLAGS.has(name) ? `Unknown command "${name}".\n\n` : '';
-  return `${unknown}Usage: app-core-cli <command> [options]\n\nCommands:\n${lines.join('\n')}\n\nRun \`app-core-cli <command> --help\` for the usage of one command; it never runs the command.\n`;
+  return `${unknown}Usage: app-core-cli <command> [options]\n\nCommands:\n${lines.join('\n')}\n\nGuides (app-core-cli help <guide>):\n${guides.join('\n')}\n\nRun \`app-core-cli <command> --help\` for the usage of one command; it never runs the command.\n`;
 }

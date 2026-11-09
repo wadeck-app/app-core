@@ -27,8 +27,8 @@ Runs the same server as `packages/server`, with the frontend built into this pac
 
 - The shell has no dashboard, no module tabs and no "Modules" or "A/B tests" pages; the brand is the module's title, and `/` opens the first page the module adds to the menu (`slot: "nav"`). `GET /api/shell-settings` answers `{"abTests": false, "standalone": {"moduleId": "<id>"}}`.
 - A module with no `nav` page has nothing to open on: the page says so.
-- The module's package can ship this as its own command: a `bin` that runs `app-core-cli serve --module <its dist-module> --no-update`, with `@wadeck-app/app-core-cli` as a dependency.
-- Not covered: a window or installer around the browser, and a name or icon other than the module's title.
+- The module's package ships this as its own command: a `bin` script that resolves `@wadeck-app/app-core-cli/dist/cli.bundle.js` with `createRequire` and runs `serve --module <dist-module> --no-update` plus the arguments it was given. The script, the `package.json` fields and the steps are in `app-core-cli help standalone` (the text is `src/helpStandalone.ts`); the script was run against a built module and served it.
+- Not covered: a window or installer around the browser, a name or icon other than the module's title, hiding the information menu of the top bar.
 
 `GET /build-info.json` returns `builtAt`, `dslUi`, `dslRenderer` of the bundled frontend.
 

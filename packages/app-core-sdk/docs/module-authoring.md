@@ -641,6 +641,14 @@ In the packaged manifest:
 
 Components run in the shell's origin with full DOM access: install only modules you trust.
 
+## Shipping the module as an application
+
+A module can be the whole application: `app-core-cli serve --module <dist-module>` serves it alone (no dashboard, no module tabs, `/` opens its first `nav` page), with `--no-tray` for no tray icon and `--no-update` for no self-update. The complete guide, the steps and the `bin` script that ships it as a command of your package: `app-core-cli help standalone` (also `app-core-cli serve --module <dir> --help`); reference: `packages/app-core-cli/docs/serve.md`.
+
+- The module needs at least one page with `"slot": "nav"`, or there is nothing to open on.
+- Build first (`app-core-cli package`): a source manifest is refused with the command to run. The modules it `requires` must be in the `node_modules` of its package.
+- Give the application its own `--config-dir` and `--port`; the defaults (a folder per module id, 4850) may meet a global app-core.
+
 ## Naming
 
 The package folder must be named `app-module-<name>` (e.g. `app-module-queue`), not
