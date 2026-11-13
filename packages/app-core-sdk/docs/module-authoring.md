@@ -649,6 +649,17 @@ A module can be the whole application: `app-core-cli serve --module <dist-module
 - Build first (`app-core-cli package`): a source manifest is refused with the command to run. The modules it `requires` must be in the `node_modules` of its package.
 - Give the application its own `--config-dir` and `--port`; the defaults (a folder per module id, 4850) may meet a global app-core.
 
+## What the page's Content-Security-Policy forbids
+
+The shell and every HTML page app-core serves carry a strict policy (`packages/app-core-cli/docs/serve.md`, "Content-Security-Policy"). In a `dsl-lib` bundle or a view:
+
+- No inline `style="..."` or `<style>` (use classes and the CSS file of the bundle), no inline `<script>`, no `eval` / `new Function`.
+- No resource from another origin: no external image, font, stylesheet, script, `fetch` or WebSocket. Call your own module routes (`/api/modules/<id>/...`); serve what you need from the bundle or a route.
+- No `data:` or `blob:` image or font.
+- Setting styles through the DOM (`element.style.x = ...`, as React does) is fine.
+
+A violation shows in the server log as `[csp] blocked ... on <page>`; run the server with `APP_CORE_CSP=report-only` to list them without breaking the page.
+
 ## Naming
 
 The package folder must be named `app-module-<name>` (e.g. `app-module-queue`), not

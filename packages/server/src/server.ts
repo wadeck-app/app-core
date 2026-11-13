@@ -13,6 +13,7 @@ import { readRegistryEntries } from './registry.js';
 import { getErrorMessage } from './errors.js';
 import { orderByRequires, readRequiredIds } from './loadOrder.js';
 import { etagHook } from './conditionalGet.js';
+import { registerCsp, resolveCspMode, type CspMode } from './csp.js';
 import { inventoryAbTests } from './abTestScan.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,8 @@ export interface BuildServerOptions {
   standalone?: { moduleId: string };
   // Host names (without port) the server may be addressed by besides 127.0.0.1, localhost and [::1]; APP_CORE_ALLOWED_HOSTS adds more.
   allowedHosts?: string[];
+  // The Content-Security-Policy of the HTML pages: `enforce` (default), `report-only` or `off`; else APP_CORE_CSP. See csp.ts.
+  csp?: CspMode;
 }
 
 export interface AppCoreServer {
@@ -131,6 +134,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   const server = Fastify({ logger: false });
   // Before every route, the modules' included (see requestGuard.ts).
   registerRequestGuard(server, allowedHostsFrom(opts.allowedHosts));
+  // The policy of the HTML pages, and the route the browser reports what it blocked to. Throws here when APP_CORE_CSP is not a mode.
+  registerCsp(server, opts.csp ?? resolveCspMode());
   // Any way of closing the server (stop(), dev, tests) runs the modules' teardown first; idempotent.
   server.addHook('onClose', async () => {
     await manager.shutdown();

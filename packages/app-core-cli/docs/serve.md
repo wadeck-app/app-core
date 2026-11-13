@@ -6,6 +6,7 @@ Runs the same server as `packages/server`, with the frontend built into this pac
 |---|---|---|
 | `APP_CORE_PORT` | `4850` | Listens on `127.0.0.1` only. |
 | `APP_CORE_CONFIG_DIR` | `~/.config/app-core` | Module registry (`modules/<id>.json`), `server.port.json`, and per module `data/<id>/` and `state/<id>.json`. |
+| `APP_CORE_CSP` | `enforce` | `report-only` logs what the policy would block without blocking it; `off` sends no policy (a warning says so). Any other value stops the server at startup. See "Content-Security-Policy". |
 | `APP_CORE_HOOK_TIMEOUT_MS` | `30000` | Timeout of a module's import, setup and each lifecycle hook. A value that is not a positive integer stops the server at startup. |
 
 `server.port.json` (`{"pid": ..., "port": ...}`) is written after the server listens and removed on a clean stop. After a forced kill it stays on disk; consumers must check that `pid` is alive.
@@ -33,6 +34,17 @@ Runs the same server as `packages/server`, with the frontend built into this pac
 `GET /build-info.json` returns `builtAt`, `dslUi`, `dslRenderer` of the bundled frontend.
 
 If the bundled frontend is missing, `serve` exits 1 with a message instead of serving a blank API-only server.
+
+## Content-Security-Policy
+
+Every HTML response (the shell, and any HTML a module route answers) carries `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'`; the source and the reason of each directive are in `packages/server/src/csp.ts`. A response that has its own policy keeps it and gets this one too.
+
+- Blocked: inline scripts and styles (`<script>`, `<style>`, `style="..."`), `eval`, any other origin (images, fonts, fetch, WebSocket), `data:` and `blob:` URLs, framing, `<base>`, forms to other sites.
+- Allowed: files of this origin, which includes every module bundle under `/api/modules/<id>/_lib/`.
+- Not isolated: modules from each other. A bundle is a script of this origin and still reads what other modules show (threat model T-04); the policy stops what leaves for another site, injected scripts and framing.
+- A violation is posted by the browser to `POST /api/csp-report` and logged once per distinct case: `[csp] blocked "<uri>" (img-src) on /modules/x/y. ...`. `APP_CORE_CSP=report-only` turns a module that breaks into log lines instead of a broken page.
+- Vite's dev server (5173) sends no policy; `serve`, `dev` and the server on 4850 do.
+- Not included: `require-trusted-types-for 'script'`. The shell renders Markdown and charts through `innerHTML`, so a Trusted Types policy with a sanitizer comes first.
 
 ## Start it with Orchestrator
 

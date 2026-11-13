@@ -6,13 +6,8 @@
     <title>app-core</title>
   </head>
   <body>
-    <script>
-      // dsl-ui's useTheme only applies the `dark` class after the first render; doing it here avoids a light flash.
-      var storedTheme = localStorage.getItem('theme');
-      if (storedTheme === 'dark' || (storedTheme === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      }
-    </script>
+    <!-- Sets the theme before the first paint (see public/theme-init.js); a file, not an inline script, because of the CSP. -->
+    <script src="/theme-init.js"></script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
