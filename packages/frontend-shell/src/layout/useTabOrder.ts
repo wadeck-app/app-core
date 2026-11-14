@@ -51,3 +51,37 @@ export function useTabOrder(): { saved: string[]; save: (ids: string[]) => void;
   const reset = useCallback(() => save([]), [save]);
   return { saved, save, reset };
 }
+
+const HIDDEN_STORAGE_KEY = 'app-core.nav.hidden-modules';
+
+function readHidden(): string[] {
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_STORAGE_KEY);
+    return raw === null ? [] : (JSON.parse(raw) as string[]);
+  } catch (err) {
+    console.warn(`[nav] cannot read "${HIDDEN_STORAGE_KEY}" from localStorage: ${String(err)}. Every module is shown.`);
+    return [];
+  }
+}
+
+// `id` added to the hidden ones, or removed from them when it was there.
+export function toggleHidden(hidden: readonly string[], id: string): string[] {
+  return hidden.includes(id) ? hidden.filter((h) => h !== id) : [...hidden, id];
+}
+
+// The modules the user hid from the top bar and the dashboard menu (their pages stay reachable by address). Kept in this browser,
+// like the order.
+export function useHiddenModules(): { hidden: string[]; toggle: (id: string) => void; reset: () => void } {
+  const [hidden, setHidden] = useState<string[]>(readHidden);
+  const store = useCallback((next: string[]) => {
+    setHidden(next);
+    try {
+      window.localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify(next));
+    } catch (err) {
+      console.warn(`[nav] cannot save "${HIDDEN_STORAGE_KEY}" to localStorage: ${String(err)}. The hidden modules come back after a reload.`);
+    }
+  }, []);
+  const toggle = useCallback((id: string) => store(toggleHidden(hidden, id)), [store, hidden]);
+  const reset = useCallback(() => store([]), [store]);
+  return { hidden, toggle, reset };
+}

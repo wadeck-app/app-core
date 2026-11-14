@@ -7,7 +7,7 @@ import { NavSettings } from './NavSettings.js';
 import { breadcrumbFor, trimModulePrefix, type Crumb } from './navHelpers.js';
 import { HOME_MODULE_ID, activeNavModule, homeNavModule, isPageCurrent, listedNavModules } from './navModel.js';
 import { TopBarActions } from './TopBarActions.js';
-import { applyTabOrder, useTabOrder } from './useTabOrder.js';
+import { applyTabOrder, useHiddenModules, useTabOrder } from './useTabOrder.js';
 import { useTertiaryNav } from './tertiaryModel.js';
 import { TertiaryTabs } from './TertiaryTabs.js';
 import { useHiddenEntries, usePushedIndicators } from './indicatorBus.js';
@@ -34,10 +34,15 @@ export function AppLayout({ modules, navModules, failed = [], standalone, childr
   const { pathname } = useLocation();
   const active = activeNavModule(pathname, navModules);
   const tabOrder = useTabOrder();
+  const hiddenModules = useHiddenModules();
   // On the document, not on a subtree: the popovers and dialogs of the pages are rendered in portals and must follow the accent too.
   useRootAccent(active ? moduleColor(active.id) : undefined);
 
-  const listed = applyTabOrder(listedNavModules(navModules), tabOrder.saved);
+  // Every module the manifests list, in the user's order: the settings show them all. The tabs and the dashboard menu leave out the ones the
+  // user hid (they stay reachable by address, as a module that is not listed does).
+  const ordered = applyTabOrder(listedNavModules(navModules), tabOrder.saved);
+  const listed = ordered.filter((m) => !hiddenModules.hidden.includes(m.id));
+  const shownNavModules = navModules.map((m) => (hiddenModules.hidden.includes(m.id) ? { ...m, listed: false } : m));
   // A standalone application has one module: nothing to switch between, so no tabs (the dashboard is not part of it either).
   const tabs: ShellItem[] = standalone !== undefined ? [] : [
     { id: DASHBOARD_TAB_ID, label: 'Dashboard', href: '/', current: pathname === '/' ? 'page' : undefined },
@@ -51,7 +56,7 @@ export function AppLayout({ modules, navModules, failed = [], standalone, childr
     })),
   ];
 
-  const menuModule = active ?? (standalone === undefined ? undefined : navModules.find((m) => m.id === standalone.moduleId)) ?? homeNavModule(navModules);
+  const menuModule = active ?? (standalone === undefined ? undefined : navModules.find((m) => m.id === standalone.moduleId)) ?? homeNavModule(shownNavModules);
   const onDashboard = menuModule.id === HOME_MODULE_ID;
   // The third level: the pages of the module that share a `tab.group` with the page shown, as tabs under the trail, in the same sticky
   // block. A page without one shows nothing.
@@ -91,7 +96,17 @@ export function AppLayout({ modules, navModules, failed = [], standalone, childr
 
   const actions = (
     <>
-      {standalone === undefined ? <NavSettings modules={listed} customized={tabOrder.saved.length > 0} onSave={tabOrder.save} onReset={tabOrder.reset} /> : null}
+      {standalone === undefined ? <NavSettings
+          modules={ordered}
+          hidden={hiddenModules.hidden}
+          customized={tabOrder.saved.length > 0 || hiddenModules.hidden.length > 0}
+          onSave={tabOrder.save}
+          onToggleHidden={hiddenModules.toggle}
+          onReset={() => {
+            tabOrder.reset();
+            hiddenModules.reset();
+          }}
+        /> : null}
       <TopBarActions modules={modules} failed={failed} />
     </>
   );

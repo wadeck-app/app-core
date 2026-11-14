@@ -100,9 +100,9 @@ describe('tab order, chosen by the user', () => {
   it('goes back to the default order from the settings, which offer it only once the order was changed', () => {
     renderAt('/');
     fireEvent.click(screen.getByRole('button', { name: 'Navigation settings' }));
-    expect(screen.getByRole('button', { name: 'Default order' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reset to default' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Move Flow later' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Default order' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
     expect(tabNames()).toEqual(['Dashboard', 'Flow', 'Queue', 'Task']);
     expect(window.localStorage.getItem('app-core.nav.tab-order')).toBe('[]');
   });

@@ -114,6 +114,8 @@ The source manifest is strict: any other field fails `check`.
 
 **Keeping a module out of the navigation.** `"showInNav": false` removes the module from the shell's navigation: no tab in the top bar and no shortcut on the dashboard menu. The module is still loaded and its pages stay routable (reachable by link); while one of them is open, the side menu lists the module's pages. A module without any `page` / `nav` extension point (widgets only) is never listed, with or without this field, so use `showInNav: false` for a module that has `nav` pages you do not want in the menu. The value must be a boolean: `"false"` (a string) fails `check` and `package`.
 
+The user can do the same for any module from the top bar's Navigation settings (order and show/hide, kept in their browser): a module hidden that way behaves like `showInNav: false` for that user, so a page must not rely on its module being in the top bar.
+
 ### manifest.json
 
 ```json
