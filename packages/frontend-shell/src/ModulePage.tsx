@@ -32,9 +32,13 @@ export function ModulePage({ modules, target }: { modules: LoadedModuleSummary[]
   // Every page is mounted as this same element, and the renderer tells pages apart by their route parameters only: two
   // pages without any would share the state of the first (its $vars, its sources). The key makes each page start over.
   const pageKey = `${mod.id}:${ep.path ?? index}`;
+  // The host frames every page (centered, padded). A view whose own root is a PageContent decides its width (`maxWidth`, "xl" when
+  // absent): the frame then adds no cap of its own, or a `maxWidth: full` view would still stop at the frame's "xl". Any other root has
+  // no width of its own and keeps the default frame.
+  const viewDecidesWidth = ep.view?.['$type'] === 'PageContent';
   return (
     <ModuleLibGate moduleId={mod.id}>
-      <PageContent sections={<ModuleView key={pageKey} rawYaml={ep.rawYaml} />} />
+      <PageContent maxWidth={viewDecidesWidth ? 'full' : undefined} sections={<ModuleView key={pageKey} rawYaml={ep.rawYaml} />} />
     </ModuleLibGate>
   );
 }
