@@ -46,8 +46,8 @@
     "node": ">=22"
   },
   "optionalDependencies": {
-    "@wadeck-app/app-core-cli-darwin-arm64": ">=0.0.0-0",
-    "@wadeck-app/app-core-cli-darwin-x64": ">=0.0.0-0",
-    "@wadeck-app/app-core-cli-win32-x64": ">=0.0.0-0"
+    "@wadeck-app/app-core-cli-darwin-arm64": "latest",
+    "@wadeck-app/app-core-cli-darwin-x64": "latest",
+    "@wadeck-app/app-core-cli-win32-x64": "latest"
   }
 }

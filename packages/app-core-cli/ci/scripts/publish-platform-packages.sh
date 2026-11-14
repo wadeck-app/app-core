@@ -10,9 +10,10 @@
 # If a published version already carries the current hash, it is reused as-is and no
 # publish happens, so the version sequence gets gaps that document binary changes.
 #
-# Why an EXACT pin rather than a range: with ">=0.0.0-0" any installed version satisfies
-# the range, so npm never touches the platform package and the CLI ends up running new
-# JS against an old tray. With an exact pin, `npm install -g main@X` updates the platform
+# The source package.json declares these as "latest" (the repo rule for registry libs);
+# this script replaces them with an EXACT pin in the published copy. Why exact rather than
+# a range or a tag: with a range any installed version satisfies it, so npm never touches
+# the platform package and the CLI ends up running new JS against an old tray. With an exact pin, `npm install -g main@X` updates the platform
 # package in the same transaction iff the pin moved, and a rollback to an older main
 # restores the binary that main was built against. `os`/`cpu` on the platform packages
 # keep npm from downloading the other platforms.
