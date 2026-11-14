@@ -45,7 +45,23 @@ async function main(): Promise<void> {
     process.stdout.write(`${VERSION}\n`);
     return;
   }
-  const [command, target, ...rest] = process.argv.slice(2);
+  // `app-core-cli cli version | update`: the spelling every CLI of the family answers, and the one the updater calls (shared-updater tests a
+  // staged package with `<bin> cli version` before switching to it: without it the update is abandoned and the old version stays).
+  const given = process.argv.slice(2);
+  if (given[0] === 'cli') {
+    if (given[1] === 'version') {
+      // Offline and quick: the health test has 15 s, no registry token and UPDATER_DISABLE=1. The published version is the `version` command's.
+      process.stdout.write(`${PKG_NAME} ${VERSION}\n`);
+      return;
+    }
+    if (given[1] !== 'update') {
+      process.stderr.write(`app-core-cli cli: ${given[1] === undefined ? 'a subcommand is missing' : `unknown subcommand "${given[1]}"`}. Use "app-core-cli cli version" (the installed version) or "app-core-cli cli update" (the same as "app-core-cli update").\n`);
+      process.exitCode = 1;
+      return;
+    }
+    given.shift();
+  }
+  const [command, target, ...rest] = given;
 
   // Check for an update in the background on every real invocation (not
   // `self-check`, to avoid recursing into the just-installed binary

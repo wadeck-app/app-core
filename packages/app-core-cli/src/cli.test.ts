@@ -402,3 +402,35 @@ describe('cli --help (real subprocess)', () => {
     expect(help(['dev', './no-such-module', '--help']).status).toBe(0);
   });
 });
+
+// The updater (shared-updater, staged install) tests the new package with `node <bin> cli version` before it switches to it: exit 0 and
+// the version as a whole word in the output, in a temp HOME, without a registry token and with UPDATER_DISABLE=1. Without it the update
+// is abandoned ("failed its health test") and the machine stays on the old version.
+describe('cli cli version (the updater health test, real subprocess)', () => {
+  const isolated = (args: string[]) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-cli-health-'));
+    try {
+      return spawnSync('node', [cliEntry, ...args], {
+        encoding: 'utf8',
+        timeout: 15_000,
+        env: { ...process.env, HOME: home, USERPROFILE: home, APP_CORE_CLI_CONFIG_DIR: path.join(home, 'cfg'), UPDATER_DISABLE: '1' },
+      });
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  };
+
+  it('exits 0 and says the installed version, without looking for a newer one', () => {
+    const run = isolated(['cli', 'version']);
+    expect(run.status, `${run.stdout}${run.stderr}`).toBe(0);
+    expect(run.stdout).toMatch(/(^|\s)0\.0\.0-dev(\s|$)/);
+    expect(`${run.stdout}${run.stderr}`).not.toContain('Failed to fetch');
+  });
+
+  it('refuses another subcommand of "cli" and names the ones that exist', () => {
+    const run = isolated(['cli', 'frobnicate']);
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain('cli version');
+    expect(run.stderr).toContain('cli update');
+  });
+});
