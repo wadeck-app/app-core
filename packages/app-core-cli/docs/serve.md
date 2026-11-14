@@ -49,13 +49,14 @@ Every HTML response (the shell, and any HTML a module route answers) carries `de
 ## Start it with Orchestrator
 
 ```sh
-orch add startup app-core --command "app-core-cli serve" \
-  --liveness-strategy portFile --liveness-port-file "~/.config/app-core/server.port.json" \
-  --timeout 2000000
+app-core-cli autostart            # registers the startup job "app-core"
+app-core-cli autostart --remove   # unregisters it; a running server is not stopped
 ```
 
-- The portFile liveness skips an automatic start while the recorded pid is alive. A manual `orch trigger` is not filtered; the port is then simply busy and `serve` exits with the listen error.
-- Orchestrator kills a job after `--timeout` seconds (default 300), which would stop the server after five minutes; the value above is about 23 days.
+- It calls `orch ensure startup app-core ...` (Orchestrator 2026.11.14-592 or later): safe to repeat, it prints `added`, `updated` or `unchanged`, and keeps any field of the job you edited by hand that it does not set. `--id <job-id>` picks another job id.
+- Nothing runs it for you, not even `update`: it changes what starts at login.
+- The job has `--timeout 0` (Orchestrator's default of 300 s would stop the server after five minutes), one run at a time, and the portFile liveness: an automatic start is skipped while the recorded pid is alive. A manual `orch trigger` is not filtered; the port is then simply busy and `serve` exits with the listen error.
+- The repository's own `app-core-dev` job (`npm run dev:all`) uses the same port file: do not keep both enabled.
 
 ## Updates
 

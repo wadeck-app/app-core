@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { validateManifestFile } from './validate.js';
 import { DEV_USAGE, parseDevArgs, runDev } from './dev.js';
 import { runServe } from './serve.js';
+import { parseAutostartArgs, runAutostart } from './autostart.js';
 import { checkModule, formatCheckIssues } from './check.js';
 import { DEFAULT_OUT_DIR, packageModule, parsePackageArgs, resolveVersion } from './package.js';
 import { parseLinkArgs } from './providers.js';
@@ -301,6 +302,21 @@ async function main(): Promise<void> {
       console.error(`app-core-cli serve failed: ${getErrorMessage(err)}`);
       process.exitCode = 1;
     }
+    return;
+  }
+
+  if (command === 'autostart') {
+    // Registers (or with --remove, unregisters) the installed server as an Orchestrator startup job. Never run by another command:
+    // it changes what starts at login, so it is asked for.
+    const parsed = parseAutostartArgs([target, ...rest].filter((arg): arg is string => arg !== undefined));
+    if (!parsed.ok) {
+      console.error(`app-core-cli autostart: ${parsed.error}`);
+      process.exitCode = 1;
+      return;
+    }
+    const result = runAutostart(parsed.options);
+    (result.exitCode === 0 ? console.log : console.error)(result.message);
+    process.exitCode = result.exitCode;
     return;
   }
 
