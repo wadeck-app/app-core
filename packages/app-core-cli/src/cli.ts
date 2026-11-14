@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { validateManifestFile } from './validate.js';
 import { DEV_USAGE, parseDevArgs, runDev } from './dev.js';
 import { runServe } from './serve.js';
-import { parseAutostartArgs, runAutostart } from './autostart.js';
+import { parseStartupArgs, runStartup } from './startup.js';
 import { checkModule, formatCheckIssues } from './check.js';
 import { DEFAULT_OUT_DIR, packageModule, parsePackageArgs, resolveVersion } from './package.js';
 import { parseLinkArgs } from './providers.js';
@@ -305,16 +305,16 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (command === 'autostart') {
-    // Registers (or with --remove, unregisters) the installed server as an Orchestrator startup job. Never run by another command:
-    // it changes what starts at login, so it is asked for.
-    const parsed = parseAutostartArgs([target, ...rest].filter((arg): arg is string => arg !== undefined));
+  if (command === 'startup') {
+    // enable | disable | status of the Orchestrator startup job that starts the server (same surface as `machine startup`). Never run
+    // by another command: it changes what starts at login, so it is asked for.
+    const parsed = parseStartupArgs([target, ...rest].filter((arg): arg is string => arg !== undefined));
     if (!parsed.ok) {
-      console.error(`app-core-cli autostart: ${parsed.error}`);
+      console.error(`app-core-cli startup: ${parsed.error}`);
       process.exitCode = 1;
       return;
     }
-    const result = runAutostart(parsed.options);
+    const result = runStartup(parsed.options);
     (result.exitCode === 0 ? console.log : console.error)(result.message);
     process.exitCode = result.exitCode;
     return;

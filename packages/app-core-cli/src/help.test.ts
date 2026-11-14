@@ -20,7 +20,7 @@ describe('isHelpRequest', () => {
 
 describe('helpText', () => {
   it('gives the usage and what the command changes, for every command', () => {
-    for (const command of ['validate', 'init', 'check', 'package', 'dev', 'serve', 'autostart', 'tray', 'version', 'update', 'self-check']) {
+    for (const command of ['validate', 'init', 'check', 'package', 'dev', 'serve', 'startup', 'tray', 'version', 'update', 'self-check']) {
       const text = helpText([command, '--help']);
       expect(text, command).toMatch(new RegExp(`^app-core-cli ${command}`));
       expect(text.split('\n').filter((l) => l.trim() !== '').length, command).toBeGreaterThanOrEqual(2);

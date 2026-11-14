@@ -49,14 +49,16 @@ Every HTML response (the shell, and any HTML a module route answers) carries `de
 ## Start it with Orchestrator
 
 ```sh
-app-core-cli autostart            # registers the startup job "app-core"
-app-core-cli autostart --remove   # unregisters it; a running server is not stopped
+app-core-cli startup enable    # the server starts with Orchestrator
+app-core-cli startup disable   # it no longer does; a running server is not stopped
+app-core-cli startup status    # the job, and what is outdated in it
 ```
 
-- It calls `orch ensure startup app-core ...` (Orchestrator 2026.11.14-592 or later): safe to repeat, it prints `added`, `updated` or `unchanged`, and keeps any field of the job you edited by hand that it does not set. `--id <job-id>` picks another job id.
-- Nothing runs it for you, not even `update`: it changes what starts at login.
-- The job has `--timeout 0` (Orchestrator's default of 300 s would stop the server after five minutes), one run at a time, and the portFile liveness: an automatic start is skipped while the recorded pid is alive. A manual `orch trigger` is not filtered; the port is then simply busy and `serve` exits with the listen error.
-- The repository's own `app-core-dev` job (`npm run dev:all`) uses the same port file: do not keep both enabled.
+- `enable` calls `orch ensure startup ...` (Orchestrator 2026.11.14-592 or later): safe to repeat, it prints `added`, `updated` or `unchanged`, and keeps any field of the job you edited by hand that it does not set. Same surface as `machine startup`.
+- Nothing runs it for you, not even `update`: it changes what starts at login. It never runs `orch install`; it tells you to when Orchestrator itself may not start at login.
+- A job that already starts the server (it uses the server's port file), such as the repository's `app-core-dev` (`npm run dev:all`), is the one used: its command, label and folder are kept, and only the missing settings are completed. Otherwise the job `app-core` (`app-core-cli serve`) is created. `--id <job-id>` picks one explicitly; several candidates without `--id` is an error that lists them.
+- The settings: `--timeout 0` (Orchestrator's default of 300 s would stop the server after five minutes), one run at a time, and the portFile liveness: an automatic start is skipped while the recorded pid is alive. A manual `orch trigger` is not filtered; the port is then simply busy and `serve` exits with the listen error.
+- `disable` never removes a job it did not create (command other than `app-core-cli serve`) unless `--id` names it. `enable --id` next to another job on the same port file prints a warning: two jobs would fight for the port.
 
 ## Updates
 

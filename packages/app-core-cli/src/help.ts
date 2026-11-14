@@ -2,7 +2,7 @@ import { DEV_USAGE } from './dev.js';
 import { INIT_USAGE } from './init.js';
 import { STANDALONE_HELP, STANDALONE_SUMMARY } from './helpStandalone.js';
 import { LINK_USAGE } from './providers.js';
-import { AUTOSTART_USAGE } from './autostart.js';
+import { STARTUP_USAGE } from './startup.js';
 
 interface CommandHelp {
   usage: string;
@@ -36,10 +36,10 @@ const COMMANDS: Record<string, CommandHelp> = {
     summary:
       'Runs the app-core server and the bundled frontend in the foreground (port from --port or APP_CORE_PORT, default 4850). --module makes the application one module with no dashboard; --no-update stops every update check (APP_CORE_CLI_NO_UPDATE=1 too). The guide for that case: app-core-cli help standalone.',
   },
-  autostart: {
-    usage: AUTOSTART_USAGE,
+  startup: {
+    usage: STARTUP_USAGE,
     summary:
-      'Makes Orchestrator start "app-core-cli serve" at login: registers the startup job "app-core" (no timeout, one run at a time, skipped while the server is alive), or removes it with --remove. Needs `orch` on the PATH (2026.11.14-592 or later); run it again any time, it only changes what differs. A running server is not stopped.',
+      'enable makes Orchestrator start the server at login (job "app-core": "app-core-cli serve", no timeout, one run at a time, skipped while the server is alive); a job that already starts it, such as "app-core-dev", is used as it is: its command is kept and only missing settings are completed. disable removes the job (never one it did not create, unless --id names it); status shows it and what is outdated. Needs `orch` on the PATH (2026.11.14-592 or later). A running server is not stopped.',
   },
   tray: {
     usage: 'app-core-cli tray --url <address "Open app-core" goes to>',
