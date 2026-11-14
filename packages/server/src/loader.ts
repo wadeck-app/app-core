@@ -192,6 +192,24 @@ export class ModuleManager {
   // Which contributions of a loaded module to its `optionalRequires` providers are used right now, and why the others are not.
   // Worked out from the modules loaded at this moment each time it is asked, so a provider that registers, updates or goes
   // away changes the answer at once, with nothing to keep in step. No cascade: an optional provider leaving unloads nobody.
+  private sayOptionalWarnings(mod: LoadedModule): void {
+    for (const warning of this.optionalOutcome(mod).warnings) {
+      (this.options.onWarning ?? writeWarning)(`module "${mod.id}" ${warning}`);
+    }
+  }
+
+  // Startup loads the registry in `requires` order, which says nothing about optional providers: a module loaded before its optional
+  // provider would be reported as missing it, and a minute later it is not. Defer the warnings during that load, then say what is still
+  // missing once, from the final state.
+  deferOptionalWarnings = false;
+
+  reportOptionalWarnings(): void {
+    this.deferOptionalWarnings = false;
+    for (const mod of this.loaded.values()) {
+      this.sayOptionalWarnings(mod);
+    }
+  }
+
   optionalOutcome(mod: LoadedModule): OptionalOutcome {
     return evaluateOptionalContributions({
       moduleId: mod.id,
@@ -439,9 +457,10 @@ export class ModuleManager {
         held: existing === undefined ? [] : held,
       };
       this.loaded.set(entry.id, loadedModule);
-      // Said once in the logs when the module loads; the answer of GET /api/modules is the live one.
-      for (const warning of this.optionalOutcome(loadedModule).warnings) {
-        (this.options.onWarning ?? writeWarning)(`module "${entry.id}" ${warning}`);
+      // Said once in the logs when the module loads; the answer of GET /api/modules is the live one. Not while the registry is being
+      // loaded at startup: an optional provider that comes later in the registry would be reported as missing (see reportOptionalWarnings).
+      if (!this.deferOptionalWarnings) {
+        this.sayOptionalWarnings(loadedModule);
       }
       return loadedModule;
     } catch (err) {

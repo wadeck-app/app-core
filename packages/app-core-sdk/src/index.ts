@@ -9,6 +9,7 @@ export {
   UnsupportedSourceTypeError,
   parseManifest,
   parseSourceManifest,
+  unknownKeyWarnings,
   parseRegistrationPayload,
   type Manifest,
   type SourceManifest,

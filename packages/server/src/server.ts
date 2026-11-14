@@ -207,6 +207,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
     manager.recordFailure(entry, error, 'requirement');
     process.stderr.write(`[app-core] ${error}\n`);
   }
+  manager.deferOptionalWarnings = true;
   for (const entry of ordered) {
     try {
       await manager.loadFromEntry(entry);
@@ -223,6 +224,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
 
   // Anything that failed on a requirement and can load now (the order above makes it rare, but it is cheap and cannot loop).
   await manager.recoverFailed();
+  // What an optional provider is still missing, now that every module of the registry had its turn.
+  manager.reportOptionalWarnings();
 
   return { server, manager, modulesDir };
 }

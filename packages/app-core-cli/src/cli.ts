@@ -70,6 +70,10 @@ async function main(): Promise<void> {
     const json = rest.includes('--json');
     const result = validateManifestFile(target);
     if (result.ok) {
+      // On stderr in both modes: --json keeps a stdout that is the manifest alone.
+      for (const warning of result.warnings) {
+        console.error(`warning: ${target}: ${warning}`);
+      }
       if (json) {
         console.log(JSON.stringify(result.manifest));
       } else {

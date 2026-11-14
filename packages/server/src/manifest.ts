@@ -443,3 +443,45 @@ export class ManifestIdMismatchError extends Error {
     this.name = 'ManifestIdMismatchError';
   }
 }
+
+// How far two spellings are from each other (insertions, deletions, substitutions), to say "did you mean" about a mistyped key.
+function editDistance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      row[j] = Math.min((previous[j] ?? 0) + 1, (row[j - 1] ?? 0) + 1, (previous[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    previous = row;
+  }
+  return previous[b.length] ?? Number.POSITIVE_INFINITY;
+}
+
+function unknownKeysIn(object: unknown, known: readonly string[], where: string): string[] {
+  if (typeof object !== 'object' || object === null || Array.isArray(object)) {
+    return [];
+  }
+  return Object.keys(object)
+    .filter((key) => !known.includes(key))
+    .map((key) => {
+      // The closest known key, and only when it is close for the length of the word (a 2-letter key is "near" almost anything).
+      const closest = known.map((k) => ({ k, distance: editDistance(k.toLowerCase(), key.toLowerCase()) })).sort((a, b) => a.distance - b.distance)[0];
+      const near = closest !== undefined && closest.distance <= Math.ceil(key.length / 3) ? closest.k : undefined;
+      return `${where} has the key "${key}", which app-core does not know: it is ignored.${near === undefined ? '' : ` Did you mean "${near}"?`} Known keys: ${known.join(', ')}.`;
+    });
+}
+
+// The schema drops the keys it does not know instead of refusing them (a module built for a newer app-core keeps loading), so a
+// mistyped key ("colour") would be ignored without a word. This lists them, for `validate` and `check` to say so. `kind` is the manifest
+// of a built module (top-level keys are checked too) or the source manifest (its schema already refuses unknown top-level keys).
+export function unknownKeyWarnings(raw: unknown, kind: 'built' | 'source'): string[] {
+  if (typeof raw !== 'object' || raw === null) {
+    return [];
+  }
+  const extensionPoints: unknown = Reflect.get(raw, 'extensionPoints');
+  const known = Object.keys(ExtensionPointSchema.shape);
+  return [
+    ...(kind === 'built' ? unknownKeysIn(raw, Object.keys(ManifestSchema.shape), 'the manifest') : []),
+    ...(Array.isArray(extensionPoints) ? extensionPoints.flatMap((ep, i) => unknownKeysIn(ep, known, `extensionPoints[${i}]`)) : []),
+  ];
+}

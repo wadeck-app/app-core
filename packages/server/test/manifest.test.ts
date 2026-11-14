@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ZodError } from 'zod';
-import { parseManifest, parseRegistrationPayload, UnsupportedSourceTypeError } from '../src/manifest.js';
+import { parseManifest, parseRegistrationPayload, UnsupportedSourceTypeError, unknownKeyWarnings } from '../src/manifest.js';
 
 describe('parseManifest', () => {
   it('accepts a well-formed manifest with one extension point', () => {
@@ -292,5 +292,50 @@ describe('parseManifest: figures next to menu entries and tabs (count)', () => {
     expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', field: 'a b' } }]))).toContain('count.field must be a path of names separated by "."');
     expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', refreshSeconds: 4000 } }]))).toContain('count.refreshSeconds must be -1');
     expect(message(manifest([{ label: 'A', path: '/a', count: { route: '/a/count', every: 5 } }]))).toContain('Unrecognized key');
+  });
+});
+
+describe('unknownKeyWarnings', () => {
+  const ep = { kind: 'page', slot: 'nav', label: 'Home', view: { type: 'inline', value: {} } };
+
+  it('has nothing to say about a manifest whose keys are all known', () => {
+    expect(unknownKeyWarnings({ id: 'm', version: '1', backendEntryPath: './b.cjs', extensionPoints: [ep] }, 'built')).toEqual([]);
+  });
+
+  it('names the key, where it is, what it looks like and the keys that exist', () => {
+    const [warning] = unknownKeyWarnings({ extensionPoints: [{ ...ep, lable: 'x' }] }, 'source');
+    expect(warning).toContain('extensionPoints[0] has the key "lable", which app-core does not know: it is ignored.');
+    expect(warning).toContain('Did you mean "label"?');
+    expect(warning).toContain('Known keys: kind, slot, label,');
+  });
+
+  it('says no "did you mean" when nothing is close', () => {
+    expect(unknownKeyWarnings({ extensionPoints: [{ ...ep, colour: 'red' }] }, 'source')[0]).not.toContain('Did you mean');
+  });
+
+  it('checks the top level of a built manifest only (the source schema already refuses its unknown keys)', () => {
+    expect(unknownKeyWarnings({ requries: {}, extensionPoints: [ep] }, 'built')).toHaveLength(1);
+    expect(unknownKeyWarnings({ requries: {}, extensionPoints: [ep] }, 'source')).toEqual([]);
+  });
+
+  it('does not throw on what is not a manifest: the schema reports that', () => {
+    expect(unknownKeyWarnings(null, 'built')).toEqual([]);
+    expect(unknownKeyWarnings({ extensionPoints: ['x', null, 3] }, 'built').length).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('unknownKeyWarnings: the suggestion', () => {
+  const ep = { kind: 'page', slot: 'nav', label: 'Home', view: { type: 'inline', value: {} } };
+  const hint = (key: string): string | undefined => /Did you mean "([^"]+)"/.exec(unknownKeyWarnings({ extensionPoints: [{ ...ep, [key]: 1 }] }, 'source')[0] ?? '')?.[1];
+
+  it('is the closest known key, not the first one within reach', () => {
+    expect(hint('lable')).toBe('label');
+    expect(hint('slott')).toBe('slot');
+    expect(hint('Label')).toBe('label');
+  });
+
+  it('is absent for a short or unrelated key', () => {
+    expect(hint('id')).toBeUndefined();
+    expect(hint('colour')).toBeUndefined();
   });
 });

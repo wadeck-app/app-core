@@ -1,9 +1,10 @@
 import * as fs from 'node:fs';
-import { parseManifest, parseSourceManifest, type Manifest, type SourceManifest } from '@wadeck-app/app-core-sdk';
+import { parseManifest, parseSourceManifest, unknownKeyWarnings, type Manifest, type SourceManifest } from '@wadeck-app/app-core-sdk';
 
 // `message` is the full text for a terminal (it names the file); `reason` is the same text without the
 // file path, for callers that already print the path themselves (check).
-export type ManifestValidation<T> = { ok: true; manifest: T } | { ok: false; message: string; reason: string };
+// `warnings` are what the schema ignores without refusing (a mistyped key): the manifest is valid, but not as its author meant.
+export type ManifestValidation<T> = { ok: true; manifest: T; warnings: string[] } | { ok: false; message: string; reason: string };
 
 interface IssueLike {
   path: Array<string | number>;
@@ -17,7 +18,7 @@ function issuesOf(err: unknown): IssueLike[] | undefined {
   return candidate?.name === 'ZodError' && Array.isArray(candidate.issues) ? (candidate.issues as IssueLike[]) : undefined;
 }
 
-function validateWith<T>(manifestPath: string, parse: (raw: unknown) => T): ManifestValidation<T> {
+function validateWith<T>(manifestPath: string, parse: (raw: unknown) => T, kind: 'built' | 'source'): ManifestValidation<T> {
   if (!fs.existsSync(manifestPath)) {
     return { ok: false, message: `No manifest found at ${manifestPath}`, reason: 'No manifest found' };
   }
@@ -29,7 +30,7 @@ function validateWith<T>(manifestPath: string, parse: (raw: unknown) => T): Mani
     return { ok: false, message: `${manifestPath} ${reason}`, reason };
   }
   try {
-    return { ok: true, manifest: parse(raw) };
+    return { ok: true, manifest: parse(raw), warnings: unknownKeyWarnings(raw, kind) };
   } catch (err) {
     const issues = issuesOf(err);
     const reason =
@@ -46,10 +47,10 @@ function validateWith<T>(manifestPath: string, parse: (raw: unknown) => T): Mani
 // tool shelling out to this CLI) gets the one authoritative parsed shape
 // instead of hand-rolling its own field extraction.
 export function validateManifestFile(manifestPath: string): ManifestValidation<Manifest> {
-  return validateWith(manifestPath, parseManifest);
+  return validateWith(manifestPath, parseManifest, 'built');
 }
 
 // Same, for the manifest an author writes at the module root (id, extensionPoints, dslLib.shared).
 export function validateSourceManifestFile(manifestPath: string): ManifestValidation<SourceManifest> {
-  return validateWith(manifestPath, parseSourceManifest);
+  return validateWith(manifestPath, parseSourceManifest, 'source');
 }

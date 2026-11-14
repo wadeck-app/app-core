@@ -150,7 +150,7 @@ The source manifest is strict: any other field fails `check`.
   module's `ExtensionSlot` -- app-core sorts by it and strips it before rendering; it's a purely
   structural sort key, app-core never interprets what it means.
 
-To validate a single manifest against the server schema, run `app-core-cli validate <manifest.json>` on the packaged `dist-module/manifest.json`. The source manifest has no `version` or `backendEntryPath`, so `validate` rejects it: use `check` for it.
+To validate a single manifest against the server schema, run `app-core-cli validate <manifest.json>` on the packaged `dist-module/manifest.json`. The source manifest has no `version` or `backendEntryPath`, so `validate` rejects it: use `check` for it. A key app-core does not know (a typo such as `lable`) is dropped without failing, so a module built for a newer app-core still loads; `validate` prints `warning: ...` on stderr and `check` lists it as a warning, each with the key it looks like.
 
 ### Registering the module with app-core
 

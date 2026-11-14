@@ -48,6 +48,43 @@ describe('validateManifestFile', () => {
   });
 });
 
+describe('validateManifestFile: warnings', () => {
+  const write = (manifest: Record<string, unknown>): string => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-validate-warn-'));
+    const file = path.join(dir, 'manifest.json');
+    fs.writeFileSync(file, JSON.stringify(manifest));
+    return file;
+  };
+  const built = {
+    id: 'tiny',
+    version: '1.0.0',
+    backendEntryPath: './api-backend/backend.cjs',
+    extensionPoints: [{ kind: 'page', slot: 'nav', label: 'Home', view: { type: 'inline', value: {} } }],
+  };
+
+  it('has none for a clean manifest', () => {
+    const result = validateManifestFile(write(built));
+    expect(result.ok && result.warnings).toEqual([]);
+  });
+
+  it('lists a key the schema ignores, in an extension point and at the top level of a built manifest, with the likely key', () => {
+    const result = validateManifestFile(write({ ...built, requries: { x: '^1' }, extensionPoints: [{ ...built.extensionPoints[0], slott: 'nav' }] }));
+    expect(result.ok && result.warnings).toEqual([
+      expect.stringContaining('the manifest has the key "requries", which app-core does not know: it is ignored. Did you mean "requires"?'),
+      expect.stringContaining('extensionPoints[0] has the key "slott"'),
+    ]);
+  });
+
+  it('prints them on stderr and keeps stdout the manifest alone with --json', () => {
+    const file = write({ ...built, extensionPoints: [{ ...built.extensionPoints[0], lable: 'x' }] });
+    const run = spawnSync('node', [cliEntry, 'validate', file, '--json'], { encoding: 'utf8' });
+    expect(run.status).toBe(0);
+    expect(JSON.parse(run.stdout).id).toBe('tiny');
+    expect(run.stderr).toContain('warning:');
+    expect(run.stderr).toContain('Did you mean "label"?');
+  });
+});
+
 describe('cli validate --json (real subprocess, not a unit-level call)', () => {
   it('emits the parsed manifest as JSON on success', () => {
     const manifestPath = path.join(builtFixture('app-module-minimal'), 'manifest.json');

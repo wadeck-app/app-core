@@ -307,7 +307,7 @@ function checkViewFile(moduleDir: string, viewValue: string, index: number, seen
   }
 }
 
-function checkManifest(moduleDir: string, issues: CheckIssue[]): SourceManifest | undefined {
+function checkManifest(moduleDir: string, issues: CheckIssue[], warnings: string[]): SourceManifest | undefined {
   const result = validateSourceManifestFile(path.join(moduleDir, 'manifest.json'));
   if (!result.ok) {
     issues.push({
@@ -318,6 +318,7 @@ function checkManifest(moduleDir: string, issues: CheckIssue[]): SourceManifest 
     return undefined;
   }
   const manifest = result.manifest;
+  warnings.push(...result.warnings);
 
   const seen = new Set<string>();
   manifest.extensionPoints.forEach((ep, index) => {
@@ -568,13 +569,14 @@ export async function checkModule(moduleDirArg: string, options: CheckOptions = 
   }
   checkRoot(moduleDir, issues);
   const scanned = await checkSrc(moduleDir, issues);
-  const manifest = checkManifest(moduleDir, issues);
+  const manifestWarnings: string[] = [];
+  const manifest = checkManifest(moduleDir, issues, manifestWarnings);
   checkPublishing(moduleDir, issues);
-  let warnings: string[] = [];
+  let warnings: string[] = manifestWarnings;
   if (manifest !== undefined) {
     checkLifecycle(moduleDir, manifest, scanned, issues);
     await checkExposedTypes(moduleDir, manifest, issues);
-    warnings = checkContributions(moduleDir, manifest, options.links ?? {}, issues);
+    warnings = [...manifestWarnings, ...checkContributions(moduleDir, manifest, options.links ?? {}, issues)];
   }
   return { issues, warnings, manifest };
 }

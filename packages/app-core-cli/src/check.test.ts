@@ -38,6 +38,16 @@ describe('checkModule: a valid module', () => {
     expect(result.manifest?.id).toBe('tiny');
   });
 
+  it('still passes, but warns about a mistyped key of an extension point, with the key it looks like', async () => {
+    const ep = { ...BASE_MANIFEST.extensionPoints[0], lable: 'Home', colour: 'red' };
+    const result = await checkModule(module_({ 'manifest.json': JSON.stringify({ ...BASE_MANIFEST, extensionPoints: [ep] }) }));
+    expect(result.issues).toEqual([]);
+    expect(result.warnings).toEqual([
+      expect.stringContaining('extensionPoints[0] has the key "lable", which app-core does not know: it is ignored. Did you mean "label"?'),
+      expect.stringContaining('extensionPoints[0] has the key "colour"'),
+    ]);
+  });
+
   // Regression: "check ." reported every source file as unparsable (esbuild needs an absolute working dir).
   it('passes when the module folder is given as a relative path', async () => {
     const dir = module_();
