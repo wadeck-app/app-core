@@ -1,0 +1,63 @@
+/* Dark palettes under test (A/B "Palette", see PaletteAbTest.tsx). Each block overrides the dsl-ui tokens of the dark theme while
+   <html data-palette="..."> is set; "current" sets nothing. Light theme untouched.
+   Goal against the current theme: the page and its cards are close to each other (less contrast, simpler to read), and the menus
+   (top bar, side menu) are the darkest layer instead of the lightest. The menus use `surface` in dsl-ui, the same token as the cards,
+   so they get their own variable, --palette-chrome, applied at the bottom. */
+
+/* Neutral gray, no tint. */
+html.dark[data-palette='graphite'] {
+  --color-bg: #16171a;
+  --color-surface: #1c1e22;
+  --color-bg-secondary: #191b1f;
+  --color-muted-bg: #272a30;
+  --color-border: #2a2d33;
+  --palette-chrome: #0b0c0e;
+}
+
+/* Deep blue, the family of the current theme, but lifted and closer. */
+html.dark[data-palette='night'] {
+  --color-bg: #0e1422;
+  --color-surface: #131a2b;
+  --color-bg-secondary: #101727;
+  --color-muted-bg: #1c2640;
+  --color-border: #1f2a42;
+  --palette-chrome: #060a13;
+}
+
+/* The current black becomes the menus; the page takes the slate that used to be the cards. */
+html.dark[data-palette='ink'] {
+  --color-bg: #0f172a;
+  --color-surface: #141e33;
+  --color-bg-secondary: #111a2e;
+  --color-muted-bg: #1e293b;
+  --color-border: #1e293b;
+  --palette-chrome: #020617;
+}
+
+/* Warm brown-gray, with a warmer text. */
+html.dark[data-palette='warm'] {
+  --color-bg: #181614;
+  --color-surface: #1e1c19;
+  --color-bg-secondary: #1b1917;
+  --color-muted-bg: #2a2723;
+  --color-border: #2c2925;
+  --color-content: #ece8e3;
+  --color-muted: #a39e96;
+  --palette-chrome: #0c0a09;
+}
+
+/* Blue-green gray. */
+html.dark[data-palette='teal'] {
+  --color-bg: #0f1919;
+  --color-surface: #142020;
+  --color-bg-secondary: #121c1c;
+  --color-muted-bg: #1d2e2e;
+  --color-border: #1f3030;
+  --palette-chrome: #050c0c;
+}
+
+/* The top bar and the side menu (dsl-ui AppShell paints both with `surface`). */
+html.dark[data-palette] header.sticky,
+html.dark[data-palette] [data-testid='shell-menu-backdrop'] {
+  background-color: var(--palette-chrome);
+}

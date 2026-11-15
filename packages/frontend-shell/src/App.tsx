@@ -4,6 +4,7 @@ import { AbExperiments, RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui
 import { AbTestsPage } from './AbTestsPage.js';
 import { ModulesPage } from './ModulesPage.js';
 import { AbTestsSeenRecorder } from './abTestsSeen.js';
+import { PaletteAbTest } from './PaletteAbTest.js';
 import { Dashboard } from './Dashboard.js';
 import { ModuleIndex } from './ModuleIndex.js';
 import { ModulePage } from './ModulePage.js';
@@ -73,6 +74,8 @@ export default function App(): React.ReactElement {
       <AbExperiments enabled={abTests ? true : undefined}>
       {/* Keeps where each A/B test was seen (dock on), for the A/B tests page. */}
       <AbTestsSeenRecorder />
+      {/* A/B test of the dark palette (PaletteAbTest): applied to the whole app. */}
+      <PaletteAbTest />
       <RouterProvider>
         <ToastProvider>
           {/* The outcome of every module action (row/batch actions, forms, brains) is shown as a toast. */}
