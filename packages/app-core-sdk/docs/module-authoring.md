@@ -640,6 +640,7 @@ In the packaged manifest:
   sheet fixes that element but breaks the module's own `px-2 pl-4` (8px instead of 16px); a sheet
   that includes the dsl-ui classes gives the right value for both. `package` copies the CSS you
   built as is; running Tailwind is your build step, not the CLI's.
+- The sheets of all the modules sit in the same document, one after the other in load order, with no isolation. At equal specificity the last one wins, so a rule of a module loaded later can override a rule of yours that comes from a responsive or state variant: its top-level `.hidden{display:none}` beats your `@media (min-width:1024px){.lg\:flex{display:flex}}` (measured on the dev shell with 6 module sheets: a pane of 0 px instead of 320 px at 1440 px; disabling the later sheets restored it). Any base utility paired with a variant of the same property is exposed (`hidden lg:flex`, `w-full lg:w-72`, `border border-l-4`). An app-core with one module does not show it. Protect your components: scope Tailwind to your own root (`important: '.<id>-scope'` in `tailwind.config`, one wrapper element carrying that class, also around anything rendered in a portal) and turn the `container` core plugin off. Test it with the other modules' sheets loaded, not alone.
 
 Components run in the shell's origin with full DOM access: install only modules you trust.
 
