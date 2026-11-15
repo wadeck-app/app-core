@@ -6,6 +6,7 @@ import { validateManifestFile } from './validate.js';
 import { DEV_USAGE, parseDevArgs, runDev } from './dev.js';
 import { runServe } from './serve.js';
 import { parseStartupArgs, runStartup } from './startup.js';
+import { wantsBackgroundUpdate } from './backgroundUpdate.js';
 import { checkModule, formatCheckIssues } from './check.js';
 import { DEFAULT_OUT_DIR, packageModule, parsePackageArgs, resolveVersion } from './package.js';
 import { parseLinkArgs } from './providers.js';
@@ -69,8 +70,7 @@ async function main(): Promise<void> {
   // silent no-op, per UpdateManager's own documented behavior. A bundle built from the repository (not a CalVer release)
   // has its updater file too: the version is passed so that it spawns nothing and never starts an `npm install -g`.
   // `--no-update` (or APP_CORE_CLI_NO_UPDATE=1) is for an application that must stay on the version it was built with.
-  const noUpdate = process.argv.slice(2).includes('--no-update') || process.env['APP_CORE_CLI_NO_UPDATE'] === '1';
-  if (command !== 'self-check' && !noUpdate) {
+  if (wantsBackgroundUpdate(command, process.argv.slice(2), process.env)) {
     try {
       new UpdateManager(PKG_NAME).scheduleBackgroundUpdate(bundlePath, 'app-core-cli-updater.cjs', VERSION);
     } catch {
