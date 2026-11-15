@@ -81,3 +81,64 @@ html.dark[data-palette] header.sticky,
 html.dark[data-palette] [data-testid='shell-menu-backdrop'] {
   background-color: var(--palette-chrome);
 }
+
+/* ─── Light palettes ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   Same idea as the dark ones, for the light mode (<html data-palette-light="...">, only when the dark class is not there): soft tints,
+   the page and the cards close together, and the menus a shade DARKER than the page instead of white. */
+
+/* Warm off-white, like paper, with a warmer text. */
+html:not(.dark)[data-palette-light='paper'] {
+  --color-bg: #f5f2ec;
+  --color-surface: #fbf9f5;
+  --color-bg-secondary: #f0ece4;
+  --color-muted-bg: #e9e4da;
+  --color-border: #ddd6c8;
+  --color-content: #292524;
+  --color-muted: #78716c;
+  --palette-chrome: #ebe6dc;
+}
+
+/* Cool blue-gray. */
+html:not(.dark)[data-palette-light='mist'] {
+  --color-bg: #eef1f5;
+  --color-surface: #f7f9fb;
+  --color-bg-secondary: #e9edf2;
+  --color-muted-bg: #e0e5ec;
+  --color-border: #d3dae3;
+  --palette-chrome: #e2e7ee;
+}
+
+/* Green-gray. */
+html:not(.dark)[data-palette-light='sage'] {
+  --color-bg: #eff2ee;
+  --color-surface: #f8faf7;
+  --color-bg-secondary: #e9eee8;
+  --color-muted-bg: #e0e7de;
+  --color-border: #d2dbd0;
+  --palette-chrome: #e3e9e1;
+}
+
+/* Pink-gray. */
+html:not(.dark)[data-palette-light='rose'] {
+  --color-bg: #f4eff0;
+  --color-surface: #faf7f7;
+  --color-bg-secondary: #efe9ea;
+  --color-muted-bg: #e7dfe1;
+  --color-border: #dacfd2;
+  --palette-chrome: #eae1e3;
+}
+
+/* Neutral light gray, no tint. */
+html:not(.dark)[data-palette-light='cloud'] {
+  --color-bg: #f1f2f4;
+  --color-surface: #f8f8f9;
+  --color-bg-secondary: #ebecee;
+  --color-muted-bg: #e2e4e8;
+  --color-border: #d6d8dd;
+  --palette-chrome: #e5e7ea;
+}
+
+html:not(.dark)[data-palette-light] header.sticky,
+html:not(.dark)[data-palette-light] [data-testid='shell-menu-backdrop'] {
+  background-color: var(--palette-chrome);
+}

@@ -49,12 +49,12 @@ describe('AppLayout: top tabs', () => {
 
 // The look of the bar (height, shadow, theme tokens) belongs to dsl-ui's AppShell and is tested there.
 describe('AppLayout: top bar', () => {
-  it('shows the app name, the module tabs and the app actions (theme toggle, versions) in the top bar', () => {
+  it('shows the app name, the module tabs and the app actions (theme, versions) in the top bar', () => {
     renderAt(billing.basePath);
     const bar = within(screen.getByRole('banner'));
     expect(bar.getByText('app-core')).toBeInTheDocument();
     expect(bar.getByRole('navigation', { name: 'Modules' })).toBeInTheDocument();
-    expect(bar.getByRole('button', { name: /Switch to (dark|light) mode/ })).toBeInTheDocument();
+    expect(bar.getByRole('button', { name: 'Theme' })).toBeInTheDocument();
     expect(bar.getByRole('button', { name: 'Versions' })).toBeInTheDocument();
   });
 

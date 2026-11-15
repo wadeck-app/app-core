@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { applyPalette, usePalette } from './palettes.js';
+import { applyPalettes, usePalette } from './palettes.js';
 
-// Puts the stored palette on <html> when the app starts (and when the stored one changes), whatever page or top bar is shown.
+// Puts the stored palettes (dark and light) on <html> when the app starts and when a stored one changes, whatever page or top bar is shown.
 export function PaletteApplier(): null {
-  const [palette] = usePalette();
+  const [dark] = usePalette('dark');
+  const [light] = usePalette('light');
   useEffect(() => {
-    applyPalette(palette);
-  }, [palette]);
+    applyPalettes();
+  }, [dark, light]);
   return null;
 }

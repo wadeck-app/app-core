@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
 
+export type PaletteMode = 'dark' | 'light';
+
 export const DEFAULT_PALETTE = 'default';
-export const PALETTE_STORAGE_KEY = 'app-core.theme.palette';
 
 export interface Palette {
   id: string;
@@ -14,54 +15,79 @@ export interface Palette {
   surface: string;
 }
 
-// The dark palettes: the picker lists them in this order, palettes.css has one block per id but the default one (the dsl-ui theme as it is).
-export const PALETTES: readonly Palette[] = [
-  { id: DEFAULT_PALETTE, label: 'Default', hint: 'The theme as it is: near-black page, lighter blue-gray cards and menus.', chrome: '#1e293b', bg: '#020617', surface: '#1e293b' },
-  { id: 'graphite', label: 'Graphite', hint: 'Neutral gray, no tint. Page and cards close together; menus darkest.', chrome: '#0b0c0e', bg: '#16171a', surface: '#1c1e22' },
-  { id: 'night', label: 'Night', hint: 'Deep blue like the default but lifted and softer. Menus darkest.', chrome: '#060a13', bg: '#0e1422', surface: '#131a2b' },
-  { id: 'warm', label: 'Warm', hint: 'Brown-gray with a warmer text. Menus darkest.', chrome: '#0c0a09', bg: '#181614', surface: '#1e1c19' },
-  { id: 'dusk', label: 'Dusk', hint: 'Lighter blue-gray, the least contrast of all: nothing is near-black.', chrome: '#13161c', bg: '#1c2029', surface: '#232834' },
-  { id: 'plum', label: 'Plum', hint: 'Purple-gray. Menus darkest.', chrome: '#0e0c12', bg: '#17141c', surface: '#1d1a24' },
-  { id: 'wine', label: 'Wine', hint: 'Red-brown gray. Menus darkest.', chrome: '#0f0b0d', bg: '#1a1417', surface: '#211a1e' },
-  { id: 'olive', label: 'Olive', hint: 'Yellow-green gray. Menus darkest.', chrome: '#0d0f0a', bg: '#171a14', surface: '#1d2018' },
-];
+// The palettes of each mode: the picker lists the ones of the mode that is on, in this order. palettes.css has one block per id but the
+// default one (the dsl-ui theme as it is).
+export const PALETTES: Readonly<Record<PaletteMode, readonly Palette[]>> = {
+  dark: [
+    { id: DEFAULT_PALETTE, label: 'Default', hint: 'The theme as it is: near-black page, lighter blue-gray cards and menus.', chrome: '#1e293b', bg: '#020617', surface: '#1e293b' },
+    { id: 'graphite', label: 'Graphite', hint: 'Neutral gray, no tint. Page and cards close together; menus darkest.', chrome: '#0b0c0e', bg: '#16171a', surface: '#1c1e22' },
+    { id: 'night', label: 'Night', hint: 'Deep blue like the default but lifted and softer. Menus darkest.', chrome: '#060a13', bg: '#0e1422', surface: '#131a2b' },
+    { id: 'warm', label: 'Warm', hint: 'Brown-gray with a warmer text. Menus darkest.', chrome: '#0c0a09', bg: '#181614', surface: '#1e1c19' },
+    { id: 'dusk', label: 'Dusk', hint: 'Lighter blue-gray, the least contrast of all: nothing is near-black.', chrome: '#13161c', bg: '#1c2029', surface: '#232834' },
+    { id: 'plum', label: 'Plum', hint: 'Purple-gray. Menus darkest.', chrome: '#0e0c12', bg: '#17141c', surface: '#1d1a24' },
+    { id: 'wine', label: 'Wine', hint: 'Red-brown gray. Menus darkest.', chrome: '#0f0b0d', bg: '#1a1417', surface: '#211a1e' },
+    { id: 'olive', label: 'Olive', hint: 'Yellow-green gray. Menus darkest.', chrome: '#0d0f0a', bg: '#171a14', surface: '#1d2018' },
+  ],
+  light: [
+    { id: DEFAULT_PALETTE, label: 'Default', hint: 'The theme as it is: white menus and cards on a pale blue-gray page.', chrome: '#ffffff', bg: '#f8fafc', surface: '#ffffff' },
+    { id: 'paper', label: 'Paper', hint: 'Warm off-white, like paper. Menus a shade darker than the page, cards lighter.', chrome: '#ebe6dc', bg: '#f5f2ec', surface: '#fbf9f5' },
+    { id: 'mist', label: 'Mist', hint: 'Cool blue-gray, soft. Menus a shade darker than the page.', chrome: '#e2e7ee', bg: '#eef1f5', surface: '#f7f9fb' },
+    { id: 'sage', label: 'Sage', hint: 'Soft green-gray. Menus a shade darker than the page.', chrome: '#e3e9e1', bg: '#eff2ee', surface: '#f8faf7' },
+    { id: 'rose', label: 'Rose', hint: 'Soft pink-gray. Menus a shade darker than the page.', chrome: '#eae1e3', bg: '#f4eff0', surface: '#faf7f7' },
+    { id: 'cloud', label: 'Cloud', hint: 'Neutral light gray, no tint. Menus a shade darker than the page.', chrome: '#e5e7ea', bg: '#f1f2f4', surface: '#f8f8f9' },
+  ],
+};
 
-const known = (id: string): boolean => PALETTES.some((p) => p.id === id);
+// localStorage key and <html> attribute of each mode. The dark ones are the first ones shipped, so they keep their names.
+const STORAGE_KEY: Readonly<Record<PaletteMode, string>> = { dark: 'app-core.theme.palette', light: 'app-core.theme.palette-light' };
+const ATTRIBUTE: Readonly<Record<PaletteMode, string>> = { dark: 'data-palette', light: 'data-palette-light' };
+const MODES: readonly PaletteMode[] = ['dark', 'light'];
+
+export const paletteStorageKey = (mode: PaletteMode): string => STORAGE_KEY[mode];
+
+const ids = (mode: PaletteMode): string[] => PALETTES[mode].map((p) => p.id);
 const listeners = new Set<() => void>();
 const warned = new Set<string>();
 
-// The stored palette. A value that is not a palette is said once, with the known ids, and the default applies: never used silently.
-export function readPalette(): string {
-  const stored = localStorage.getItem(PALETTE_STORAGE_KEY);
+// The stored palette of a mode. A value that is not a palette of that mode is said once, with the known ids, and the default applies:
+// never used silently.
+export function readPalette(mode: PaletteMode): string {
+  const key = STORAGE_KEY[mode];
+  const stored = localStorage.getItem(key);
   if (stored === null || stored === DEFAULT_PALETTE) {
     return DEFAULT_PALETTE;
   }
-  if (known(stored)) {
+  if (ids(mode).includes(stored)) {
     return stored;
   }
-  if (!warned.has(stored)) {
-    warned.add(stored);
-    console.warn(`[theme] Ignoring unknown palette "${stored}" in localStorage "${PALETTE_STORAGE_KEY}"; expected one of: ${PALETTES.map((p) => p.id).join(', ')}. The default palette is used.`);
+  const warning = `${key}=${stored}`;
+  if (!warned.has(warning)) {
+    warned.add(warning);
+    console.warn(`[theme] Ignoring unknown ${mode} palette "${stored}" in localStorage "${key}"; expected one of: ${ids(mode).join(', ')}. The default palette is used.`);
   }
   return DEFAULT_PALETTE;
 }
 
-// <html data-palette="...">: palettes.css reads it (dark theme only). The default palette sets nothing.
-export function applyPalette(id: string): void {
+// <html data-palette="..."> (dark) and <html data-palette-light="..."> (light): palettes.css reads each one under its own mode, so
+// both can be set at once and the mode that is on decides. The default palette sets nothing.
+export function applyPalettes(): void {
   const root = document.documentElement;
-  if (id === DEFAULT_PALETTE) {
-    root.removeAttribute('data-palette');
-  } else {
-    root.setAttribute('data-palette', id);
+  for (const mode of MODES) {
+    const id = readPalette(mode);
+    if (id === DEFAULT_PALETTE) {
+      root.removeAttribute(ATTRIBUTE[mode]);
+    } else {
+      root.setAttribute(ATTRIBUTE[mode], id);
+    }
   }
 }
 
-export function writePalette(id: string): void {
-  if (!known(id)) {
-    throw new Error(`Unknown palette "${id}"; expected one of: ${PALETTES.map((p) => p.id).join(', ')}.`);
+export function writePalette(mode: PaletteMode, id: string): void {
+  if (!ids(mode).includes(id)) {
+    throw new Error(`Unknown ${mode} palette "${id}"; expected one of: ${ids(mode).join(', ')}.`);
   }
-  localStorage.setItem(PALETTE_STORAGE_KEY, id);
-  applyPalette(id);
+  localStorage.setItem(STORAGE_KEY[mode], id);
+  applyPalettes();
   for (const listener of listeners) {
     listener();
   }
@@ -71,8 +97,8 @@ function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   // A change made in another tab.
   const onStorage = (e: StorageEvent): void => {
-    if (e.key === PALETTE_STORAGE_KEY) {
-      applyPalette(readPalette());
+    if (e.key === STORAGE_KEY.dark || e.key === STORAGE_KEY.light) {
+      applyPalettes();
       listener();
     }
   };
@@ -83,7 +109,7 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-export function usePalette(): [string, (id: string) => void] {
-  const id = useSyncExternalStore(subscribe, readPalette);
-  return [id, writePalette];
+export function usePalette(mode: PaletteMode): [string, (id: string) => void] {
+  const id = useSyncExternalStore(subscribe, () => readPalette(mode));
+  return [id, (next) => writePalette(mode, next)];
 }

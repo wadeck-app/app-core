@@ -52,12 +52,12 @@ describe('App: navbar and overlay widgets of modules', () => {
     }
   });
 
-  it('orders navbar widgets by order, ahead of the theme toggle', async () => {
+  it('orders navbar widgets by order, ahead of the theme control', async () => {
     state.modules = [widgetModule('a', 'a', 2), widgetModule('b', 'b', 1)];
     render(<App />);
     const first = await within(navbar()).findByText('nav-b');
     const second = within(navbar()).getByText('nav-a');
-    const toggle = within(navbar()).getByRole('button', { name: /Switch to (dark|light) mode/ });
+    const toggle = within(navbar()).getByRole('button', { name: 'Theme' });
     expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(second.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
