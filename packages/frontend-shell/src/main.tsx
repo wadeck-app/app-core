@@ -5,7 +5,7 @@
 // palette layers underneath, not on top.
 import '@wadeck-app/dsl-ui/theme.css';
 import './index.css';
-// Dark palettes under A/B test (PaletteAbTest): after the theme, so its overrides win.
+// The dark palettes (theme/palettes.ts): after the theme, so their overrides win.
 import './palettes.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';

@@ -1,5 +1,5 @@
-/* Dark palettes under test (A/B "Palette", see PaletteAbTest.tsx). Each block overrides the dsl-ui tokens of the dark theme while
-   <html data-palette="..."> is set; "current" sets nothing. Light theme untouched.
+/* The dark palettes (the picker next to the theme button, see theme/palettes.ts). Each block overrides the dsl-ui tokens of the dark theme while
+   <html data-palette="..."> is set; the default palette sets nothing. Light theme untouched.
    Goal against the current theme: the page and its cards are close to each other (less contrast, simpler to read), and the menus
    (top bar, side menu) are the darkest layer instead of the lightest. The menus use `surface` in dsl-ui, the same token as the cards,
    so they get their own variable, --palette-chrome, applied at the bottom. */
@@ -24,16 +24,6 @@ html.dark[data-palette='night'] {
   --palette-chrome: #060a13;
 }
 
-/* The current black becomes the menus; the page takes the slate that used to be the cards. */
-html.dark[data-palette='ink'] {
-  --color-bg: #0f172a;
-  --color-surface: #141e33;
-  --color-bg-secondary: #111a2e;
-  --color-muted-bg: #1e293b;
-  --color-border: #1e293b;
-  --palette-chrome: #020617;
-}
-
 /* Warm brown-gray, with a warmer text. */
 html.dark[data-palette='warm'] {
   --color-bg: #181614;
@@ -46,14 +36,44 @@ html.dark[data-palette='warm'] {
   --palette-chrome: #0c0a09;
 }
 
-/* Blue-green gray. */
-html.dark[data-palette='teal'] {
-  --color-bg: #0f1919;
-  --color-surface: #142020;
-  --color-bg-secondary: #121c1c;
-  --color-muted-bg: #1d2e2e;
-  --color-border: #1f3030;
-  --palette-chrome: #050c0c;
+/* Lighter blue-gray: the least contrast of all, nothing is near-black. */
+html.dark[data-palette='dusk'] {
+  --color-bg: #1c2029;
+  --color-surface: #232834;
+  --color-bg-secondary: #20242e;
+  --color-muted-bg: #2e3442;
+  --color-border: #2d3340;
+  --palette-chrome: #13161c;
+}
+
+/* Purple-gray. */
+html.dark[data-palette='plum'] {
+  --color-bg: #17141c;
+  --color-surface: #1d1a24;
+  --color-bg-secondary: #1a1720;
+  --color-muted-bg: #2a2535;
+  --color-border: #2b2636;
+  --palette-chrome: #0e0c12;
+}
+
+/* Red-brown gray. */
+html.dark[data-palette='wine'] {
+  --color-bg: #1a1417;
+  --color-surface: #211a1e;
+  --color-bg-secondary: #1e171b;
+  --color-muted-bg: #2e2429;
+  --color-border: #302429;
+  --palette-chrome: #0f0b0d;
+}
+
+/* Yellow-green gray. */
+html.dark[data-palette='olive'] {
+  --color-bg: #171a14;
+  --color-surface: #1d2018;
+  --color-bg-secondary: #1a1d16;
+  --color-muted-bg: #2a2e22;
+  --color-border: #2b2f24;
+  --palette-chrome: #0d0f0a;
 }
 
 /* The top bar and the side menu (dsl-ui AppShell paints both with `surface`). */

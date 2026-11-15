@@ -1,14 +1,12 @@
 import React from 'react';
-import { Moon, Sun } from 'lucide-react';
-import { IconButton, useTheme } from '@wadeck-app/dsl-ui';
 import { ModuleWidget, widgetsFor } from '../ModuleWidgets.js';
 import type { FailedModuleSummary, LoadedModuleSummary } from '../types.js';
 import { VersionsMenu } from '../VersionsMenu.js';
 import { DateSettingsButton } from '../dates/DateSettingsDialog.js';
+import { ThemeControls } from '../theme/ThemeControls.js';
 
 // Right-aligned group shared by every top bar: navbar widgets, date settings, versions menu, theme toggle.
 export function TopBarActions({ modules, failed = [] }: { modules: LoadedModuleSummary[]; failed?: FailedModuleSummary[] }): React.ReactElement {
-  const { theme, setTheme } = useTheme();
   return (
     <span className="ml-auto flex items-center gap-3">
       {widgetsFor(modules, 'navbar').map((w) => (
@@ -18,13 +16,7 @@ export function TopBarActions({ modules, failed = [] }: { modules: LoadedModuleS
       ))}
       <DateSettingsButton />
       <VersionsMenu modules={modules} failed={failed} />
-      <IconButton
-        icon={theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        variant="ghost"
-        size="icon-sm"
-      />
+      <ThemeControls />
     </span>
   );
 }
