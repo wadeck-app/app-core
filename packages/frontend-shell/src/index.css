@@ -5,3 +5,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* The A/B dock of dsl-ui (a development tool) appends an empty block at the end of the page so that its floating bar never covers the last
+   content; it showed as a blank band under every page. The dock floats over the page and folds into a pill (chevron) when it is in the way. */
+[data-testid="ab-dock-spacer"] {
+  display: none;
+}
