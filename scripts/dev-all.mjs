@@ -2,12 +2,40 @@
 // Runs the server watcher and the frontend dev server together (one command, one Orchestrator job).
 // Children are spawned as plain `node <bin>` (no npm/cmd.exe layer) and stopped by killing their whole tree.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import net from 'node:net';
-import { dirname, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { serverWatchExcludes } from '../packages/server/dev/watchExcludes.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+// tsx watch holds a handle on the folder of every file the server loads, and Windows refuses to rename a folder that is watched: the
+// modules installed by `<cli> cli update` (global npm packages, swapped in by rename) and the ones registered from a build folder must
+// stay out of the watch, or every such update fails with EPERM while dev:all runs. A module registered after this start is not covered:
+// restart dev:all if its update fails with EPERM.
+function watchExcludes() {
+  const npmRoot = spawnSync('npm root -g', { encoding: 'utf8', shell: true });
+  const globalNodeModules = npmRoot.status === 0 ? npmRoot.stdout.trim() : undefined;
+  if (globalNodeModules === undefined) {
+    console.warn(`[dev-all] WARNING: "npm root -g" failed (${(npmRoot.stderr || npmRoot.error?.message || 'no output').trim()}): the installed CLIs are not kept out of the server watch, so "<cli> cli update" may fail with EPERM on Windows while dev:all runs.`);
+  }
+  const modulesDir = join(process.env.APP_CORE_CONFIG_DIR ?? join(homedir(), '.config', 'app-core'), 'modules');
+  const registryEntries = [];
+  if (existsSync(modulesDir)) {
+    for (const file of readdirSync(modulesDir).filter((f) => f.endsWith('.json'))) {
+      try {
+        registryEntries.push(JSON.parse(readFileSync(join(modulesDir, file), 'utf8')));
+      } catch (err) {
+        console.warn(`[dev-all] WARNING: ${join(modulesDir, file)} is not readable JSON (${err.message}); its module is not kept out of the server watch.`);
+      }
+    }
+  }
+  const globs = serverWatchExcludes({ globalNodeModules, registryEntries });
+  console.log(`[dev-all] server watch excludes ${globs.length} installed folder(s)${globs.length > 0 ? `: ${globs.join(', ')}` : ''}`);
+  return globs.flatMap((glob) => ['--exclude', glob]);
+}
 
 const services = [
   {
@@ -15,7 +43,7 @@ const services = [
     port: 4850,
     cwd: resolve(root, 'packages/server'),
     bin: resolve(root, 'node_modules/tsx/dist/cli.mjs'),
-    args: ['watch', 'src/index.ts'],
+    args: ['watch', ...watchExcludes(), 'src/index.ts'],
   },
   {
     name: 'frontend',
