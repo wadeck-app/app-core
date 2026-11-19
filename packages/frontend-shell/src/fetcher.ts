@@ -19,13 +19,18 @@ export const fetcher: Fetcher = async (
   const spaceIdx = url.indexOf(' ');
   const method = spaceIdx >= 0 ? url.slice(0, spaceIdx) : 'GET';
   const path = spaceIdx >= 0 ? url.slice(spaceIdx + 1) : url;
+  // A request that changes something always carries a JSON body, `{}` when the action has none (a row or batch action without a form):
+  // without a Content-Type the browser sends a "simple" cross-site request, and the write guards of the modules (project, agent-manager)
+  // answer 415 to it. A GET or a HEAD sends nothing.
+  const readOnly = method === 'GET' || method === 'HEAD';
+  const payload = body !== undefined ? body : readOnly ? undefined : {};
   const res = await fetch(path, {
     method,
     headers: {
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(payload !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...extraHeaders,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: payload !== undefined ? JSON.stringify(payload) : undefined,
   });
   if (res.status === 204) {
     return undefined;

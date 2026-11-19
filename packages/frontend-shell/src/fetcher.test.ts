@@ -55,3 +55,33 @@ describe('fetcher', () => {
     expect(err.message).toContain('answered 200 but not with JSON (content-type "text/html")');
   });
 });
+
+describe('fetcher: requests that change something carry a JSON body', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const sentWith = async (url: string, body?: unknown): Promise<RequestInit> => {
+    const spy = vi.fn(async () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', spy);
+    await fetcher(url, undefined, body);
+    return (spy.mock.calls[0] as unknown as [string, RequestInit])[1];
+  };
+
+  // A row or batch action without a form has no body; without a Content-Type the browser sends a "simple" cross-site request, which a module
+  // guard (project, agent-manager) refuses with 415.
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('%s without a body sends {} as application/json', async (method) => {
+    const init = await sentWith(`${method} /api/modules/project/deleted/p1/restore`);
+    expect(init.body).toBe('{}');
+    expect(init.headers).toMatchObject({ 'Content-Type': 'application/json' });
+  });
+
+  it('keeps the body it is given', async () => {
+    const init = await sentWith('POST /api/modules/task/tasks', { title: 'x' });
+    expect(init.body).toBe('{"title":"x"}');
+  });
+
+  it('sends nothing with a GET', async () => {
+    const init = await sentWith('GET /api/modules/task/tasks');
+    expect(init.body).toBeUndefined();
+    expect(init.headers).not.toHaveProperty('Content-Type');
+  });
+});
