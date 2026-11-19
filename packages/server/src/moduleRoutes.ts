@@ -8,9 +8,21 @@ export type ModuleRouteHandler = (
   reply: FastifyReply,
 ) => unknown | Promise<unknown>;
 
+// What a route does, declared by the module that registers it:
+//  - 'read': changes nothing (default for GET and HEAD);
+//  - 'write': changes something (default for every other method); no gate yet: ordinary routes are NOT protected by the PIN;
+//  - 'sensitive': dispatched only with a valid access token (`Authorization: Bearer`), obtained by typing the PIN (see auth/).
+export const ROUTE_EFFECTS = ['read', 'write', 'sensitive'] as const;
+export type RouteEffect = (typeof ROUTE_EFFECTS)[number];
+
+export interface RouteOptions {
+  effect?: RouteEffect;
+}
+
 export interface FoundRoute {
   handler: ModuleRouteHandler;
   params: Record<string, string>;
+  effect: RouteEffect;
 }
 
 interface RouteEntry {
@@ -18,6 +30,7 @@ interface RouteEntry {
   pattern: string;
   segments: string[];
   handler: ModuleRouteHandler;
+  effect: RouteEffect;
 }
 
 const PARAM_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -80,7 +93,7 @@ export class ModuleRouteRegistry {
   private routes = new Map<string, RouteEntry[]>();
   private openResponses = new Map<string, Set<ServerResponse>>();
 
-  register(moduleId: string, method: string, subPath: string, handler: ModuleRouteHandler): void {
+  register(moduleId: string, method: string, subPath: string, handler: ModuleRouteHandler, options: RouteOptions = {}): void {
     const normalized = normalizeSubPath(subPath);
     if (normalized === '/_lib' || normalized.startsWith('/_lib/')) {
       throw new Error(
@@ -91,6 +104,10 @@ export class ModuleRouteRegistry {
     validatePattern(subPath, segments);
 
     const upperMethod = method.toUpperCase();
+    const effect = options.effect ?? (upperMethod === 'GET' || upperMethod === 'HEAD' ? 'read' : 'write');
+    if (!ROUTE_EFFECTS.includes(effect)) {
+      throw new Error(`registerRoute: effect "${String(effect)}" of ${upperMethod} "${normalized}" is not known. Use one of: ${ROUTE_EFFECTS.join(', ')}.`);
+    }
     const entries = this.routes.get(moduleId) ?? [];
     const conflict = entries.find((entry) => entry.method === upperMethod && sameShape(entry.segments, segments));
     if (conflict) {
@@ -98,7 +115,7 @@ export class ModuleRouteRegistry {
         `registerRoute: ${upperMethod} "${normalized}" conflicts with the already registered ${upperMethod} "${conflict.pattern}" (same method and path shape). Remove one, or rename a static segment.`,
       );
     }
-    entries.push({ method: upperMethod, pattern: normalized, segments, handler });
+    entries.push({ method: upperMethod, pattern: normalized, segments, handler, effect });
     this.routes.set(moduleId, entries);
   }
 
@@ -163,7 +180,7 @@ export class ModuleRouteRegistry {
         params[segment.slice(1)] = value;
       }
     });
-    return { handler: best.handler, params };
+    return { handler: best.handler, params, effect: best.effect };
   }
 }
 

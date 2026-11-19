@@ -47,3 +47,18 @@ Unverified: whether every CLI that calls module routes finds the port in `server
 - Cover L3 if possible. Adding authentication to app-core is accepted, although it is a single-user app.
 
 Consequence: O3 (one-time login) becomes a real login, and `sensitive` needs proof of the person, not of the browser. Open: the credential (see the chat message of 2026-11-19). Notes: a session kept on the server (random id, revocable) does what a JWT would here; a JWT is needed only if another service must verify it offline. An unattended daemon calling `register` at boot cannot log in: that channel stays on the O5 token, so L3 stays possible there; it is mitigated, not closed (allowed folders for `source.path`, every registration logged and shown in the UI).
+
+## Design chosen by the user (2026-11-20): PIN, refresh token, access token
+
+Replaces O3, O6 and the passkey idea for now. Scope of the first delivery: `sensitive` routes only; O1 (header gate on every write) and O5 (machine token for daemons) are a later step.
+
+- Routes declare an effect when a module registers them: `read` (default for GET), `write` (default for the rest), `sensitive`. Only `sensitive` is enforced in this delivery.
+- PIN (at least 6 digits, or any longer secret): scrypt hash in `<app-core config dir>/auth.json`, mode 0600. Created and changed only by `app-core-cli pin set` (hidden prompt, offline): never over HTTP, so an agent cannot create the first PIN. Per machine.
+- Valid PIN (`POST /api/auth/pin`) gives a refresh token: random, stored hashed server-side in the config dir (survives restarts and updates), sent as an `HttpOnly; SameSite=Strict; Path=/api/auth` cookie, valid 7 days, extended to 7 days from now each time it is used. No absolute cap (one constant if wanted later). No rotation (several tabs refresh without racing).
+- `POST /api/auth/refresh` (cookie) returns an access token: JWT HS256 signed with a per-install secret (`<config dir>/auth-secret`, mode 0600, generated at first start), 10 minutes, claim `sensitive: true`. The shell keeps it in localStorage and sends `Authorization: Bearer`.
+- A `sensitive` route without a valid access token answers 401 `{ error: 'elevation-required' }`. The shell fetcher then refreshes, and if there is no valid refresh token asks for the PIN in a dialog, then repeats the original request once.
+- PIN lockout on the server: 5 wrong tries, then waits that grow (1 min, 5 min, 30 min).
+- `POST /api/auth/logout` revokes the refresh token ("Lock now" in the interface).
+- No PIN set: sensitive routes answer 403 `{ error: 'pin-not-set' }` with the command to run.
+
+Known limits, said to the user: the access token in localStorage is readable by page scripts and by a same-user process for its 10 minutes; a same-user process that reads `auth.json` can find a 6-digit PIN offline; with daily use the PIN is asked about once if never idle 7 days.

@@ -1,0 +1,41 @@
+# PIN for sensitive actions
+
+A module declares a route `sensitive` (`ctx.registerRoute(method, path, handler, { effect: 'sensitive' })`, see `app-core-sdk/docs/module-authoring.md`). The route answers only with an access token that the user's PIN unlocks.
+
+## Set it
+
+```
+app-core-cli pin set      # typed twice, hidden, at least 6 characters
+app-core-cli pin status   # set or not; never prints the hash
+```
+
+- Needs an interactive terminal. The PIN is never taken from argv, a pipe or a file, and no HTTP route can set it.
+- Per machine: stored as a scrypt hash in `<config dir>/auth.json` (`APP_CORE_CONFIG_DIR`, else `~/.config/app-core`; `--config-dir <dir>` for an application started with `serve --module`).
+- Setting a new PIN closes every session (all refresh and access tokens stop working).
+- No PIN set: a sensitive route answers 403 `pin-not-set` with the command to run.
+
+## What the user sees
+
+1. A sensitive action without a token: the dashboard refreshes silently from its cookie; if there is none, it asks the PIN in a dialog, then repeats the action once. Cancel rejects the action ("Sensitive action cancelled: PIN not entered").
+2. 5 wrong PINs lock for 1 minute, then 5, then 30 (per server process, reset by a restart or a right PIN). The dialog counts the seconds.
+3. With daily use the PIN is asked about once; again after 7 days without use.
+4. The lock icon in the top bar ("Lock sensitive actions") ends the session at once.
+
+## Files (config dir)
+
+| File | Content |
+|---|---|
+| `auth.json` | scrypt hash, salt and parameters of the PIN |
+| `auth-secret` | 32 random bytes signing the access tokens (created at first use) |
+| `auth-sessions.json` | SHA-256 of each refresh token, its expiry, and the generation counter (logout and a new PIN increment it) |
+
+Tokens: access = JWT HS256, 10 minutes, kept by the dashboard in localStorage `app-core.access-token`. Refresh = random, HttpOnly `SameSite=Strict` cookie on `/api/auth`, 7 days sliding (`REFRESH_WINDOW_MS` in `server/src/auth/tokens.ts`), no absolute cap. The cookie has no `Secure` flag (plain http on localhost).
+
+## Limits
+
+- The access token in localStorage is readable by page scripts and by a process of the same user during its 10 minutes.
+- A process of the same user that can read `auth.json` can find a 6-digit PIN offline; scrypt makes it slow, not impossible. Use a longer secret if that matters.
+- File modes (0600) are not enforced on Windows: the files are readable by your whole user account.
+- Only routes declared `sensitive` are protected. Ordinary write routes, and `/api/modules/register|update|unregister`, are not.
+- A restart resets the lockout; an access token not yet expired survives a restart (secret and generation are on disk).
+- Anyone who can reach `POST /api/auth/logout` can lock the session (the request guard still applies).

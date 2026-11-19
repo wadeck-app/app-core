@@ -1,0 +1,11 @@
+{
+  "id": "sensitive-fixture",
+  "extensionPoints": [
+    {
+      "kind": "widget",
+      "slot": "dashboard",
+      "label": "Sensitive fixture widget",
+      "view": { "type": "inline", "value": { "$type": "Badge", "label": "sensitive-fixture" } }
+    }
+  ]
+}

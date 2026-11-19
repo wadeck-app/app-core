@@ -15,6 +15,8 @@ import { orderByRequires, readRequiredIds } from './loadOrder.js';
 import { etagHook } from './conditionalGet.js';
 import { registerCsp, resolveCspMode, type CspMode } from './csp.js';
 import { inventoryAbTests } from './abTestScan.js';
+import { authRoutes } from './auth/routes.js';
+import { refuseUnlessElevated } from './auth/guard.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +31,8 @@ export interface BuildServerOptions {
   allowedHosts?: string[];
   // The Content-Security-Policy of the HTML pages: `enforce` (default), `report-only` or `off`; else APP_CORE_CSP. See csp.ts.
   csp?: CspMode;
+  // Clock (epoch ms) of the PIN lockout and of the tokens; tests only.
+  authClock?: () => number;
 }
 
 export interface AppCoreServer {
@@ -140,6 +144,9 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   server.addHook('onClose', async () => {
     await manager.shutdown();
   });
+  const configDir = opts.configDir ?? resolveConfigDir();
+  // The PIN, the refresh cookie and the access token that unlock the routes modules declare `sensitive` (see auth/).
+  await server.register(authRoutes, { configDir, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
   await server.register(modulesRoutes, { modulesDir, manager });
   await server.register(slotsRoutes, { manager });
   // What the shell cannot know from its build: settings of this server process, read once per page load.
@@ -174,6 +181,13 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
     const found = manager.routeRegistry.find(id, req.method, `/${wildcard}`);
     if (!found) {
       return reply.code(404).send({ error: 'not-found' });
+    }
+    // A route declared `sensitive` is dispatched only with the access token the PIN unlocks (auth/guard.ts).
+    if (found.effect === 'sensitive') {
+      const refusal = refuseUnlessElevated(configDir, req.headers.authorization, opts.authClock);
+      if (refusal !== undefined) {
+        return reply.code(refusal.status).send(refusal.body);
+      }
     }
     manager.routeRegistry.trackResponse(id, reply.raw);
     // The handler sees only its own `:name` segments, never the catch-all's `id` (module id) and `*`.

@@ -1,0 +1,62 @@
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { Lock } from 'lucide-react';
+import { IconButton, ToastContext } from '@wadeck-app/dsl-ui';
+import { getErrorMessage } from '../errors.js';
+import { clearAccessToken, getAccessToken, onAccessTokenChange } from './accessToken.js';
+
+async function readElevated(): Promise<boolean> {
+  const res = await fetch('/api/auth/status');
+  if (!res.ok) {
+    throw new Error(`GET /api/auth/status answered ${res.status}`);
+  }
+  const body = (await res.json()) as { elevated?: unknown };
+  if (typeof body.elevated !== 'boolean') {
+    throw new Error('GET /api/auth/status has no boolean "elevated"; the server is older than this frontend');
+  }
+  return body.elevated;
+}
+
+// "Lock now": shown only while the PIN is unlocked (a live refresh cookie, or an access token stored here). Ends the session on the
+// server (every access token dies at once, the refresh cookie is cleared) and forgets the token of this browser.
+export function LockControl(): React.ReactElement | null {
+  // Absent from a tree without a ToastProvider (a test of a part of the bar): the toast is then skipped, the lock still happens.
+  const toast = useContext(ToastContext);
+  const [elevated, setElevated] = useState(false);
+  const [hasToken, setHasToken] = useState(() => getAccessToken() !== undefined);
+
+  const check = useCallback(async (): Promise<void> => {
+    setHasToken(getAccessToken() !== undefined);
+    try {
+      setElevated(await readElevated());
+    } catch (err) {
+      console.warn(`[shell] cannot tell whether sensitive actions are unlocked (GET /api/auth/status): ${getErrorMessage(err)}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    void check();
+    return onAccessTokenChange(() => void check());
+  }, [check]);
+
+  if (!elevated && !hasToken) {
+    return null;
+  }
+
+  const lock = async (): Promise<void> => {
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: unknown };
+        throw new Error(typeof body.message === 'string' ? body.message : `POST /api/auth/logout answered ${res.status}`);
+      }
+      setElevated(false);
+      setHasToken(false);
+      clearAccessToken();
+      toast?.success('Sensitive actions are locked: the PIN is asked again at the next one.');
+    } catch (err) {
+      toast?.error(`Could not lock sensitive actions: ${getErrorMessage(err)}`);
+    }
+  };
+
+  return <IconButton icon={<Lock size={14} />} aria-label="Lock sensitive actions" title="Lock sensitive actions" variant="ghost" size="icon-sm" onClick={() => void lock()} />;
+}

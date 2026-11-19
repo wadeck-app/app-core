@@ -1,6 +1,7 @@
 import { DEV_USAGE } from './dev.js';
 import { INIT_USAGE } from './init.js';
 import { STANDALONE_HELP, STANDALONE_SUMMARY } from './helpStandalone.js';
+import { PIN_USAGE } from './pin.js';
 import { LINK_USAGE } from './providers.js';
 import { STARTUP_USAGE } from './startup.js';
 
@@ -40,6 +41,11 @@ const COMMANDS: Record<string, CommandHelp> = {
     usage: STARTUP_USAGE,
     summary:
       'enable makes Orchestrator start the server at login (job "app-core": "app-core-cli serve", no timeout, one run at a time, skipped while the server is alive); a job that already starts it, such as "app-core-dev", is used as it is: its command is kept and only missing settings are completed. disable removes the job (never one it did not create, unless --id names it); status shows it and what is outdated. Needs `orch` on the PATH (2026.11.14-592 or later). A running server is not stopped.',
+  },
+  pin: {
+    usage: PIN_USAGE,
+    summary:
+      'set chooses or changes the PIN that unlocks the actions modules declare sensitive (at least 6 characters, typed twice, hidden; never taken from the command line, a pipe or a file) and closes every session already open; status says whether one is set. The PIN is per machine: stored as a scrypt hash in auth.json of the app-core config dir (APP_CORE_CONFIG_DIR, else ~/.config/app-core; --config-dir for an application started with serve --module). It cannot be set over HTTP. On Windows the file mode is not enforced. See docs/pin.md.',
   },
   tray: {
     usage: 'app-core-cli tray --url <address "Open app-core" goes to>',

@@ -248,7 +248,7 @@ export default function (ctx: ModuleContext) {
 | Member | Notes |
 |---|---|
 | `dataDir` | Persistent folder of the module. |
-| `registerRoute(method, subPath, handler)` | Cleared on unload. |
+| `registerRoute(method, subPath, handler, options?)` | Cleared on unload. `options.effect`: `'read'` (default for GET/HEAD), `'write'` (default otherwise), `'sensitive'`: see [Sensitive routes](#sensitive-routes-the-pin). |
 | `fileVersion(...files)`, `unchanged(req, reply, version)` | Answer 304 without computing: see [Data that changes rarely](#data-that-changes-rarely-etag-and-304). |
 | `setInterval(fn, ms)`, `setTimeout(fn, ms)` | Return an opaque `ModuleTimerHandle`; keeping it is optional, everything still running is cleared on unload. A fired timeout is dropped from tracking. |
 | `clearInterval(handle)`, `clearTimeout(handle)` | Stop one timer. Already cleared, already fired, or after unload: no-op. A value that is not a handle, or the other kind of handle, throws and says what to pass. |
@@ -285,6 +285,30 @@ ctx.registerRoute('POST', '/dlq/:id/replay', (req, reply) => reply.send({ replay
 - Two routes of the same method and shape (`/a/:x` and `/a/:y`) cannot both be registered:
   `registerRoute` throws, and the module is reported in `failed` instead of silently overwriting one.
 - Names must be letters, digits or `_`; the sub path `/_lib` is reserved (see dsl-lib below).
+
+### Sensitive routes (the PIN)
+
+```ts
+ctx.registerRoute('POST', '/sessions/:id/send', handler, { effect: 'sensitive' });
+```
+
+A sensitive route is dispatched only with `Authorization: Bearer <access token>`, which the user gets by typing the PIN. Your handler never sees a request without it.
+
+| Answer | When |
+|---|---|
+| 403 `pin-not-set` | No PIN chosen yet; the message names `app-core-cli pin set`. |
+| 401 `elevation-required` | A PIN exists, the token is missing, invalid, expired or revoked. |
+
+Calls from the dashboard need nothing from you: its fetcher refreshes the token or opens the PIN dialog, then repeats the call once (a failure is thrown with the server's message, a cancelled dialog with "Sensitive action cancelled: PIN not entered"). Any other client (a CLI, another module's server-side `fetch`) gets the 401 and cannot unlock: that is the point.
+
+Limits:
+
+- Only routes declared `sensitive` are protected; `write` is not gated yet.
+- The access token (10 minutes) sits in the browser's localStorage: page scripts and a process of the same user can read it.
+- A process of the same user that reads `auth.json` can find a 6-digit PIN offline; file modes are not enforced on Windows.
+- With daily use the PIN is asked about once; again after 7 days idle.
+
+Setup, files and lockout: [`app-core-cli/docs/pin.md`](../../app-core-cli/docs/pin.md). The route list of `GET /api/modules` does not show effects (it lists no routes).
 
 ### Lifecycle hooks, previous version and `dataDir`
 

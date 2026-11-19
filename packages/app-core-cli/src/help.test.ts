@@ -20,11 +20,19 @@ describe('isHelpRequest', () => {
 
 describe('helpText', () => {
   it('gives the usage and what the command changes, for every command', () => {
-    for (const command of ['validate', 'init', 'check', 'package', 'dev', 'serve', 'startup', 'tray', 'version', 'update', 'self-check']) {
+    for (const command of ['validate', 'init', 'check', 'package', 'dev', 'serve', 'startup', 'pin', 'tray', 'version', 'update', 'self-check']) {
       const text = helpText([command, '--help']);
       expect(text, command).toMatch(new RegExp(`^app-core-cli ${command}`));
       expect(text.split('\n').filter((l) => l.trim() !== '').length, command).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  it('says that pin set chooses the PIN of sensitive actions, per machine, typed hidden', () => {
+    const text = helpText(['pin', '--help']);
+    expect(text).toContain('app-core-cli pin <set|status>');
+    expect(text).toContain('per machine');
+    expect(text).toContain('never taken from the command line');
+    expect(helpText(['--help'])).toContain('  pin ');
   });
 
   it('says that update installs a release, so nobody learns it by running it', () => {

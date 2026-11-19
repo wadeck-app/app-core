@@ -23,6 +23,9 @@ import { readTrayBuildInfo } from './tray/buildInfo.js';
 import { helpText, isHelpRequest, isVersionFlag, updatePlan } from './help.js';
 import { devBuildRefusalMessage, isReleaseVersion } from '@wadeck-app/shared-cli/ReleaseVersion';
 import { spawn } from 'node:child_process';
+import { runPin } from './pin.js';
+import { readHidden } from './hiddenPrompt.js';
+import { resolveConfigDir } from '@wadeck-app/app-core-server/configDir';
 
 // Injected by esbuild at bundle time via define; falls back to dev placeholder.
 declare const __APP_CORE_CLI_VERSION__: string;
@@ -336,6 +339,31 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === 'pin') {
+    // The PIN of the sensitive routes (docs/pin.md). Typed hidden in a terminal, never taken from argv, a pipe or a file.
+    const pinArgs = [target, ...rest].filter((arg): arg is string => arg !== undefined);
+    const at = pinArgs.indexOf('--config-dir');
+    let pinConfigDir = resolveConfigDir();
+    if (at !== -1) {
+      const given = pinArgs[at + 1];
+      if (given === undefined || given.startsWith('--')) {
+        console.error('app-core-cli pin: --config-dir needs a value, e.g. --config-dir ./my-app-data');
+        process.exitCode = 1;
+        return;
+      }
+      pinConfigDir = given;
+      pinArgs.splice(at, 2);
+    }
+    process.exitCode = await runPin(pinArgs, {
+      configDir: pinConfigDir,
+      interactive: process.stdin.isTTY === true,
+      readHidden: (question) => readHidden(question, process.stdin, process.stderr),
+      stdout: process.stdout,
+      stderr: process.stderr,
+    });
+    return;
+  }
+
   if (command === 'tray') {
     // Not for users: `npm run dev:all` (scripts/dev-all.mjs) starts it next to the server it runs from sources, which has
     // no `app-core-cli` process of its own to hold the icon. It lives and dies with dev-all.
@@ -393,7 +421,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.error('Usage: app-core-cli <validate|init|check|package|dev|serve|tray|version|update|self-check> [path] (app-core-cli --version prints the installed version, app-core-cli --help lists the commands)');
+  console.error('Usage: app-core-cli <validate|init|check|package|dev|serve|pin|tray|version|update|self-check> [path] (app-core-cli --version prints the installed version, app-core-cli --help lists the commands)');
   process.exitCode = 1;
 }
 

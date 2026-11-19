@@ -12,7 +12,7 @@ describe('ModuleRouteRegistry with :name segments', () => {
   it('matches a static route exactly and exposes no params', () => {
     const registry = new ModuleRouteRegistry();
     registry.register('m', 'GET', '/status', handler);
-    expect(registry.find('m', 'GET', '/status')).toEqual({ handler, params: {} });
+    expect(registry.find('m', 'GET', '/status')).toEqual({ handler, params: {}, effect: 'read' });
     expect(registry.find('m', 'GET', '/other')).toBeUndefined();
   });
 

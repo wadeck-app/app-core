@@ -32,4 +32,4 @@ export {
   type ModuleTimerHandle,
 } from '@wadeck-app/app-core-server/moduleContext';
 
-export { type ModuleRouteHandler } from '@wadeck-app/app-core-server/moduleRoutes';
+export { type ModuleRouteHandler, type RouteEffect, type RouteOptions } from '@wadeck-app/app-core-server/moduleRoutes';

@@ -1,4 +1,6 @@
 import type { Fetcher } from '@wadeck-app/dsl-renderer';
+import { getAccessToken } from './auth/accessToken.js';
+import { elevate } from './auth/elevation.js';
 
 // What the user reads when the answer has no usable body: where it came from, the status, and the usual cause. A dev proxy (Vite on
 // 5173 to app-core on 4850) answers an empty 500 while its target is down or restarting.
@@ -24,28 +26,46 @@ export const fetcher: Fetcher = async (
   // answer 415 to it. A GET or a HEAD sends nothing.
   const readOnly = method === 'GET' || method === 'HEAD';
   const payload = body !== undefined ? body : readOnly ? undefined : {};
-  const res = await fetch(path, {
-    method,
-    headers: {
-      ...(payload !== undefined ? { 'Content-Type': 'application/json' } : {}),
-      ...extraHeaders,
-    },
-    body: payload !== undefined ? JSON.stringify(payload) : undefined,
-  });
+  // The access token of the PIN goes to this app only (a path of this origin), never to another address.
+  const sameOrigin = path.startsWith('/') && !path.startsWith('//');
+  const send = async (): Promise<{ res: Response; text: string; data: unknown; parsed: boolean }> => {
+    const token = sameOrigin ? getAccessToken() : undefined;
+    const res = await fetch(path, {
+      method,
+      headers: {
+        ...(payload !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(token !== undefined ? { Authorization: `Bearer ${token}` } : {}),
+        ...extraHeaders,
+      },
+      body: payload !== undefined ? JSON.stringify(payload) : undefined,
+    });
+    if (res.status === 204) {
+      return { res, text: '', data: undefined, parsed: false };
+    }
+    // The status is read before the body: an answer without JSON must still say what happened.
+    const text = await res.text();
+    let data: unknown;
+    let parsed = false;
+    if (text.trim() !== '') {
+      try {
+        data = JSON.parse(text);
+        parsed = true;
+      } catch {
+        // Not JSON (a proxy's plain-text error, an HTML page): reported below with its status.
+      }
+    }
+    return { res, text, data, parsed };
+  };
+  let attempt = await send();
+  // A route a module declared sensitive wants the PIN: get an access token (refresh cookie, else the PIN dialog), then repeat the
+  // request ONCE. A second refusal is an error like any other: no loop.
+  if (sameOrigin && attempt.res.status === 401 && (attempt.data as { error?: unknown } | undefined)?.error === 'elevation-required') {
+    await elevate();
+    attempt = await send();
+  }
+  const { res, text, data, parsed } = attempt;
   if (res.status === 204) {
     return undefined;
-  }
-  // The status is read before the body: an answer without JSON must still say what happened.
-  const text = await res.text();
-  let data: unknown;
-  let parsed = false;
-  if (text.trim() !== '') {
-    try {
-      data = JSON.parse(text);
-      parsed = true;
-    } catch {
-      // Not JSON (a proxy's plain-text error, an HTML page): reported below with its status.
-    }
   }
   if (!res.ok) {
     const { message, error } = (parsed && typeof data === 'object' && data !== null ? data : {}) as { message?: string; error?: string };

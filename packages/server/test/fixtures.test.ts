@@ -22,6 +22,7 @@ const EXPECTED: Record<string, { id: string; version: string }> = {
   'app-module-menu-contributor-b': { id: 'menu-contributor-b', version: '1.0.0' },
   'app-module-menu-provider': { id: 'menu-provider', version: '1.0.0' },
   'app-module-minimal': { id: 'module-a', version: '1.0.0' },
+  'app-module-sensitive': { id: 'sensitive-fixture', version: '1.0.0' },
   'app-module-slot-contributor-a': { id: 'slot-contributor-a', version: '1.0.0' },
   'app-module-slot-contributor-b': { id: 'slot-contributor-b', version: '1.0.0' },
   'app-module-slot-provider': { id: 'slot-provider', version: '1.0.0' },

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { PinPromptHost } from './auth/PinPromptHost.js';
 import { AbExperiments, RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
 import { AbTestsPage } from './AbTestsPage.js';
 import { ModulesPage } from './ModulesPage.js';
@@ -80,6 +81,8 @@ export default function App(): React.ReactElement {
         <ToastProvider>
           {/* The outcome of every module action (row/batch actions, forms, brains) is shown as a toast. */}
           <ShellNotifier>
+          {/* The one dialog that asks the PIN when a sensitive action needs it (the fetcher calls it). */}
+          <PinPromptHost />
           <ModuleLibsProvider value={libStatuses}>
             <AppFrame modules={modules} failed={failedModules} standalone={standalone}>
               {error ? (

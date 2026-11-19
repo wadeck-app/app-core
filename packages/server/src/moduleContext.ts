@@ -1,4 +1,4 @@
-import type { ModuleRouteHandler, ModuleRouteRegistry } from './moduleRoutes.js';
+import type { ModuleRouteHandler, ModuleRouteRegistry, RouteOptions } from './moduleRoutes.js';
 import { unchanged } from './etagCore.js';
 
 declare const timerHandleBrand: unique symbol;
@@ -27,7 +27,10 @@ export interface ModuleContext {
   // Removes a listener added with on(). A listener that is not registered, or a call after dispose, is a no-op.
   off(event: string, fn: (...args: unknown[]) => void): void;
   emit(event: string, ...args: unknown[]): void;
-  registerRoute(method: string, subPath: string, handler: ModuleRouteHandler): void;
+  // `options.effect`: 'read' | 'write' | 'sensitive' (default: read for GET and HEAD, write for the rest). A 'sensitive' route answers
+  // only to a request carrying the access token that the PIN unlocks; without it: 403 pin-not-set (no PIN chosen yet) or 401
+  // elevation-required. Declare it for what the user must confirm with the PIN (sending text into a session, deleting data...).
+  registerRoute(method: string, subPath: string, handler: ModuleRouteHandler, options?: RouteOptions): void;
   // A version for data kept in files: it changes when one of them is modified or appears or disappears. A missing file is a version
   // of its own, not an error. Give it to `unchanged`.
   fileVersion(...files: string[]): Promise<string>;
@@ -168,11 +171,11 @@ export function createModuleContext(moduleId: string, routeRegistry: ModuleRoute
     emit(event, ...args) {
       listeners.get(event)?.forEach((fn) => fn(...args));
     },
-    registerRoute(method, subPath, handler) {
+    registerRoute(method, subPath, handler, options) {
       if (disposed) {
         throw new Error('moduleContext.registerRoute called after dispose()');
       }
-      routeRegistry.register(moduleId, method, subPath, handler);
+      routeRegistry.register(moduleId, method, subPath, handler, options);
     },
     fileVersion: (...files) => (services.fileVersion ?? fileVersionUnavailable)(files),
     unchanged: (req, reply, version) => unchanged(req, reply, version),
