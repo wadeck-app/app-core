@@ -346,6 +346,15 @@ no base-path logic to worry about. Keep the module id a fixed literal in the URL
 a `$route`/dynamic placeholder -- an empty-placeholder path silently skips the fetch in the
 underlying DSL renderer, so a fixed literal is the safe pattern.
 
+### Update test of app-core-cli (`GET /health`)
+
+Before `app-core-cli` switches to a new version, the updater starts that version's server on a copy of this machine's registry and refuses the update if it fails. For each loaded module:
+
+- Optional `ctx.registerRoute('GET', '/health', ...)` (served at `/api/modules/<id>/health`) answers 200 with `{ "ok": boolean, "checks": [{ "name": string, "ok": boolean, "detail"?: string }] }`. `ok: false` refuses the update and lists the failed checks with their `detail`, unless the running server's `/health` is `ok: false` too (warning only). Test what matters to the module (connections to other systems, its data), read-only. The staged server runs with the real home (HOME, APPDATA...), so the systems you reach through it are the real ones, and with a temporary app-core config dir: its `dataDir` is empty.
+- A 200 in another format fails the update: do not use `/health` for anything else.
+- No `/health` (404): the module is tested through its base pages. Each `page` without `:param` in its `path` must have its view, and each `$sources` entry of the form `GET /path` (no `{placeholder}`, no `$route`/`$urlParam` parameter) must answer without a 5xx, unless the running server answers the same URL with a 5xx too (then it is only a warning in the log).
+- A module that already fails to load in the running server does not block the update.
+
 ### Data that changes rarely (ETag and 304)
 
 A view that refreshes a source (`poll`, a refresh button) asks the same route again. Two things keep an unchanged answer cheap:

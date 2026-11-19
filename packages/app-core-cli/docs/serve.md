@@ -63,3 +63,13 @@ app-core-cli startup status    # the job, and what is outdated in it
 ## Updates
 
 Every `app-core-cli` invocation, including `serve`, schedules the background self-update check (`shared-updater`, `without-daemon`) unless `--no-update` or `APP_CORE_CLI_NO_UPDATE=1` is given. The server and frontend are part of the same package, so a new version is used the next time `serve` starts. `app-core-cli update` still updates when you ask for it. A build from the repository (not a CalVer release) never updates.
+
+### An update is refused unless the new server runs
+
+The new version is installed into a staging folder first. The updater runs `cli version`, then starts `serve --port 0 --no-tray --no-update` of that version with a temp app-core config dir (copy of the `modules/*.json` registry entries only, no data) and the real home (HOME, USERPROFILE, APPDATA, XDG_*), so module backends reach their systems as they do in the running server (only the `cli version` step runs with a temp home) and requires, within 60 s:
+
+- `/` is HTML, every same-origin script/link it references answers 200, `/build-info.json` parses;
+- every module registered here is loaded in `/api/modules` (a module that also fails in the running server is excused; with no running server, any failed module refuses the update);
+- each loaded module's `GET /api/modules/<id>/health` is ok, or, when it answers 404, its base pages resolve and their GET sources answer without a 5xx. A 5xx source or an `ok: false` `/health` refuses the update only if the running server answers the same URL healthily; if it fails there too it is a warning line in the output. With no running server to compare, it refuses and says so (format and rules: `app-core-sdk/docs/module-authoring.md`, "Update test").
+
+The stage and its process tree are always stopped and the temp dir removed (retried for about 5 s; a folder still locked is removed by the next update check, which also sweeps `app-core-staged-health-*` folders of the temp dir older than 10 minutes, and reports one older than 24 h that it cannot remove). On refusal nothing is switched, the old version keeps running, and the message (step, module, last 40 lines of the staged server output) is in `<app-core-cli config dir>/logs/<date>.ndjson` and printed by `app-core-cli update`.

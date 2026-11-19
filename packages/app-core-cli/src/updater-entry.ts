@@ -6,6 +6,7 @@ import { runUpdater, execNpm } from '@wadeck-app/shared-updater';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
 import { devBuildRefusalMessage, isReleaseVersion } from '@wadeck-app/shared-cli/ReleaseVersion';
 import { join } from 'node:path';
+import { stagedServerHealthCheck } from './stagedHealth.js';
 
 // Injected by esbuild at bundle time via define; falls back to dev placeholder.
 declare const __APP_CORE_CLI_VERSION__: string;
@@ -36,6 +37,9 @@ runUpdater({
   configDir,
   currentVersion,
   strategy: 'without-daemon',
+  // A new version is refused unless its own server runs with the modules registered here (see stagedHealth.ts).
+  healthCheck: stagedServerHealthCheck,
+  healthCheckTimeoutMs: 60_000,
   onUpdateAvailable: async (_newVersion: string) => 'apply-now' as const,
 }).catch((err) => {
   process.stderr.write(`[app-core-cli-updater] fatal: ${err}\n`);

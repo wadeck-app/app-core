@@ -145,6 +145,17 @@ describe('lifecycle hooks with the real packaged fixtures', () => {
     expect(events()).toEqual(['setup:v1', 'teardown:v1']);
   });
 
+  it('startServer({ port: 0 }) reports and records the port really bound, never 0', async () => {
+    const running = await startServer({ configDir, port: 0 });
+    try {
+      expect(running.port).toBeGreaterThan(0);
+      const recorded = JSON.parse(fs.readFileSync(path.join(configDir, 'server.port.json'), 'utf8')) as { port: number };
+      expect(recorded.port).toBe(running.port);
+    } finally {
+      await running.stop();
+    }
+  });
+
   it('startServer().stop() runs the teardown of every loaded module before closing', async () => {
     // Port 0 is not accepted by APP_CORE_PORT; pick a free one first.
     const probe = await buildServer({ configDir: path.join(configDir, 'probe') });
