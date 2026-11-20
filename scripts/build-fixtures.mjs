@@ -36,6 +36,8 @@ export const VERSIONS = {
   // Built before the contributors (see packageOrder), which are checked against its dist-module.
   'app-module-menu-provider': '1.0.0',
   'app-module-minimal': '1.0.0',
+  // One route declared sensitive (the PIN protection).
+  'app-module-sensitive': '1.0.0',
   'app-module-slot-contributor-a': '1.0.0',
   'app-module-slot-contributor-b': '1.0.0',
   // Built before the contributors (see packageOrder): they are checked against its dist-module.
