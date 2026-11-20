@@ -22,6 +22,7 @@
     "./server": { "import": "./dist/server.js", "types": "./dist/server.d.ts" },
     "./start": { "import": "./dist/start.js", "types": "./dist/start.d.ts" },
     "./moduleState": { "import": "./dist/moduleState.js", "types": "./dist/moduleState.d.ts" },
+    "./appUpdate": { "import": "./dist/appUpdate.js", "types": "./dist/appUpdate.d.ts" },
     "./auth/pin": { "import": "./dist/auth/pin.js", "types": "./dist/auth/pin.d.ts" },
     "./auth/tokens": { "import": "./dist/auth/tokens.js", "types": "./dist/auth/tokens.d.ts" },
     "./errors": { "import": "./dist/errors.js", "types": "./dist/errors.d.ts" }

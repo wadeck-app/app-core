@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer, type RunningServer } from '@wadeck-app/app-core-server/start';
+import type { AppUpdateOptions } from '@wadeck-app/app-core-server/appUpdate';
 import { prepareStandalone, writeStandaloneRegistry } from './standalone.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +18,8 @@ export interface ServeOptions {
   port?: number;
   // The folder used when a standalone application is given no `configDir`: one per module id.
   defaultStandaloneConfigDir?: (moduleId: string) => string;
+  // What the update indicator of the shell needs (see the server's appUpdate.ts): running version, installed package, updater folder, restart.
+  update?: AppUpdateOptions;
 }
 
 export interface ServedApp extends RunningServer {
@@ -40,7 +43,7 @@ export async function runServe(opts: ServeOptions = {}): Promise<ServedApp> {
     if (opts.configDir !== undefined) {
       throw new Error('--config-dir only applies to --module: the global app-core keeps its state in APP_CORE_CONFIG_DIR (or ~/.config/app-core).');
     }
-    return startServer({ publicDir, abTests: opts.abTests, port: opts.port });
+    return startServer({ publicDir, abTests: opts.abTests, port: opts.port, update: opts.update });
   }
   const defaultConfigDir = opts.defaultStandaloneConfigDir;
   const plan = prepareStandalone(opts.module, {
@@ -52,6 +55,6 @@ export async function runServe(opts: ServeOptions = {}): Promise<ServedApp> {
       }),
   });
   writeStandaloneRegistry(plan);
-  const running = await startServer({ publicDir, abTests: opts.abTests, configDir: plan.configDir, standalone: { moduleId: plan.moduleId }, port: opts.port });
+  const running = await startServer({ publicDir, abTests: opts.abTests, configDir: plan.configDir, standalone: { moduleId: plan.moduleId }, port: opts.port, update: opts.update });
   return { ...running, configDir: plan.configDir, moduleId: plan.moduleId };
 }

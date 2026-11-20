@@ -17,6 +17,7 @@ import { registerCsp, resolveCspMode, type CspMode } from './csp.js';
 import { inventoryAbTests } from './abTestScan.js';
 import { authRoutes } from './auth/routes.js';
 import { refuseUnlessElevated } from './auth/guard.js';
+import { appUpdateRoutes, type AppUpdateOptions } from './appUpdate.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +34,8 @@ export interface BuildServerOptions {
   csp?: CspMode;
   // Clock (epoch ms) of the PIN lockout and of the tokens; tests only.
   authClock?: () => number;
+  // What GET /api/app-update and POST /api/app-update/restart need: given by `app-core-cli serve`; absent from a run from sources.
+  update?: AppUpdateOptions;
 }
 
 export interface AppCoreServer {
@@ -147,6 +150,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   const configDir = opts.configDir ?? resolveConfigDir();
   // The PIN, the refresh cookie and the access token that unlock the routes modules declare `sensitive` (see auth/).
   await server.register(authRoutes, { configDir, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
+  // The update indicator of the top bar: what the updater recorded, and the restart that starts the installed version.
+  await server.register(appUpdateRoutes, { update: opts.update ?? {}, configDir, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
   await server.register(modulesRoutes, { modulesDir, manager });
   await server.register(slotsRoutes, { manager });
   // What the shell cannot know from its build: settings of this server process, read once per page load.

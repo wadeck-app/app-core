@@ -7,6 +7,7 @@ import { DEV_USAGE, parseDevArgs, runDev } from './dev.js';
 import { runServe } from './serve.js';
 import { parseStartupArgs, runStartup } from './startup.js';
 import { wantsBackgroundUpdate } from './backgroundUpdate.js';
+import { startPeriodicUpdate } from './periodicUpdate.js';
 import { checkModule, formatCheckIssues } from './check.js';
 import { DEFAULT_OUT_DIR, packageModule, parsePackageArgs, resolveVersion } from './package.js';
 import { parseLinkArgs } from './providers.js';
@@ -37,6 +38,11 @@ const bundlePath = process.env['LAUNCHER_BUNDLE_OVERRIDE'] ?? fileURLToPath(impo
 // LAUNCHER_BUNDLE_OVERRIDE, which names the orchestrator's bundle, and the files next to it are not ours (the tray looked
 // for build-info.json there).
 const ownDir = dirname(fileURLToPath(import.meta.url));
+
+// Spawns the detached updater (one check per 30 minutes, see shared-updater): at every start, and every 6 hours of a running `serve`.
+function scheduleUpdate(): void {
+  new UpdateManager(PKG_NAME).scheduleBackgroundUpdate(bundlePath, 'app-core-cli-updater.cjs', VERSION);
+}
 
 async function main(): Promise<void> {
   // Asking how a command works never runs it (nor schedules an update): `update --help` used to run the updater.
@@ -73,9 +79,10 @@ async function main(): Promise<void> {
   // silent no-op, per UpdateManager's own documented behavior. A bundle built from the repository (not a CalVer release)
   // has its updater file too: the version is passed so that it spawns nothing and never starts an `npm install -g`.
   // `--no-update` (or APP_CORE_CLI_NO_UPDATE=1) is for an application that must stay on the version it was built with.
-  if (wantsBackgroundUpdate(command, process.argv.slice(2), process.env)) {
+  const wantsUpdate = wantsBackgroundUpdate(command, process.argv.slice(2), process.env);
+  if (wantsUpdate) {
     try {
-      new UpdateManager(PKG_NAME).scheduleBackgroundUpdate(bundlePath, 'app-core-cli-updater.cjs', VERSION);
+      scheduleUpdate();
     } catch {
       // Never let a background-update scheduling failure block the actual command.
     }
@@ -275,12 +282,20 @@ async function main(): Promise<void> {
         throw new Error(`--port needs a port number between 0 and 65535, got "${portArg}", e.g. --port 4851.`);
       }
       const serveNoUpdate = args.includes('--no-update') || process.env['APP_CORE_CLI_NO_UPDATE'] === '1';
+      // Set once the tray and `stop` exist (below); the shell's "Restart now" (POST /api/app-update/restart) calls it, as the tray's Restart does.
+      let restartServer: (() => void) | undefined;
       const { port, stop, configDir: servedConfigDir, moduleId } = await runServe({
         abTests,
         module: moduleArg,
         configDir: configDirArg,
         port: portNumber,
         defaultStandaloneConfigDir: (id) => join(configDir, 'standalone', id),
+        update: {
+          // Only an installed release has a version to compare with its package.json; a bundle built from sources says so (state unknown).
+          ...(isReleaseVersion(VERSION) ? { runningVersion: VERSION, packageDir: join(ownDir, '..') } : {}),
+          updaterDir: configDir,
+          restart: () => restartServer?.(),
+        },
       });
       if (moduleId !== undefined) {
         console.log(`app-core-cli serve: application "${moduleId}" (--module): no dashboard, data in ${servedConfigDir}`);
@@ -305,6 +320,9 @@ async function main(): Promise<void> {
           })
           .finally(() => process.exit(0));
       };
+      restartServer = restart;
+      // A server that stays up for days: the updater runs again every 6 hours (not with --no-update).
+      startPeriodicUpdate({ enabled: wantsUpdate, schedule: scheduleUpdate });
       process.on('SIGINT', shutdown);
       process.on('SIGTERM', shutdown);
       if (args.includes('--no-tray')) {

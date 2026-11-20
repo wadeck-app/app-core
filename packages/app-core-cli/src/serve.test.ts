@@ -85,6 +85,22 @@ describe('runServe', () => {
     expect(await shellSettings()).toEqual({ abTests: true });
   });
 
+  it('hands the update information to the server: GET /api/app-update names the running version, and the restart is offered', async () => {
+    const updaterDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-serve-updater-'));
+    const packageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-serve-package-'));
+    fs.writeFileSync(path.join(packageDir, 'package.json'), JSON.stringify({ version: '2026.11.20-209-2f19765e' }));
+    fs.writeFileSync(path.join(updaterDir, 'update-state.json'), JSON.stringify({ status: 'success', currentVersion: '2026.11.14-193-c7bfd3f7', timestamp: 1 }));
+    try {
+      const running = await runServe({ publicDir, update: { runningVersion: '2026.11.14-193-c7bfd3f7', packageDir, updaterDir, restart: () => undefined } });
+      stop = running.stop;
+      const body = (await (await fetch(`${BASE}/api/app-update`)).json()) as Record<string, unknown>;
+      expect(body).toMatchObject({ state: 'restart-needed', running: '2026.11.14-193-c7bfd3f7', installed: '2026.11.20-209-2f19765e', canRestart: true });
+    } finally {
+      fs.rmSync(updaterDir, { recursive: true, force: true });
+      fs.rmSync(packageDir, { recursive: true, force: true });
+    }
+  });
+
   it('removes server.port.json when stopped', async () => {
     const running = await runServe({ publicDir });
     await running.stop();

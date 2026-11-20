@@ -64,6 +64,13 @@ app-core-cli startup status    # the job, and what is outdated in it
 
 Every `app-core-cli` invocation, including `serve`, schedules the background self-update check (`shared-updater`, `without-daemon`) unless `--no-update` or `APP_CORE_CLI_NO_UPDATE=1` is given. The server and frontend are part of the same package, so a new version is used the next time `serve` starts. `app-core-cli update` still updates when you ask for it. A build from the repository (not a CalVer release) never updates.
 
+### Update indicator and restart
+
+- A running `serve` starts the updater again every 6 hours (the 30 minute cache of `shared-updater` makes a call that comes too soon a file read). No timer with `--no-update`.
+- `GET /api/app-update` reads `update-state.json`, `update-cache.json` (in `APP_CORE_CLI_CONFIG_DIR`, else `~/.config/app-core-cli`) and the `package.json` of the installed package; no network. It answers `state`: `up-to-date`, `restart-needed` (installed differs from running), `update-failed` (`failure`: message, log file of the day; the updater records no step), `update-available`, `applying`, or `unknown` with a `reason` (a run from sources such as `dev:all`, a missing or unreadable file). `canRestart` says whether the restart below is offered.
+- The top bar shows the state (hidden when up to date) and polls every 5 minutes and on window focus.
+- `POST /api/app-update/restart` needs the PIN (same rules as a `sensitive` module route, `pin.md`), answers 202, then runs the tray's Restart. The shell waits for the server to answer with the installed version and reloads. 409 `restart-unavailable` when the server is not started by `serve`.
+
 ### An update is refused unless the new server runs
 
 The new version is installed into a staging folder first. The updater runs `cli version`, then starts `serve --port 0 --no-tray --no-update` of that version with a temp app-core config dir (copy of the `modules/*.json` registry entries only, no data) and the real home (HOME, USERPROFILE, APPDATA, XDG_*), so module backends reach their systems as they do in the running server (only the `cli version` step runs with a temp home) and requires, within 60 s:
