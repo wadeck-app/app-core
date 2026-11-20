@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { elevate } from './auth/elevation.js';
 import { fetcher } from './fetcher.js';
-import { APP_CORE_SHELL_GLOBAL, ensureSharedGlobals } from './sharedGlobals.js';
+import { APP_CORE_SHELL_GLOBAL, installShellApi } from './sharedGlobals.js';
 
 // A module's bundle holds the SDK's copy of the key (`@wadeck-app/app-core-sdk/shell`) and the shell its own: they must stay equal.
 describe('the shell API given to the dsl-lib components', () => {
@@ -15,8 +15,10 @@ describe('the shell API given to the dsl-lib components', () => {
     expect(APP_CORE_SHELL_GLOBAL).toBe(constIn(sdk, 'APP_CORE_SHELL_GLOBAL'));
   });
 
-  it('gives the elevate and the fetcher of the shell itself, before any module bundle is imported', async () => {
-    await ensureSharedGlobals();
+  // Installed on its own, not through ensureSharedGlobals(): that one also loads react-router-dom, whose CommonJS entry races with the
+  // parallel imports under Node 24 on the CI runner.
+  it('gives the elevate and the fetcher of the shell itself, before any module bundle is imported', () => {
+    installShellApi();
     const api: unknown = Reflect.get(globalThis, APP_CORE_SHELL_GLOBAL);
     expect(api).toEqual({ elevate, fetcher });
     expect((api as { elevate: unknown }).elevate).toBe(elevate);

@@ -10,6 +10,11 @@ declare global {
 // (packages/app-core-sdk/src/shell.ts) reads this key. A test keeps the two literals equal.
 export const APP_CORE_SHELL_GLOBAL = '__APP_CORE_SHELL__';
 
+// Gives the shell's own `elevate` and `fetcher` to the dsl-lib components; ensureSharedGlobals() does it before any bundle is imported.
+export function installShellApi(): void {
+  Reflect.set(globalThis, APP_CORE_SHELL_GLOBAL, { elevate, fetcher });
+}
+
 let pending: Promise<void> | undefined;
 
 // Module bundles (dsl-lib) are built with these packages externalized and read them from
@@ -19,7 +24,7 @@ let pending: Promise<void> | undefined;
 // itself uses. Must complete before any module bundle is imported.
 export function ensureSharedGlobals(): Promise<void> {
   pending ??= (async () => {
-    Reflect.set(globalThis, APP_CORE_SHELL_GLOBAL, { elevate, fetcher });
+    installShellApi();
     const [react, jsxRuntime, reactDom, reactDomClient, reactRouterDom, dslUi, dslRenderer] = await Promise.all([
       import('react'),
       import('react/jsx-runtime'),
