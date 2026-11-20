@@ -20,6 +20,11 @@
       "import": "./dist/indicators.bundle.js",
       "default": "./dist/indicators.bundle.js"
     },
+    "./shell": {
+      "types": "./dist/shell.bundle.d.ts",
+      "import": "./dist/shell.bundle.js",
+      "default": "./dist/shell.bundle.js"
+    },
     "./violations": {
       "types": "./dist/violations.bundle.d.ts",
       "import": "./dist/violations.bundle.js",
@@ -31,6 +36,7 @@
     "*": {
       "register": ["dist/register.bundle.d.ts"],
       "indicators": ["dist/indicators.bundle.d.ts"],
+      "shell": ["dist/shell.bundle.d.ts"],
       "violations": ["dist/violations.bundle.d.ts"]
     }
   },
@@ -41,6 +47,8 @@
     "dist/register.bundle.d.ts",
     "dist/indicators.bundle.js",
     "dist/indicators.bundle.d.ts",
+    "dist/shell.bundle.js",
+    "dist/shell.bundle.d.ts",
     "dist/violations.bundle.js",
     "dist/violations.bundle.d.ts",
     "README.md",

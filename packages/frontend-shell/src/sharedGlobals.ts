@@ -1,7 +1,14 @@
+import { elevate } from './auth/elevation.js';
+import { fetcher } from './fetcher.js';
+
 declare global {
   // eslint-disable-next-line no-var
   var __APP_CORE_SHARED__: Record<string, unknown> | undefined;
 }
+
+// Where the shell gives `{ elevate, fetcher }` to the dsl-lib components of the modules: the SDK entry `@wadeck-app/app-core-sdk/shell`
+// (packages/app-core-sdk/src/shell.ts) reads this key. A test keeps the two literals equal.
+export const APP_CORE_SHELL_GLOBAL = '__APP_CORE_SHELL__';
 
 let pending: Promise<void> | undefined;
 
@@ -12,6 +19,7 @@ let pending: Promise<void> | undefined;
 // itself uses. Must complete before any module bundle is imported.
 export function ensureSharedGlobals(): Promise<void> {
   pending ??= (async () => {
+    Reflect.set(globalThis, APP_CORE_SHELL_GLOBAL, { elevate, fetcher });
     const [react, jsxRuntime, reactDom, reactDomClient, reactRouterDom, dslUi, dslRenderer] = await Promise.all([
       import('react'),
       import('react/jsx-runtime'),

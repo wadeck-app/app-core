@@ -310,6 +310,22 @@ Limits:
 
 Setup, files and lockout: [`app-core-cli/docs/pin.md`](../../app-core-cli/docs/pin.md). The route list of `GET /api/modules` does not show effects (it lists no routes).
 
+### Calling a sensitive route from a dsl-lib component
+
+A component of your dsl-lib has no access to the shell's fetcher; `@wadeck-app/app-core-sdk/shell` (browser code, bundled into your module) gives it:
+
+```ts
+import { appFetcher, elevate } from '@wadeck-app/app-core-sdk/shell';
+
+// Optional: ask for the PIN now (refresh cookie first, then the dialog), e.g. before showing the button.
+await elevate();
+const answer = await appFetcher('POST /api/modules/chat/sessions/1/send', undefined, { text });
+```
+
+- `appFetcher(url, params?, body?, extraHeaders?)` is the fetcher of the shell's pages: `url` is `'METHOD /path'`, a 401 `elevation-required` opens the PIN dialog and repeats the call once.
+- `elevate()` rejects with "Sensitive action cancelled: PIN not entered" when the user cancels.
+- Outside the shell (a unit test) or on an app-core without this entry, both throw "the app-core shell does not provide ...": there is no plain `fetch` fallback. Needs the app-core-cli version that introduced the `shell` entry; check `app-core-cli version`.
+
 ### Lifecycle hooks, previous version and `dataDir`
 
 Each hook is its own file under `src/backend` whose default export is the function; `check` verifies the file exists and has a default export, `package` bundles it.
