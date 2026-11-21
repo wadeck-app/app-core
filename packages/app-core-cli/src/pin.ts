@@ -1,4 +1,4 @@
-import { authFilePath, isPinSet, MIN_PIN_LENGTH, setPin } from '@wadeck-app/app-core-server/auth/pin';
+import { authFilePath, isPinSet, MIN_PIN_LENGTH, pinProblem, setPin } from '@wadeck-app/app-core-server/auth/pin';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 
 export const PIN_USAGE = 'app-core-cli pin <set|status> [--config-dir <dir>]';
@@ -12,7 +12,8 @@ export interface PinDeps {
   stderr: { write(text: string): unknown };
 }
 
-// `app-core-cli pin set | status`. Returns the exit code. The PIN is created and changed only here, offline: no HTTP route can set it.
+// `app-core-cli pin set | status`. Returns the exit code. `set` replaces the PIN whether it was chosen here or in the dashboard,
+// without asking the current one (it runs as the user, on the machine).
 export async function runPin(args: string[], deps: PinDeps): Promise<number> {
   const [sub, ...rest] = args;
   const fail = (message: string): number => {
@@ -38,9 +39,10 @@ export async function runPin(args: string[], deps: PinDeps): Promise<number> {
       return fail('"pin set" needs an interactive terminal: the PIN is typed with the keyboard, hidden, and never taken from the command line, a pipe or a file. Run it in a terminal.');
     }
     const pin = await deps.readHidden(`New PIN (at least ${MIN_PIN_LENGTH} characters, hidden): `);
-    // Same check as setPin, before asking twice.
-    if (Array.from(pin).length < MIN_PIN_LENGTH) {
-      return fail(`The PIN must have at least ${MIN_PIN_LENGTH} characters (got ${Array.from(pin).length}). Nothing was changed.`);
+    // Same rule as the dashboard and setPin (one function), checked before asking twice.
+    const problem = pinProblem(pin);
+    if (problem !== undefined) {
+      return fail(`${problem} Nothing was changed.`);
     }
     const again = await deps.readHidden('Type it again: ');
     if (again !== pin) {

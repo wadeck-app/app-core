@@ -1,31 +1,37 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Dialog } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
-import { setPinAsker, type PinAsker, type PinVerdict } from './pinPrompt.js';
+import { setPinAsker, type PinAsker, type PinPromptMode, type PinVerdict } from './pinPrompt.js';
+import { ResetHint, usePinStatus } from './ResetHint.js';
+import { useLockCountdown } from './useLockCountdown.js';
 
-const INPUT = 'w-full rounded border border-border bg-surface px-2 py-1.5 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
-const BUTTON = 'inline-flex items-center rounded border border-border bg-surface px-3 py-1.5 text-sm text-content transition-colors hover:bg-bg-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
+export const PIN_INPUT = 'w-full rounded border border-border bg-surface px-2 py-1.5 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
+export const PIN_BUTTON = 'inline-flex items-center rounded border border-border bg-surface px-3 py-1.5 text-sm text-content transition-colors hover:bg-bg-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
 
 interface Pending {
+  mode: PinPromptMode;
   verify: (pin: string) => Promise<PinVerdict>;
   settle: (accepted: boolean) => void;
 }
 
-// The one dialog that asks the PIN, for every request that needs it at the moment (the fetcher shares one elevation, see
-// auth/elevation.ts). Mounted once, in the app; it registers itself as the asker the fetcher calls.
+// The one dialog that asks the PIN ('enter') or asks to choose it ('choose', when none exists), for every request that needs it at
+// the moment (the fetcher shares one elevation, see auth/elevation.ts). Mounted once, in the app; it registers itself as the asker
+// the fetcher calls.
 export function PinPromptHost(): React.ReactElement {
   const [pending, setPending] = useState<Pending | null>(null);
   const [pin, setPin] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState<string | undefined>(undefined);
-  const [lockedUntil, setLockedUntil] = useState(0);
-  const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const pendingRef = useRef<Pending | null>(null);
+  const countdown = useLockCountdown();
+  const { status, error: statusError } = usePinStatus(pending !== null);
 
   const asker = useCallback<PinAsker>(
-    (verify) =>
+    (verify, mode = 'enter') =>
       new Promise<boolean>((resolve) => {
         const next: Pending = {
+          mode,
           verify,
           settle: (accepted) => {
             pendingRef.current = null;
@@ -37,11 +43,13 @@ export function PinPromptHost(): React.ReactElement {
         pendingRef.current?.settle(false);
         pendingRef.current = next;
         setPin('');
+        setConfirm('');
         setMessage(undefined);
-        setLockedUntil(0);
+        countdown.clear();
         setBusy(false);
         setPending(next);
       }),
+    // `countdown.clear` only sets state: the asker must not be re-registered at every render.
     [],
   );
 
@@ -53,20 +61,15 @@ export function PinPromptHost(): React.ReactElement {
     };
   }, [asker]);
 
-  // The seconds of a lock count down on screen.
-  useEffect(() => {
-    if (lockedUntil <= Date.now()) {
-      return undefined;
-    }
-    const timer = setInterval(() => setNow(Date.now()), 500);
-    return () => clearInterval(timer);
-  }, [lockedUntil]);
-
-  const remaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
-  const locked = lockedUntil > 0 && remaining > 0;
+  const choosing = pending?.mode === 'choose';
+  const { locked, remaining } = countdown;
 
   const submit = async (): Promise<void> => {
     if (pending === null || busy || locked || pin === '') {
+      return;
+    }
+    if (choosing && confirm !== pin) {
+      setMessage('The two entries do not match. Type the same PIN twice.');
       return;
     }
     setBusy(true);
@@ -77,11 +80,10 @@ export function PinPromptHost(): React.ReactElement {
         return;
       }
       setPin('');
+      setConfirm('');
       setMessage(verdict.message);
       if (verdict.retryAfterSeconds !== undefined) {
-        const at = Date.now() + verdict.retryAfterSeconds * 1000;
-        setNow(Date.now());
-        setLockedUntil(at);
+        countdown.lock(verdict.retryAfterSeconds);
       }
     } catch (err) {
       setMessage(getErrorMessage(err));
@@ -91,10 +93,12 @@ export function PinPromptHost(): React.ReactElement {
   };
 
   const shown = locked ? `Too many wrong PINs. Try again in ${remaining} ${remaining === 1 ? 'second' : 'seconds'}.` : message;
+  const minimum = status?.minPinLength;
+  const canSubmit = !(busy || locked || pin === '' || (choosing && confirm === ''));
 
   return (
     <Dialog
-      title="PIN needed"
+      title={choosing ? 'Choose a PIN' : 'PIN needed'}
       open={pending !== null}
       onOpenChange={(open) => {
         if (!open) {
@@ -104,11 +108,11 @@ export function PinPromptHost(): React.ReactElement {
       size="sm"
       actions={
         <>
-          <button type="button" className={BUTTON} onClick={() => pending?.settle(false)}>
+          <button type="button" className={PIN_BUTTON} onClick={() => pending?.settle(false)}>
             Cancel
           </button>
-          <button type="button" className={BUTTON} disabled={busy || locked || pin === ''} onClick={() => void submit()}>
-            Unlock
+          <button type="button" className={PIN_BUTTON} disabled={!canSubmit} onClick={() => void submit()}>
+            {choosing ? 'Choose PIN' : 'Unlock'}
           </button>
         </>
       }
@@ -119,16 +123,27 @@ export function PinPromptHost(): React.ReactElement {
           void submit();
         }}
       >
-        <p className="mb-3 text-sm text-muted">This action needs your PIN (the one chosen with &quot;app-core-cli pin set&quot;). It stays unlocked while you use the dashboard.</p>
+        {choosing ? (
+          <p className="mb-3 text-sm text-muted">{`No PIN is set yet. Choose the PIN that unlocks sensitive actions${minimum === undefined ? '' : ` (at least ${minimum} characters)`}. You can also run "app-core-cli pin set" in a terminal.`}</p>
+        ) : (
+          <p className="mb-3 text-sm text-muted">This action needs your PIN. It stays unlocked while you use the dashboard.</p>
+        )}
         <label className="block text-sm text-content">
-          PIN
-          <input className={`${INPUT} mt-1`} type="password" autoComplete="off" autoFocus value={pin} disabled={busy} onChange={(event) => setPin(event.target.value)} />
+          {choosing ? 'New PIN' : 'PIN'}
+          <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" autoFocus value={pin} disabled={busy} onChange={(event) => setPin(event.target.value)} />
         </label>
+        {choosing ? (
+          <label className="mt-2 block text-sm text-content">
+            Confirm the PIN
+            <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={confirm} disabled={busy} onChange={(event) => setConfirm(event.target.value)} />
+          </label>
+        ) : null}
         {shown !== undefined ? (
           <p role="alert" className="mt-2 text-sm text-danger">
             {shown}
           </p>
         ) : null}
+        <ResetHint status={status} error={statusError} />
       </form>
     </Dialog>
   );

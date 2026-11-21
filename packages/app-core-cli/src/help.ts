@@ -45,7 +45,7 @@ const COMMANDS: Record<string, CommandHelp> = {
   pin: {
     usage: PIN_USAGE,
     summary:
-      'set chooses or changes the PIN that unlocks the actions modules declare sensitive (at least 6 characters, typed twice, hidden; never taken from the command line, a pipe or a file) and closes every session already open; status says whether one is set. The PIN is per machine: stored as a scrypt hash in auth.json of the app-core config dir (APP_CORE_CONFIG_DIR, else ~/.config/app-core; --config-dir for an application started with serve --module). It cannot be set over HTTP. On Windows the file mode is not enforced. See docs/pin.md.',
+      'set chooses or changes the PIN that unlocks the actions modules declare sensitive (at least 6 characters, typed twice, hidden; never taken from the command line, a pipe or a file) and closes every session already open; status says whether one is set. The PIN is per machine: stored as a scrypt hash in auth.json of the app-core config dir (APP_CORE_CONFIG_DIR, else ~/.config/app-core; --config-dir for an application started with serve --module). The dashboard can also choose it (while none is set) and change it (with the current PIN); set here replaces it without asking. On Windows the file mode is not enforced. See docs/pin.md.',
   },
   tray: {
     usage: 'app-core-cli tray --url <address "Open app-core" goes to>',

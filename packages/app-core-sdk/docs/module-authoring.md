@@ -296,10 +296,10 @@ A sensitive route is dispatched only with `Authorization: Bearer <access token>`
 
 | Answer | When |
 |---|---|
-| 403 `pin-not-set` | No PIN chosen yet; the message names `app-core-cli pin set`. |
+| 403 `pin-not-set` | No PIN chosen yet. The dashboard opens a "Choose a PIN" dialog and repeats the call; the message also names `app-core-cli pin set`. |
 | 401 `elevation-required` | A PIN exists, the token is missing, invalid, expired or revoked. |
 
-Calls from the dashboard need nothing from you: its fetcher refreshes the token or opens the PIN dialog, then repeats the call once (a failure is thrown with the server's message, a cancelled dialog with "Sensitive action cancelled: PIN not entered"). Any other client (a CLI, another module's server-side `fetch`) gets the 401 and cannot unlock: that is the point.
+Calls from the dashboard need nothing from you: its fetcher refreshes the token or opens the PIN dialog (or the "Choose a PIN" one when none exists), then repeats the call once (a failure is thrown with the server's message, a cancelled dialog with "Sensitive action cancelled: PIN not entered"). Any other client (a CLI, another module's server-side `fetch`) gets the 401 and cannot unlock: that is the point.
 
 Limits:
 

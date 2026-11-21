@@ -5,8 +5,8 @@ import { writeFileAtomic } from './atomicWrite.js';
 import { SessionStore } from './tokens.js';
 
 // The PIN that unlocks the routes a module declares `sensitive`. Only its scrypt hash is stored, in `auth.json` in the app-core
-// config dir. It is created and changed only by `app-core-cli pin set` (this code, called locally): never over HTTP, so a process
-// that can only send requests cannot choose it.
+// config dir. It is created or changed by `app-core-cli pin set` (this code, called locally) or by the dashboard over HTTP
+// (POST /api/auth/pin/set only while no PIN exists, POST /api/auth/pin/change with the current PIN; see routes.ts).
 //
 // What this does not protect, said plainly:
 //  - A process of the same user that can read auth.json can try PINs offline. scrypt makes each try slow (about a tenth of a
@@ -81,14 +81,34 @@ export async function verifyPin(configDir: string, pin: string): Promise<boolean
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-// Chooses or changes the PIN, and revokes every session (a new PIN logs everybody out). Atomic write.
-export async function setPin(configDir: string, pin: string, now: () => number = Date.now): Promise<void> {
+// The one rule for a NEW PIN (the CLI, the HTTP routes and setPin all use it): what is wrong with it, or undefined when it is fine.
+export function pinProblem(pin: string): string | undefined {
   const length = Array.from(pin).length;
   if (length < MIN_PIN_LENGTH) {
-    throw new Error(`The PIN must have at least ${MIN_PIN_LENGTH} characters (got ${length}). Choose a longer one.`);
+    return `The PIN must have at least ${MIN_PIN_LENGTH} characters (got ${length}). Choose a longer one.`;
   }
   if (length > MAX_PIN_LENGTH) {
-    throw new Error(`The PIN must have at most ${MAX_PIN_LENGTH} characters (got ${length}).`);
+    return `The PIN must have at most ${MAX_PIN_LENGTH} characters (got ${length}).`;
+  }
+  return undefined;
+}
+
+// Answer of a sensitive route, and of the PIN routes, while no PIN exists.
+export const PIN_NOT_SET_MESSAGE = 'No PIN is set yet. Choose one in the dashboard (a "Choose a PIN" dialog opens at the next sensitive action) or run "app-core-cli pin set" in a terminal.';
+
+// The files to delete to go back to "no PIN set" by hand, with the instruction shown by the dashboard. Only auth.json: it is read at
+// every request, so no restart is needed. auth-sessions.json is NOT listed on purpose: choosing a PIN revokes every session by raising
+// its generation counter, and deleting that file would reset the counter, so an access token issued before (still within its 10
+// minutes) could match the new generation again. The lockout counter is in memory (no file); choosing a PIN clears it.
+export function pinResetHint(configDir: string): { files: string[]; instruction: string } {
+  return { files: [authFilePath(configDir)], instruction: 'Delete this file (no restart needed), then choose a new PIN.' };
+}
+
+// Chooses or changes the PIN, and revokes every session (a new PIN logs everybody out). Atomic write.
+export async function setPin(configDir: string, pin: string, now: () => number = Date.now): Promise<void> {
+  const problem = pinProblem(pin);
+  if (problem !== undefined) {
+    throw new Error(problem);
   }
   const salt = randomBytes(SALT_BYTES);
   const hash = await derive(pin, salt, SCRYPT);

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { PinLockout } from './lockout.js';
-import { isPinSet, MAX_PIN_LENGTH, verifyPin } from './pin.js';
+import { isPinSet, MAX_PIN_LENGTH, MIN_PIN_LENGTH, PIN_NOT_SET_MESSAGE, pinProblem, pinResetHint, setPin, verifyPin } from './pin.js';
 import { ACCESS_TOKEN_SECONDS, REFRESH_WINDOW_MS, SessionStore, signAccessToken } from './tokens.js';
 
 export interface AuthRoutesOptions {
@@ -60,35 +60,92 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
   const issue = (reply: FastifyReply, refreshToken: string) =>
     reply.header('Set-Cookie', cookieHeader(refreshToken, REFRESH_WINDOW_MS / 1000)).send({ accessToken: signAccessToken(configDir, now), expiresInSeconds: ACCESS_TOKEN_SECONDS });
 
+  // Checks the current PIN with the lockout rules, for the login and for "change". Sends the refusal and returns false, or counts the
+  // success and returns true. Must run inside oneAtATime.
+  const checkCurrentPin = async (reply: FastifyReply, pin: string): Promise<boolean> => {
+    if (!isPinSet(configDir)) {
+      reply.code(403).send({ error: 'pin-not-set', message: PIN_NOT_SET_MESSAGE });
+      return false;
+    }
+    const locked = lockout.check();
+    if (locked.locked) {
+      reply
+        .code(429)
+        .header('Retry-After', String(locked.retryAfterSeconds))
+        .send({ error: 'pin-locked', retryAfterSeconds: locked.retryAfterSeconds, message: `Too many wrong PINs. Try again in ${locked.retryAfterSeconds} seconds.` });
+      return false;
+    }
+    if (!(await verifyPin(configDir, pin))) {
+      lockout.recordFailure();
+      const after = lockout.check();
+      if (after.locked) {
+        reply
+          .code(429)
+          .header('Retry-After', String(after.retryAfterSeconds))
+          .send({ error: 'pin-locked', retryAfterSeconds: after.retryAfterSeconds, message: `Wrong PIN, and too many wrong tries. Try again in ${after.retryAfterSeconds} seconds.` });
+        return false;
+      }
+      const triesLeft = lockout.triesLeft();
+      reply.code(401).send({ error: 'pin-wrong', triesLeft, message: `Wrong PIN. ${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} left before a wait of ${minutes(lockout.nextWaitSeconds())}.` });
+      return false;
+    }
+    lockout.recordSuccess();
+    return true;
+  };
+
+  const textOf = (value: unknown): string | undefined => (typeof value === 'string' && value.length <= MAX_PIN_LENGTH ? value : undefined);
+
   server.post('/api/auth/pin', async (request, reply) => {
     const pin = (request.body as { pin?: unknown } | null | undefined)?.pin;
     if (typeof pin !== 'string' || pin === '' || pin.length > MAX_PIN_LENGTH) {
       return reply.code(400).send({ error: 'bad-request', message: `The body must be {"pin": "<the PIN>"}, a text of 1 to ${MAX_PIN_LENGTH} characters.` });
     }
+    return oneAtATime(async () => ((await checkCurrentPin(reply, pin)) ? issue(reply, sessions.createRefresh()) : reply));
+  });
+
+  // Chooses the first PIN. Only while none exists: the check and the write run in oneAtATime, so two simultaneous calls cannot both
+  // find "no PIN". Answers like the login, so the user is unlocked at once.
+  server.post('/api/auth/pin/set', async (request, reply) => {
+    const pin = textOf((request.body as { pin?: unknown } | null | undefined)?.pin);
+    if (pin === undefined) {
+      return reply.code(400).send({ error: 'bad-request', message: `The body must be {"pin": "<the new PIN>"}, a text of at most ${MAX_PIN_LENGTH} characters.` });
+    }
     return oneAtATime(async () => {
-      if (!isPinSet(configDir)) {
-        return reply.code(403).send({ error: 'pin-not-set', message: 'Run "app-core-cli pin set" to choose the PIN that unlocks sensitive actions.' });
+      if (isPinSet(configDir)) {
+        return reply.code(409).send({ error: 'pin-already-set', message: 'A PIN is already set, and it is not replaced from here. To change it, give the current PIN (POST /api/auth/pin/change, "Change PIN" in the top bar).' });
       }
-      const locked = lockout.check();
-      if (locked.locked) {
-        return reply
-          .code(429)
-          .header('Retry-After', String(locked.retryAfterSeconds))
-          .send({ error: 'pin-locked', retryAfterSeconds: locked.retryAfterSeconds, message: `Too many wrong PINs. Try again in ${locked.retryAfterSeconds} seconds.` });
+      const problem = pinProblem(pin);
+      if (problem !== undefined) {
+        return reply.code(400).send({ error: 'pin-invalid', message: problem });
       }
-      if (!(await verifyPin(configDir, pin))) {
-        lockout.recordFailure();
-        const after = lockout.check();
-        if (after.locked) {
-          return reply
-            .code(429)
-            .header('Retry-After', String(after.retryAfterSeconds))
-            .send({ error: 'pin-locked', retryAfterSeconds: after.retryAfterSeconds, message: `Wrong PIN, and too many wrong tries. Try again in ${after.retryAfterSeconds} seconds.` });
-        }
-        const triesLeft = lockout.triesLeft();
-        return reply.code(401).send({ error: 'pin-wrong', triesLeft, message: `Wrong PIN. ${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} left before a wait of ${minutes(lockout.nextWaitSeconds())}.` });
-      }
+      await setPin(configDir, pin, now);
       lockout.recordSuccess();
+      return issue(reply, sessions.createRefresh());
+    });
+  });
+
+  // Changes the PIN: the current one is checked like at the login (a wrong one is a counted try, the lockout applies). setPin revokes
+  // every refresh token and access token; the caller gets a fresh session.
+  server.post('/api/auth/pin/change', async (request, reply) => {
+    const body = request.body as { currentPin?: unknown; newPin?: unknown } | null | undefined;
+    const currentPin = textOf(body?.currentPin);
+    const newPin = textOf(body?.newPin);
+    if (currentPin === undefined || currentPin === '' || newPin === undefined) {
+      return reply.code(400).send({ error: 'bad-request', message: `The body must be {"currentPin": "<the PIN>", "newPin": "<the new PIN>"}, texts of at most ${MAX_PIN_LENGTH} characters.` });
+    }
+    // Before the current PIN is looked at: neither of these is a guess, so neither counts as a wrong try.
+    const problem = pinProblem(newPin);
+    if (problem !== undefined) {
+      return reply.code(400).send({ error: 'pin-invalid', message: problem });
+    }
+    return oneAtATime(async () => {
+      if (!(await checkCurrentPin(reply, currentPin))) {
+        return reply;
+      }
+      if (newPin === currentPin) {
+        return reply.code(400).send({ error: 'pin-unchanged', message: 'The new PIN is the same as the current one. Choose a different PIN, or cancel to keep the current one.' });
+      }
+      await setPin(configDir, newPin, now);
       return issue(reply, sessions.createRefresh());
     });
   });
@@ -111,6 +168,8 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
 
   server.get('/api/auth/status', async (request) => {
     const token = refreshTokenOf(request);
-    return { pinSet: isPinSet(configDir), locked: lockout.check().locked, elevated: token !== undefined && sessions.findRefresh(token) };
+    const pinSet = isPinSet(configDir);
+    // A session left over from a PIN deleted by hand does not unlock anything: no PIN, no elevation.
+    return { pinSet, locked: pinSet && lockout.check().locked, elevated: pinSet && token !== undefined && sessions.findRefresh(token), resetHint: pinResetHint(configDir), minPinLength: MIN_PIN_LENGTH };
   });
 };

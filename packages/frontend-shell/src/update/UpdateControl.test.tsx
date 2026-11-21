@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPinAsker } from '../auth/pinPrompt.js';
 import { UpdateControl, UPDATE_POLL_MS } from './UpdateControl.js';
 
 const OLD = '2026.11.14-193-c7bfd3f7';
@@ -104,17 +105,45 @@ describe('UpdateControl', () => {
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
   });
 
-  it('says why when the restart is refused, and keeps the button', async () => {
+  it('says why when the restart is refused (a damaged auth file here), and keeps the button', async () => {
     current = answer({ state: 'restart-needed', installed: NEW, latest: NEW });
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => (url === '/api/app-update/restart' ? json({ error: 'pin-not-set', message: 'Run "app-core-cli pin set" to choose the PIN.' }, 403) : json(current))),
+      vi.fn(async (url: string) => (url === '/api/app-update/restart' ? json({ error: 'internal', message: 'auth.json is not valid. Delete it.' }, 500) : json(current))),
     );
     render(<UpdateControl reload={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: /app-core update/i }));
     fireEvent.click(await screen.findByRole('button', { name: 'Restart now' }));
-    expect(await screen.findByText(/app-core-cli pin set/)).toBeInTheDocument();
+    expect(await screen.findByText(/auth\.json is not valid/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Restart now' })).toBeInTheDocument();
+  });
+
+  it('with no PIN set, Restart now opens the Choose-a-PIN dialog, then repeats the restart with the new session', async () => {
+    current = answer({ state: 'restart-needed', installed: NEW, latest: NEW });
+    const restartCalls: Array<string | undefined> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        if (url === '/api/app-update/restart') {
+          restartCalls.push((init.headers as Record<string, string> | undefined)?.['Authorization']);
+          return restartCalls.length === 1 ? json({ error: 'pin-not-set', message: 'No PIN is set yet.' }, 403) : json({ restarting: true });
+        }
+        if (url === '/api/auth/pin/set') {
+          return json({ accessToken: 'chosen.tok.en', expiresInSeconds: 600 });
+        }
+        return json(current);
+      }),
+    );
+    setPinAsker(async (verify, mode) => mode === 'choose' && (await verify('482915')).ok);
+    const reload = vi.fn();
+    render(<UpdateControl reload={reload} restartPollMs={5} />);
+    fireEvent.click(await screen.findByRole('button', { name: /app-core update/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Restart now' }));
+    await waitFor(() => expect(restartCalls).toEqual([undefined, 'Bearer chosen.tok.en']));
+    // The new server answers: ends the wait loop of the control.
+    current = answer({ running: NEW, installed: NEW, latest: NEW });
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    setPinAsker(undefined);
   });
 
   it('asks again on window focus and every 5 minutes, not more', async () => {

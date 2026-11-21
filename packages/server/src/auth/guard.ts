@@ -1,8 +1,8 @@
-import { isPinSet } from './pin.js';
+import { isPinSet, PIN_NOT_SET_MESSAGE } from './pin.js';
 import { verifyAccessToken } from './tokens.js';
 
 // What a `sensitive` route needs before its handler runs. Returns the refusal, or undefined when the request may go on.
-//  - no PIN chosen yet: 403 pin-not-set (nothing can unlock the route; the message names the command);
+//  - no PIN chosen yet: 403 pin-not-set (nothing can unlock the route; the message says to choose it in the dashboard or with the CLI);
 //  - a PIN, but no valid access token: 401 elevation-required (the shell asks the PIN and repeats the request).
 export interface Refusal {
   status: 401 | 403;
@@ -16,7 +16,7 @@ export function bearerTokenOf(authorization: string | undefined): string | undef
 
 export function refuseUnlessElevated(configDir: string, authorization: string | undefined, now: () => number = Date.now): Refusal | undefined {
   if (!isPinSet(configDir)) {
-    return { status: 403, body: { error: 'pin-not-set', message: 'Run "app-core-cli pin set" to choose the PIN that unlocks sensitive actions.' } };
+    return { status: 403, body: { error: 'pin-not-set', message: PIN_NOT_SET_MESSAGE } };
   }
   const token = bearerTokenOf(authorization);
   const verdict = token === undefined ? undefined : verifyAccessToken(configDir, token, now);

@@ -1,6 +1,6 @@
 import type { Fetcher } from '@wadeck-app/dsl-renderer';
 import { getAccessToken } from './auth/accessToken.js';
-import { elevate } from './auth/elevation.js';
+import { choosePin, elevate } from './auth/elevation.js';
 
 // What the user reads when the answer has no usable body: where it came from, the status, and the usual cause. A dev proxy (Vite on
 // 5173 to app-core on 4850) answers an empty 500 while its target is down or restarting.
@@ -61,6 +61,10 @@ export const fetcher: Fetcher = async (
   // request ONCE. A second refusal is an error like any other: no loop.
   if (sameOrigin && attempt.res.status === 401 && (attempt.data as { error?: unknown } | undefined)?.error === 'elevation-required') {
     await elevate();
+    attempt = await send();
+  } else if (sameOrigin && attempt.res.status === 403 && (attempt.data as { error?: unknown } | undefined)?.error === 'pin-not-set') {
+    // No PIN exists: the "Choose a PIN" dialog, then the request is repeated once with the new session.
+    await choosePin();
     attempt = await send();
   }
   const { res, text, data, parsed } = attempt;

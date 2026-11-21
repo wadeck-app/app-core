@@ -62,3 +62,9 @@ Replaces O3, O6 and the passkey idea for now. Scope of the first delivery: `sens
 - No PIN set: sensitive routes answer 403 `{ error: 'pin-not-set' }` with the command to run.
 
 Known limits, said to the user: the access token in localStorage is readable by page scripts and by a same-user process for its 10 minutes; a same-user process that reads `auth.json` can find a 6-digit PIN offline; with daily use the PIN is asked about once if never idle 7 days.
+
+### Amendment (2026-11-21, D9): the PIN can be set from the web app
+
+- Reverses "never over HTTP": `POST /api/auth/pin/set` chooses the first PIN (only while none exists; 409 otherwise) and unlocks at once; `POST /api/auth/pin/change` needs the current PIN, under the same lockout as the login, and closes every other session. The shell opens a "Choose a PIN" dialog at the first sensitive action. `app-core-cli pin set` stays and replaces the PIN without asking the current one.
+- Cost: while no PIN exists, a process of the same user can set the first PIN over HTTP (before, only the CLI could). Once a PIN is set, nothing changes. The request guard still refuses cross-site and foreign-origin calls; choose the PIN right after install.
+- Reset by hand: delete `<config dir>/auth.json` (shown in the dialogs with its real path; no restart needed). `auth-sessions.json` is not on the list on purpose, see `server/src/auth/pin.ts` (`pinResetHint`).

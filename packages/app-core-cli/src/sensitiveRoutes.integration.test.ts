@@ -5,7 +5,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as url from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { setPin } from '@wadeck-app/app-core-server/auth/pin';
+import { PIN_NOT_SET_MESSAGE, setPin } from '@wadeck-app/app-core-server/auth/pin';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const cliEntry = path.join(__dirname, '../dist/cli.js');
@@ -102,9 +102,9 @@ describe('sensitive routes, real server (PIN, refresh cookie, access token)', ()
     // No PIN chosen: the sensitive route says what to run; the route that is not sensitive is untouched.
     const noPin = await launch(server);
     expect(noPin.status).toBe(403);
-    expect(await noPin.json()).toEqual({ error: 'pin-not-set', message: 'Run "app-core-cli pin set" to choose the PIN that unlocks sensitive actions.' });
+    expect(await noPin.json()).toEqual({ error: 'pin-not-set', message: PIN_NOT_SET_MESSAGE });
     expect((await call(server, 'GET', '/api/modules/sensitive-fixture/open')).status).toBe(200);
-    expect(await (await call(server, 'GET', '/api/auth/status')).json()).toEqual({ pinSet: false, locked: false, elevated: false });
+    expect(await (await call(server, 'GET', '/api/auth/status')).json()).toMatchObject({ pinSet: false, locked: false, elevated: false });
 
     // The PIN is chosen offline, through the shared function the CLI uses, while the server runs.
     await setPin(work, PIN);
@@ -128,7 +128,7 @@ describe('sensitive routes, real server (PIN, refresh cookie, access token)', ()
 
     // Status with the cookie says elevated, and holds no secret.
     const status = await (await call(server, 'GET', '/api/auth/status', { headers: { Cookie: cookie } })).json();
-    expect(status).toEqual({ pinSet: true, locked: false, elevated: true });
+    expect(status).toEqual({ pinSet: true, locked: false, elevated: true, resetHint: { files: [path.join(work, 'auth.json')], instruction: expect.any(String) } });
 
     // Refresh with the cookie: a new token that works, the cookie sent again with the full window.
     const refreshed = await call(server, 'POST', '/api/auth/refresh', { headers: { Cookie: cookie } });

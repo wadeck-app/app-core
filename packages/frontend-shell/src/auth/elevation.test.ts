@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetcher } from '../fetcher.js';
 import { getAccessToken, storeAccessToken } from './accessToken.js';
+import { changePin } from './elevation.js';
 import { setPinAsker, type PinAsker } from './pinPrompt.js';
 
 interface Call {
@@ -135,12 +136,92 @@ describe('fetcher: sensitive routes (elevation)', () => {
     await expect(launch()).rejects.toThrow(/PIN dialog/);
   });
 
-  it('throws the server message on pin-not-set, with no refresh and no dialog', async () => {
-    script['POST /api/modules/agent/launch'] = [() => json(403, { error: 'pin-not-set', message: 'Run "app-core-cli pin set" to choose the PIN that unlocks sensitive actions.' })];
-    const err = await launch().catch((e: Error & { status?: number }) => e);
-    expect((err as Error).message).toBe('Run "app-core-cli pin set" to choose the PIN that unlocks sensitive actions.');
-    expect((err as { status?: number }).status).toBe(403);
-    expect(calls).toHaveLength(1);
+  const notSet = (): Response => json(403, { error: 'pin-not-set', message: 'No PIN is set yet. Choose one in the dashboard or run "app-core-cli pin set".' });
+
+  it('on pin-not-set opens the choose dialog (no refresh), sets the PIN, and repeats the request with the new token', async () => {
+    script['POST /api/modules/agent/launch'] = [notSet, () => json(200, { launched: true })];
+    script['POST /api/auth/pin/set'] = [() => json(200, { accessToken: 'chosen.tok.en', expiresInSeconds: 600 })];
+    const asker = vi.fn<PinAsker>(async (verify) => (await verify('482915')).ok);
+    setPinAsker(asker);
+    expect(await launch()).toEqual({ launched: true });
+    expect(asker).toHaveBeenCalledTimes(1);
+    expect(asker.mock.calls[0]?.[1]).toBe('choose');
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(['POST /api/modules/agent/launch', 'POST /api/auth/pin/set', 'POST /api/modules/agent/launch']);
+    expect(calls[1]?.body).toEqual({ pin: '482915' });
+    expect(authorizations()).toEqual([undefined, 'Bearer chosen.tok.en']);
+    expect(getAccessToken()).toBe('chosen.tok.en');
+  });
+
+  it('asks to choose the PIN once for requests that hit pin-not-set together', async () => {
+    script['POST /api/modules/agent/launch'] = [notSet, notSet, () => json(200, { n: 1 }), () => json(200, { n: 2 })];
+    script['POST /api/auth/pin/set'] = [() => json(200, { accessToken: 'chosen.tok.en', expiresInSeconds: 600 })];
+    const asker = vi.fn<PinAsker>(async (verify) => (await verify('482915')).ok);
+    setPinAsker(asker);
+    await Promise.all([launch(), launch()]);
+    expect(asker).toHaveBeenCalledTimes(1);
+    expect(authorizations().filter((a) => a === 'Bearer chosen.tok.en')).toHaveLength(2);
+  });
+
+  it('gives the dialog the server error of set (too short, already set) and lets it try again', async () => {
+    script['POST /api/modules/agent/launch'] = [notSet, () => json(200, { ok: true })];
+    script['POST /api/auth/pin/set'] = [
+      () => json(400, { error: 'pin-invalid', message: 'The PIN must have at least 6 characters (got 3). Choose a longer one.' }),
+      () => json(409, { error: 'pin-already-set', message: 'A PIN is already set, and it is not replaced from here.' }),
+      () => json(200, { accessToken: 'chosen.tok.en', expiresInSeconds: 600 }),
+    ];
+    const verdicts: unknown[] = [];
+    setPinAsker(async (verify) => {
+      for (const pin of ['123', '123456', '123456']) {
+        const verdict = await verify(pin);
+        verdicts.push(verdict);
+        if (verdict.ok) {
+          return true;
+        }
+      }
+      return false;
+    });
+    await launch();
+    expect(verdicts).toEqual([
+      { ok: false, message: 'The PIN must have at least 6 characters (got 3). Choose a longer one.' },
+      { ok: false, message: 'A PIN is already set, and it is not replaced from here.' },
+      { ok: true },
+    ]);
+  });
+
+  it('rejects with a clear error when the choose dialog is cancelled, and when none is mounted', async () => {
+    script['POST /api/modules/agent/launch'] = [notSet, notSet];
+    setPinAsker(async () => false);
+    await expect(launch()).rejects.toThrow('Sensitive action cancelled: no PIN chosen');
+    setPinAsker(undefined);
+    await expect(launch()).rejects.toThrow(/PIN dialog/);
+  });
+
+  it('does not loop: pin-not-set again after the PIN was chosen is an error with the server message', async () => {
+    script['POST /api/modules/agent/launch'] = [notSet, notSet];
+    script['POST /api/auth/pin/set'] = [() => json(200, { accessToken: 'chosen.tok.en', expiresInSeconds: 600 })];
+    setPinAsker(async (verify) => (await verify('482915')).ok);
+    await expect(launch()).rejects.toThrow('No PIN is set yet.');
+    expect(calls.filter((c) => c.url === '/api/modules/agent/launch')).toHaveLength(2);
+  });
+
+  it('changePin sends both PINs and keeps the new session token; a wrong or locked current PIN is a verdict, not a throw', async () => {
+    script['POST /api/auth/pin/change'] = [
+      () => json(401, { error: 'pin-wrong', message: 'Wrong PIN. 4 tries left before a wait of 1 minute.' }),
+      () => json(429, { error: 'pin-locked', retryAfterSeconds: 42, message: 'Too many wrong PINs. Try again in 42 seconds.' }),
+      () => json(400, { error: 'pin-unchanged', message: 'The new PIN is the same as the current one.' }),
+      () => json(200, { accessToken: 'changed.tok.en', expiresInSeconds: 600 }),
+    ];
+    expect(await changePin('000000', '999888')).toEqual({ ok: false, message: 'Wrong PIN. 4 tries left before a wait of 1 minute.' });
+    expect(await changePin('000000', '999888')).toEqual({ ok: false, message: 'Too many wrong PINs. Try again in 42 seconds.', retryAfterSeconds: 42 });
+    expect(await changePin('482915', '482915')).toEqual({ ok: false, message: 'The new PIN is the same as the current one.' });
+    expect(await changePin('482915', '999888')).toEqual({ ok: true });
+    expect(calls[3]?.body).toEqual({ currentPin: '482915', newPin: '999888' });
+    expect(getAccessToken()).toBe('changed.tok.en');
+  });
+
+  it('changePin throws the server message for anything that is not about the PINs typed (no PIN set, damaged file)', async () => {
+    script['POST /api/auth/pin/change'] = [notSet];
+    await expect(changePin('482915', '999888')).rejects.toThrow('No PIN is set yet.');
   });
 
   it('never loops: a second elevation-required after the repeat is an error', async () => {

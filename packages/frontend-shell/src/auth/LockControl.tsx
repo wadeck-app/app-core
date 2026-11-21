@@ -3,6 +3,7 @@ import { Lock } from 'lucide-react';
 import { IconButton, ToastContext } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
 import { clearAccessToken, getAccessToken, onAccessTokenChange } from './accessToken.js';
+import { PinMenu } from './PinMenu.js';
 
 async function readElevated(): Promise<boolean> {
   const res = await fetch('/api/auth/status');
@@ -16,9 +17,9 @@ async function readElevated(): Promise<boolean> {
   return body.elevated;
 }
 
-// "Lock now": shown only while the PIN is unlocked (a live refresh cookie, or an access token stored here). Ends the session on the
-// server (every access token dies at once, the refresh cookie is cleared) and forgets the token of this browser.
-export function LockControl(): React.ReactElement | null {
+// The PIN entry (always) and "Lock now" (only while unlocked: a live refresh cookie, or an access token stored here). Locking ends the
+// session on the server (every access token dies at once, the refresh cookie is cleared) and forgets the token of this browser.
+export function LockControl(): React.ReactElement {
   // Absent from a tree without a ToastProvider (a test of a part of the bar): the toast is then skipped, the lock still happens.
   const toast = useContext(ToastContext);
   const [elevated, setElevated] = useState(false);
@@ -38,8 +39,9 @@ export function LockControl(): React.ReactElement | null {
     return onAccessTokenChange(() => void check());
   }, [check]);
 
+  // The PIN menu stays reachable locked: it is where a first PIN is chosen and the PIN is changed.
   if (!elevated && !hasToken) {
-    return null;
+    return <PinMenu />;
   }
 
   const lock = async (): Promise<void> => {
@@ -58,5 +60,10 @@ export function LockControl(): React.ReactElement | null {
     }
   };
 
-  return <IconButton icon={<Lock size={14} />} aria-label="Lock sensitive actions" title="Lock sensitive actions" variant="ghost" size="icon-sm" onClick={() => void lock()} />;
+  return (
+    <>
+      <PinMenu />
+      <IconButton icon={<Lock size={14} />} aria-label="Lock sensitive actions" title="Lock sensitive actions" variant="ghost" size="icon-sm" onClick={() => void lock()} />
+    </>
+  );
 }

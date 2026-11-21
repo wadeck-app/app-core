@@ -41,6 +41,12 @@ describe('LockControl', () => {
     expect(screen.queryByRole('button', { name: 'Lock sensitive actions' })).toBeNull();
   });
 
+  it('keeps the PIN settings button reachable while locked (no lock button then)', async () => {
+    renderControl();
+    expect(await screen.findByRole('button', { name: 'PIN settings' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Lock sensitive actions' })).toBeNull();
+  });
+
   it('is shown when the server says a refresh cookie is live', async () => {
     status = { elevated: true };
     renderControl();

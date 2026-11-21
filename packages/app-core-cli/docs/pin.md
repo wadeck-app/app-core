@@ -4,22 +4,31 @@ A module declares a route `sensitive` (`ctx.registerRoute(method, path, handler,
 
 ## Set it
 
+In the dashboard, or in a terminal:
+
 ```
 app-core-cli pin set      # typed twice, hidden, at least 6 characters
 app-core-cli pin status   # set or not; never prints the hash
 ```
 
-- Needs an interactive terminal. The PIN is never taken from argv, a pipe or a file, and no HTTP route can set it.
+- Dashboard, no PIN yet: the first sensitive action (or the key icon in the top bar, "Choose a PIN") opens a dialog (new PIN + confirm) and unlocks at once. `POST /api/auth/pin/set` works only while none exists (else 409).
+- Dashboard, PIN set: key icon, "Change PIN" (current, new, confirm). `POST /api/auth/pin/change` checks the current PIN under the same lockout as the login, closes every other session, and refuses a new PIN equal to the old one.
+- The CLI needs an interactive terminal; the PIN is never taken from argv, a pipe or a file. It replaces the PIN without asking the current one.
+- While no PIN exists, a process of your user can set the first one over HTTP. Choose it right after install.
 - Per machine: stored as a scrypt hash in `<config dir>/auth.json` (`APP_CORE_CONFIG_DIR`, else `~/.config/app-core`; `--config-dir <dir>` for an application started with `serve --module`).
 - Setting a new PIN closes every session (all refresh and access tokens stop working).
-- No PIN set: a sensitive route answers 403 `pin-not-set` with the command to run.
+- No PIN set: a sensitive route answers 403 `pin-not-set`; the dashboard then opens the "Choose a PIN" dialog and repeats the action.
+
+## Forgot the PIN
+
+Delete `<config dir>/auth.json` (the dialogs and the key menu show the real path, from `GET /api/auth/status` `resetHint`). No restart needed: the file is read at every request. Then choose a new PIN. Do not delete `auth-sessions.json` too: it holds the counter that revokes old access tokens, and resetting it could make a token issued before valid again.
 
 ## What the user sees
 
 1. A sensitive action without a token: the dashboard refreshes silently from its cookie; if there is none, it asks the PIN in a dialog, then repeats the action once. Cancel rejects the action ("Sensitive action cancelled: PIN not entered").
 2. 5 wrong PINs lock for 1 minute, then 5, then 30 (per server process, reset by a restart or a right PIN). The dialog counts the seconds.
 3. With daily use the PIN is asked about once; again after 7 days without use.
-4. The lock icon in the top bar ("Lock sensitive actions") ends the session at once.
+4. The lock icon in the top bar ("Lock sensitive actions") ends the session at once. The key icon next to it ("PIN settings") is always there.
 
 ## Files (config dir)
 

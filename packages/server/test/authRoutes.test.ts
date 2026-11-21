@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { buildServer, type AppCoreServer } from '../src/server.js';
-import { setPin, authFilePath } from '../src/auth/pin.js';
+import { setPin, authFilePath, PIN_NOT_SET_MESSAGE } from '../src/auth/pin.js';
 import { REFRESH_WINDOW_MS, secretFilePath } from '../src/auth/tokens.js';
 import { createModuleContext } from '../src/moduleContext.js';
 
@@ -49,7 +49,7 @@ describe('auth routes and sensitive routes', () => {
     it('answers 403 pin-not-set to a sensitive route, naming the command', async () => {
       const res = await post('/api/modules/fx/launch');
       expect(res.statusCode).toBe(403);
-      expect(res.json()).toEqual({ error: 'pin-not-set', message: 'Run "app-core-cli pin set" to choose the PIN that unlocks sensitive actions.' });
+      expect(res.json()).toEqual({ error: 'pin-not-set', message: PIN_NOT_SET_MESSAGE });
     });
 
     it('answers 403 pin-not-set even with a Bearer header', async () => {
@@ -61,12 +61,104 @@ describe('auth routes and sensitive routes', () => {
       expect(res.statusCode).toBe(403);
       expect(res.json()).toMatchObject({ error: 'pin-not-set' });
       const status = await app.server.inject({ method: 'GET', url: '/api/auth/status' });
-      expect(status.json()).toEqual({ pinSet: false, locked: false, elevated: false });
+      expect(status.json()).toMatchObject({ pinSet: false, locked: false, elevated: false });
     });
 
     it('does not touch routes that are not sensitive', async () => {
       expect((await post('/api/modules/fx/save')).statusCode).toBe(200);
       expect((await app.server.inject({ method: 'GET', url: '/api/modules/fx/open' })).statusCode).toBe(200);
+    });
+
+    it('pin-not-set says the dashboard can choose the PIN and keeps the CLI as the alternative', async () => {
+      const message = ((await post('/api/modules/fx/launch')).json() as { message: string }).message;
+      expect(message).toMatch(/dashboard/);
+      expect(message).toContain('app-core-cli pin set');
+    });
+
+    it('POST /api/auth/pin/set chooses the PIN and unlocks at once: cookie, access token, the sensitive route answers', async () => {
+      const res = await post('/api/auth/pin/set', { pin: PIN });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['set-cookie']).toMatch(new RegExp(`^app-core-refresh=[A-Za-z0-9_-]{43}; ${COOKIE_FLAGS}; Max-Age=604800$`));
+      const { accessToken, expiresInSeconds } = res.json() as { accessToken: string; expiresInSeconds: number };
+      expect(expiresInSeconds).toBe(600);
+      expect((await post('/api/modules/fx/launch', {}, bearer(accessToken))).statusCode).toBe(200);
+      expect(res.body).not.toContain(PIN);
+      expect(fs.readFileSync(authFilePath(configDir), 'utf8')).not.toContain(PIN);
+      // The PIN works for a normal login afterwards.
+      expect((await login()).res.statusCode).toBe(200);
+      const cookie = String(res.headers['set-cookie']).split(';')[0] ?? '';
+      expect((await app.server.inject({ method: 'GET', url: '/api/auth/status', headers: { cookie } })).json()).toMatchObject({ pinSet: true, elevated: true });
+    });
+
+    it('set refuses a PIN that is too short, too long or not a text (400), and writes nothing', async () => {
+      const short = await post('/api/auth/pin/set', { pin: '12345' });
+      expect(short.statusCode).toBe(400);
+      expect(short.json()).toMatchObject({ error: 'pin-invalid' });
+      expect((short.json() as { message: string }).message).toMatch(/at least 6 characters/);
+      for (const body of [{}, { pin: 123456 }, { pin: 'x'.repeat(5000) }, { pin: 'x'.repeat(257) }]) {
+        expect((await post('/api/auth/pin/set', body)).statusCode).toBe(400);
+      }
+      expect(fs.existsSync(authFilePath(configDir))).toBe(false);
+    });
+
+    it('two simultaneous set calls: exactly one succeeds, the others get 409 and the winner PIN is the one stored', async () => {
+      const pins = ['111111', '222222', '333333', '444444'];
+      const results = await Promise.all(pins.map((pin) => post('/api/auth/pin/set', { pin })));
+      expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409, 409, 409]);
+      const winnerIndex = results.findIndex((r) => r.statusCode === 200);
+      expect((await login(pins[winnerIndex])).res.statusCode).toBe(200);
+      for (const [i, pin] of pins.entries()) {
+        if (i !== winnerIndex) {
+          expect((await login(pin)).res.statusCode).toBe(401);
+        }
+      }
+    });
+
+    it('set and change need Content-Type application/json (415) and go through the request guard', async () => {
+      for (const url of ['/api/auth/pin/set', '/api/auth/pin/change']) {
+        expect((await app.server.inject({ method: 'POST', url, headers: { 'content-type': 'text/plain' }, payload: 'x' })).statusCode).toBe(415);
+        expect((await app.server.inject({ method: 'POST', url })).statusCode).toBe(415);
+        expect((await post(url, { pin: PIN, currentPin: PIN, newPin: '999888' }, { 'sec-fetch-site': 'cross-site' })).statusCode).toBe(403);
+        expect((await post(url, { pin: PIN, currentPin: PIN, newPin: '999888' }, { origin: 'https://evil.example' })).statusCode).toBe(403);
+      }
+      expect(fs.existsSync(authFilePath(configDir))).toBe(false);
+    });
+
+    it('change without a PIN answers 403 pin-not-set', async () => {
+      const res = await post('/api/auth/pin/change', { currentPin: PIN, newPin: '999888' });
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({ error: 'pin-not-set' });
+    });
+
+    it('status gives the reset hint: the absolute path of auth.json and one sentence', async () => {
+      const hint = ((await app.server.inject({ method: 'GET', url: '/api/auth/status' })).json() as { resetHint: { files: string[]; instruction: string } }).resetHint;
+      expect(hint.files).toEqual([authFilePath(configDir)]);
+      expect(path.isAbsolute(hint.files[0] ?? '')).toBe(true);
+      expect(hint.instruction).toMatch(/Delete/);
+      expect(hint.instruction.split('. ').length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('reset by hand (deleting the files of resetHint while the server runs)', () => {
+    it('returns to "no PIN set" without a restart, and the old sessions and tokens do not come back after a new PIN', async () => {
+      const first = await post('/api/auth/pin/set', { pin: PIN });
+      const oldCookie = String(first.headers['set-cookie']).split(';')[0] ?? '';
+      const oldToken = (first.json() as { accessToken: string }).accessToken;
+      const status = (await app.server.inject({ method: 'GET', url: '/api/auth/status', headers: { cookie: oldCookie } })).json() as { resetHint: { files: string[] } };
+      expect(status.resetHint.files).toEqual([authFilePath(configDir)]);
+      for (const file of status.resetHint.files) {
+        fs.rmSync(file);
+      }
+      const after = await app.server.inject({ method: 'GET', url: '/api/auth/status', headers: { cookie: oldCookie } });
+      expect(after.json()).toMatchObject({ pinSet: false, elevated: false });
+      expect((await post('/api/modules/fx/launch', {}, bearer(oldToken))).json()).toMatchObject({ error: 'pin-not-set' });
+      expect((await post('/api/auth/pin', { pin: PIN })).statusCode).toBe(403);
+      // Choose again: the old session and the old access token, still unexpired, stay refused.
+      const second = await post('/api/auth/pin/set', { pin: '999888' });
+      expect(second.statusCode).toBe(200);
+      expect((await post('/api/modules/fx/launch', {}, bearer(oldToken))).statusCode).toBe(401);
+      expect((await post('/api/auth/refresh', {}, { cookie: oldCookie })).statusCode).toBe(401);
+      expect((await post('/api/modules/fx/launch', {}, bearer((second.json() as { accessToken: string }).accessToken))).statusCode).toBe(200);
     });
   });
 
@@ -190,8 +282,8 @@ describe('auth routes and sensitive routes', () => {
     it('status: elevated only with a live refresh cookie, and it never returns a secret', async () => {
       const { cookie } = await login();
       const status = await app.server.inject({ method: 'GET', url: '/api/auth/status', headers: { cookie } });
-      expect(status.json()).toEqual({ pinSet: true, locked: false, elevated: true });
-      expect((await app.server.inject({ method: 'GET', url: '/api/auth/status' })).json()).toEqual({ pinSet: true, locked: false, elevated: false });
+      expect(status.json()).toEqual({ pinSet: true, locked: false, elevated: true, resetHint: expect.any(Object), minPinLength: 6 });
+      expect((await app.server.inject({ method: 'GET', url: '/api/auth/status' })).json()).toEqual({ pinSet: true, locked: false, elevated: false, resetHint: expect.any(Object), minPinLength: 6 });
     });
 
     it('a new PIN (the CLI) logs everyone out: refresh and old access tokens are refused', async () => {
@@ -201,6 +293,121 @@ describe('auth routes and sensitive routes', () => {
       expect((await post('/api/auth/refresh', {}, { cookie })).statusCode).toBe(401);
       expect((await login(PIN)).res.statusCode).toBe(401);
       expect((await login('999888')).res.statusCode).toBe(200);
+    });
+
+    const change = (currentPin: unknown, newPin: unknown, headers: Record<string, string> = {}) => post('/api/auth/pin/change', { currentPin, newPin }, headers);
+    const NEW_PIN = '999888';
+
+    it('set when a PIN exists: 409 pin-already-set pointing to change, nothing changes', async () => {
+      const before = fs.readFileSync(authFilePath(configDir), 'utf8');
+      const res = await post('/api/auth/pin/set', { pin: NEW_PIN });
+      expect(res.statusCode).toBe(409);
+      expect(res.json()).toMatchObject({ error: 'pin-already-set' });
+      expect((res.json() as { message: string }).message).toMatch(/change/i);
+      expect(res.headers['set-cookie']).toBeUndefined();
+      expect(fs.readFileSync(authFilePath(configDir), 'utf8')).toBe(before);
+      expect((await login()).res.statusCode).toBe(200);
+      expect((await login(NEW_PIN)).res.statusCode).toBe(401);
+    });
+
+    it('change with a wrong current PIN: 401 pin-wrong, counted by the lockout, the old PIN still works', async () => {
+      const res = await change('000000', NEW_PIN);
+      expect(res.statusCode).toBe(401);
+      expect(res.json()).toMatchObject({ error: 'pin-wrong', triesLeft: 4 });
+      expect(res.headers['set-cookie']).toBeUndefined();
+      // The counter is the one of /api/auth/pin: a wrong login now leaves 3.
+      expect((await post('/api/auth/pin', { pin: '000000' })).json()).toMatchObject({ triesLeft: 3 });
+      expect((await login()).res.statusCode).toBe(200);
+      expect((await login(NEW_PIN)).res.statusCode).toBe(401);
+    });
+
+    it('5 wrong current PINs lock (429 with Retry-After), even the right current PIN is refused during the wait, and the PIN login is locked too', async () => {
+      for (let i = 0; i < 4; i++) {
+        expect((await change('000000', NEW_PIN)).statusCode).toBe(401);
+      }
+      const fifth = await change('000000', NEW_PIN);
+      expect(fifth.statusCode).toBe(429);
+      expect(fifth.headers['retry-after']).toBe('60');
+      expect(fifth.json()).toMatchObject({ error: 'pin-locked', retryAfterSeconds: 60 });
+      const during = await change(PIN, NEW_PIN);
+      expect(during.statusCode).toBe(429);
+      expect((await post('/api/auth/pin', { pin: PIN })).statusCode).toBe(429);
+      expect((await login(NEW_PIN)).res.statusCode).toBe(429);
+      clock.now += 61_000;
+      expect((await login()).res.statusCode).toBe(200);
+    });
+
+    it('change success: the old PIN, access token and refresh cookie are refused; the new session and PIN work', async () => {
+      const old = await login();
+      const res = await change(PIN, NEW_PIN, { cookie: old.cookie });
+      expect(res.statusCode).toBe(200);
+      const fresh = res.json() as { accessToken: string; expiresInSeconds: number };
+      expect(fresh.expiresInSeconds).toBe(600);
+      const freshCookie = String(res.headers['set-cookie']).split(';')[0] ?? '';
+      expect(res.headers['set-cookie']).toMatch(new RegExp(`^app-core-refresh=[A-Za-z0-9_-]{43}; ${COOKIE_FLAGS}; Max-Age=604800$`));
+      expect(freshCookie).not.toBe(old.cookie);
+      expect(res.body).not.toContain(NEW_PIN);
+      expect(res.body).not.toContain(PIN);
+      expect((await login(PIN)).res.statusCode).toBe(401);
+      expect((await post('/api/modules/fx/launch', {}, bearer(old.token))).statusCode).toBe(401);
+      const oldRefresh = await post('/api/auth/refresh', {}, { cookie: old.cookie });
+      expect(oldRefresh.statusCode).toBe(401);
+      expect(oldRefresh.json()).toMatchObject({ error: 'refresh-required' });
+      expect((await post('/api/modules/fx/launch', {}, bearer(fresh.accessToken))).statusCode).toBe(200);
+      expect((await post('/api/auth/refresh', {}, { cookie: freshCookie })).statusCode).toBe(200);
+      expect((await login(NEW_PIN)).res.statusCode).toBe(200);
+      // A right current PIN resets the counter of wrong tries.
+      expect((await post('/api/auth/pin', { pin: '000000' })).json()).toMatchObject({ triesLeft: 4 });
+    });
+
+    it('change to the same PIN: 400 pin-unchanged, nothing changes and no wrong try is counted', async () => {
+      const before = fs.readFileSync(authFilePath(configDir), 'utf8');
+      const res = await change(PIN, PIN);
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ error: 'pin-unchanged' });
+      expect(fs.readFileSync(authFilePath(configDir), 'utf8')).toBe(before);
+      expect((await post('/api/auth/pin', { pin: '000000' })).json()).toMatchObject({ triesLeft: 4 });
+    });
+
+    it('change refuses a bad body or a new PIN that is too short (400) without counting a try', async () => {
+      const short = await change(PIN, '12345');
+      expect(short.statusCode).toBe(400);
+      expect(short.json()).toMatchObject({ error: 'pin-invalid' });
+      for (const body of [{}, { currentPin: PIN }, { newPin: NEW_PIN }, { currentPin: 1, newPin: NEW_PIN }, { currentPin: PIN, newPin: 5 }, { currentPin: 'x'.repeat(5000), newPin: NEW_PIN }]) {
+        expect((await post('/api/auth/pin/change', body)).statusCode).toBe(400);
+      }
+      expect((await login()).res.statusCode).toBe(200);
+      expect((await post('/api/auth/pin', { pin: '000000' })).json()).toMatchObject({ triesLeft: 4 });
+    });
+
+    it('never puts a PIN or a token in an answer, a log line or an error message (set, change, wrong, locked)', async () => {
+      const written: string[] = [];
+      const spies = [
+        vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => (written.push(String(chunk)), true)),
+        vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => (written.push(String(chunk)), true)),
+        vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => void written.push(args.join(' '))),
+        vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => void written.push(args.join(' '))),
+      ];
+      const bodies: string[] = [];
+      try {
+        bodies.push((await post('/api/auth/pin/set', { pin: '135790' })).body);
+        bodies.push((await change('246801', '975310')).body);
+        bodies.push((await change(PIN, PIN)).body);
+        bodies.push((await change(PIN, '12345')).body);
+        for (let i = 0; i < 5; i++) {
+          bodies.push((await change('246801', '975310')).body);
+        }
+        bodies.push((await change(PIN, '975310')).body);
+        bodies.push(JSON.stringify((await app.server.inject({ method: 'GET', url: '/api/auth/status' })).json()));
+      } finally {
+        spies.forEach((spy) => spy.mockRestore());
+      }
+      const everything = [...written, ...bodies].join('\n');
+      for (const secret of ['135790', '246801', '975310', PIN, '12345']) {
+        expect(everything).not.toContain(secret);
+      }
+      const record = JSON.parse(fs.readFileSync(authFilePath(configDir), 'utf8')) as { pin: { hash: string; salt: string } };
+      expect(everything).not.toContain(record.pin.hash);
     });
 
     it('after a restart the refresh cookie still works; the sessions and the secret are on disk', async () => {

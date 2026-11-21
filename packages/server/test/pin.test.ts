@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { authFilePath, isPinSet, MIN_PIN_LENGTH, setPin, verifyPin } from '../src/auth/pin.js';
+import { authFilePath, isPinSet, MAX_PIN_LENGTH, MIN_PIN_LENGTH, pinProblem, pinResetHint, setPin, verifyPin } from '../src/auth/pin.js';
 import { SessionStore } from '../src/auth/tokens.js';
 
 describe('PIN storage', () => {
@@ -48,6 +48,15 @@ describe('PIN storage', () => {
     expect(isPinSet(dir)).toBe(false);
   });
 
+  it('pinProblem is the one rule for a new PIN (the CLI and the routes use it): length in characters, minimum and maximum', () => {
+    expect(pinProblem('123456')).toBeUndefined();
+    expect(pinProblem('12345')).toMatch(/at least 6 characters \(got 5\)/);
+    // Counted in characters, not in UTF-16 units: six emoji are six characters.
+    expect(pinProblem('😀😀😀😀😀😀')).toBeUndefined();
+    expect(pinProblem('x'.repeat(MAX_PIN_LENGTH))).toBeUndefined();
+    expect(pinProblem('x'.repeat(MAX_PIN_LENGTH + 1))).toMatch(/at most 256 characters/);
+  });
+
   it('says what to do when auth.json is not valid, instead of treating it as "no PIN"', async () => {
     fs.writeFileSync(authFilePath(dir), '{not json');
     expect(() => isPinSet(dir)).toThrow(/auth\.json.*not valid.*app-core-cli pin set/s);
@@ -66,6 +75,17 @@ describe('PIN storage', () => {
       return;
     }
     expect(fs.statSync(authFilePath(dir)).mode & 0o777).toBe(0o600);
+  });
+
+  it('the reset hint lists auth.json only: deleting auth-sessions.json too would reset the generation counter, so an old access token could match again', async () => {
+    expect(pinResetHint(dir).files).toEqual([authFilePath(dir)]);
+    const store = new SessionStore(dir, () => 1_000_000);
+    await setPin(dir, '123456');
+    const generationOfOldToken = store.generation();
+    fs.rmSync(path.join(dir, 'auth.json'));
+    fs.rmSync(path.join(dir, 'auth-sessions.json'));
+    await setPin(dir, '654321');
+    expect(store.generation()).toBe(generationOfOldToken);
   });
 
   it('revokes every session when a new PIN is set (generation changes, refresh tokens are gone)', async () => {
