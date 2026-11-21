@@ -983,11 +983,12 @@ export const TimeBrushEntry: ComponentRegistryEntry = {
 		const valueKey = coerceProp(resolveExpressionValue(node['valueKey'], ctx), 'TimeBrush.valueKey', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['valueKey']
 		const kind = coerceProp(resolveExpressionValue(node['kind'], ctx), 'TimeBrush.kind', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['kind']
 		const domain = coerceProp(resolveExpressionValue(node['domain'], ctx), 'TimeBrush.domain', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['domain']
+		const initialWindow = coerceProp(resolveExpressionValue(node['initialWindow'], ctx), 'TimeBrush.initialWindow', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['initialWindow']
 		const syncGroup = coerceProp(resolveExpressionValue(node['syncGroup'], ctx), 'TimeBrush.syncGroup', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['syncGroup']
 		const height = coerceProp(resolveExpressionValue(node['height'], ctx), 'TimeBrush.height', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['height']
 		const yAxisWidth = coerceProp(resolveExpressionValue(node['yAxisWidth'], ctx), 'TimeBrush.yAxisWidth', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['yAxisWidth']
 		const marginRight = coerceProp(resolveExpressionValue(node['marginRight'], ctx), 'TimeBrush.marginRight', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeBrush.js').TimeBrushProps['marginRight']
-		return <TimeBrush data={data} xKey={xKey} valueKey={valueKey} kind={kind} domain={domain} syncGroup={syncGroup} height={height} yAxisWidth={yAxisWidth} marginRight={marginRight} />
+		return <TimeBrush data={data} xKey={xKey} valueKey={valueKey} kind={kind} domain={domain} initialWindow={initialWindow} syncGroup={syncGroup} height={height} yAxisWidth={yAxisWidth} marginRight={marginRight} />
 	},
 }
 
@@ -999,6 +1000,7 @@ export const TimeSeriesChartEntry: ComponentRegistryEntry = {
 		const data = coerceProp(resolveExpressionValue(node['data'], ctx), 'TimeSeriesChart.data', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['data']
 		const xKey = coerceProp(resolveExpressionValue(node['xKey'], ctx), 'TimeSeriesChart.xKey', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['xKey']
 		const domain = coerceProp(resolveExpressionValue(node['domain'], ctx), 'TimeSeriesChart.domain', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['domain']
+		const initialWindow = coerceProp(resolveExpressionValue(node['initialWindow'], ctx), 'TimeSeriesChart.initialWindow', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['initialWindow']
 		const series = coerceProp(resolveExpressionsDeep(node['series'], ctx), 'TimeSeriesChart.series', 'array', true) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['series']
 		const bands = coerceProp(resolveExpressionsDeep(node['bands'], ctx), 'TimeSeriesChart.bands', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['bands']
 		const rangeAreas = coerceProp(resolveExpressionsDeep(node['rangeAreas'], ctx), 'TimeSeriesChart.rangeAreas', 'array', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['rangeAreas']
@@ -1020,7 +1022,7 @@ export const TimeSeriesChartEntry: ComponentRegistryEntry = {
 		const yRightDecimals = coerceProp(resolveExpressionValue(node['yRightDecimals'], ctx), 'TimeSeriesChart.yRightDecimals', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yRightDecimals']
 		const yRightIncludeZero = coerceProp(resolveExpressionValue(node['yRightIncludeZero'], ctx), 'TimeSeriesChart.yRightIncludeZero', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yRightIncludeZero']
 		const yRightAxisWidth = coerceProp(resolveExpressionValue(node['yRightAxisWidth'], ctx), 'TimeSeriesChart.yRightAxisWidth', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/TimeSeriesChart.js').TimeSeriesChartProps['yRightAxisWidth']
-		return <TimeSeriesChart data={data} xKey={xKey} domain={domain} series={series} bands={bands} rangeAreas={rangeAreas} legendItems={legendItems} gapDashAfterDays={gapDashAfterDays} syncGroup={syncGroup} title={title} height={height} yUnit={yUnit} yFormat={yFormat} yDecimals={yDecimals} yIncludeZero={yIncludeZero} yAxisWidth={yAxisWidth} marginRight={marginRight} emptyMessage={emptyMessage} xFormat={xFormat} yRightFormat={yRightFormat} yRightUnit={yRightUnit} yRightDecimals={yRightDecimals} yRightIncludeZero={yRightIncludeZero} yRightAxisWidth={yRightAxisWidth} />
+		return <TimeSeriesChart data={data} xKey={xKey} domain={domain} initialWindow={initialWindow} series={series} bands={bands} rangeAreas={rangeAreas} legendItems={legendItems} gapDashAfterDays={gapDashAfterDays} syncGroup={syncGroup} title={title} height={height} yUnit={yUnit} yFormat={yFormat} yDecimals={yDecimals} yIncludeZero={yIncludeZero} yAxisWidth={yAxisWidth} marginRight={marginRight} emptyMessage={emptyMessage} xFormat={xFormat} yRightFormat={yRightFormat} yRightUnit={yRightUnit} yRightDecimals={yRightDecimals} yRightIncludeZero={yRightIncludeZero} yRightAxisWidth={yRightAxisWidth} />
 	},
 }
 
@@ -1994,9 +1996,9 @@ SkeletonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["count","deco
 SparklineViewEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","points"] : [];
 SpinnerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","size"] : [];
 TagEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["color","label","onRemove"] : [];
-TimeBrushEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["data","domain","height","kind","marginRight","syncGroup","valueKey","xKey","yAxisWidth"] : [];
+TimeBrushEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["data","domain","height","initialWindow","kind","marginRight","syncGroup","valueKey","xKey","yAxisWidth"] : [];
 TimeSeriesChartEntry.itemKeys = {"series":{"keys":["key","name","color","width","dots","pointColorKey","detailKey","gapDash","legend","kind","fromKey","decimals","showValue","axis"]},"bands":{"keys":["from","to","color","opacity","label"]},"rangeAreas":{"keys":["lowKey","highKey","name","color","opacity","legend"]},"legendItems":{"keys":["label","color"]}};
-TimeSeriesChartEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bands","data","domain","emptyMessage","gapDashAfterDays","height","legendItems","marginRight","rangeAreas","series","syncGroup","title","xFormat","xKey","yAxisWidth","yDecimals","yFormat","yIncludeZero","yRightAxisWidth","yRightDecimals","yRightFormat","yRightIncludeZero","yRightUnit","yUnit"] : [];
+TimeSeriesChartEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bands","data","domain","emptyMessage","gapDashAfterDays","height","initialWindow","legendItems","marginRight","rangeAreas","series","syncGroup","title","xFormat","xKey","yAxisWidth","yDecimals","yFormat","yIncludeZero","yRightAxisWidth","yRightDecimals","yRightFormat","yRightIncludeZero","yRightUnit","yUnit"] : [];
 ButtonCancelEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabled","label","onCancel"] : [];
 ButtonSaveEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabledReason","hasChanges","isPending","label","onClick"] : [];
 ButtonSaveEntry.requiresContext = ["FormContext"];
