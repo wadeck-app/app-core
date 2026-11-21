@@ -610,7 +610,8 @@ export const ButtonActionEntry: ComponentRegistryEntry = {
 		const disabledReason = coerceProp(resolveExpressionValue(node['disabledReason'], ctx), 'ButtonAction.disabledReason', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['disabledReason']
 		const loading = coerceProp(resolveExpressionValue(node['loading'], ctx), 'ButtonAction.loading', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['loading']
 		const type = coerceProp(resolveExpressionValue(node['type'], ctx), 'ButtonAction.type', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['type']
-		return <ButtonAction label={label} variant={variant} icon={icon ? renderChildren(icon, registry, ctx) : null} size={size} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type} />
+		const form = coerceProp(resolveExpressionValue(node['form'], ctx), 'ButtonAction.form', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['form']
+		return <ButtonAction label={label} variant={variant} icon={icon ? renderChildren(icon, registry, ctx) : null} size={size} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type} form={form} />
 	},
 }
 
@@ -1956,7 +1957,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 // ─── Auto-detected metadata (allowedChildren, providesContext, requiresContext) ─
 // Generated from @slot JSDoc tags and createContext/useContext calls in component sources.
 ActionButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["action","actionPending","body","disabled","disabledReason","icon","iconOnly","label","onAction","params","size","variant"] : [];
-ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabled","disabledReason","icon","label","loading","onClick","size","type","variant"] : [];
+ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabled","disabledReason","form","icon","label","loading","onClick","size","type","variant"] : [];
 CheckboxGroupEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options","orientation"] : [];
 ChipButtonEntry.allowedChildren = {"items":["atomic"]};
 ChipButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["active","aria-label","aria-pressed","color","emphasis","items","onClick","shape","title"] : [];
