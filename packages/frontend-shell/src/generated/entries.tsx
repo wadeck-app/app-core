@@ -795,7 +795,10 @@ export const BadgeEntry: ComponentRegistryEntry = {
 		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'Badge.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['size']
 		const href = coerceProp(resolveExpressionValue(node['href'], ctx), 'Badge.href', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['href']
 		const external = coerceProp(resolveExpressionValue(node['external'], ctx), 'Badge.external', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['external']
-		return <Badge label={label} variant={variant} tone={tone} size={size} href={href} external={external} />
+		const onRemove = coerceProp(resolveExpressionValue(node['onRemove'], ctx), 'Badge.onRemove', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['onRemove']
+		const removeLabel = coerceProp(resolveExpressionValue(node['removeLabel'], ctx), 'Badge.removeLabel', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['removeLabel']
+		const title = coerceProp(resolveExpressionValue(node['title'], ctx), 'Badge.title', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/Badge.js').BadgeProps['title']
+		return <Badge label={label} variant={variant} tone={tone} size={size} href={href} external={external} onRemove={onRemove} removeLabel={removeLabel} title={title} />
 	},
 }
 
@@ -1975,7 +1978,7 @@ AbTestEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["id","initial",
 AbTestEntry.providesContext = ["AbParentContext"];
 AbTestEntry.requiresContext = ["AbParentContext","AbExperimentsContext"];
 AvatarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["alt","fallback","size","src"] : [];
-BadgeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["external","href","label","size","tone","variant"] : [];
+BadgeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["external","href","label","onRemove","removeLabel","size","title","tone","variant"] : [];
 ChartEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["data","fill","height","series","showLegend","variant","xAxisKey","xAxisType","xFormat","yFormat","yUnit"] : [];
 DateTextEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["dateStyle","part","relative","value"] : [];
 FetchSpinnerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["loading"] : [];

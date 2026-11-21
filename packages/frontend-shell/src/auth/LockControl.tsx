@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { LockKeyhole, X } from 'lucide-react';
-import { IconButton, ToastContext } from '@wadeck-app/dsl-ui';
+import { LockKeyhole } from 'lucide-react';
+import { Badge, IconButton, ToastContext } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
 import { ACCESS_TOKEN_KEY, clearAccessToken, onAccessTokenChange } from './accessToken.js';
 import { CANCELLED_MESSAGE, CHOOSE_CANCELLED_MESSAGE, choosePin, elevate } from './elevation.js';
@@ -92,21 +92,17 @@ export function LockControl(): React.ReactElement {
   return (
     <>
       {elevated ? (
-        // One chip, one tooltip: the native title of the chip also covers the × inside it (which has none of its own).
-        <span
+        // The design system's own removable Badge (the same component, so the same box, as the badges of the modules): one tooltip for the
+        // whole badge, the cross inside it.
+        <Badge
+          label="Sudo"
+          variant="danger"
+          tone="subtle"
+          size="sm"
           title="Sudo mode: sensitive actions are unlocked until you leave it (x) or the session expires."
-          className="inline-flex items-center rounded-full bg-danger-bg py-0.5 pl-2 pr-1 text-xs font-medium text-danger-text ring-1 ring-inset ring-danger"
-        >
-          Sudo
-          <button
-            type="button"
-            aria-label="Leave sudo mode"
-            onClick={() => void lock()}
-            className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-danger hover:text-on-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-danger-text"
-          >
-            <X size={12} aria-hidden="true" />
-          </button>
-        </span>
+          onRemove={() => void lock()}
+          removeLabel="Leave sudo mode"
+        />
       ) : (
         <IconButton icon={<LockKeyhole size={14} />} aria-label="Enter PIN" title="Enter PIN to unlock sensitive actions" variant="ghost" size="icon-sm" onClick={() => void enterPin()} />
       )}
