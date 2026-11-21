@@ -25,7 +25,7 @@ describe('PinPromptHost', () => {
     });
     const field = await screen.findByLabelText('PIN');
     expect(field).toHaveAttribute('type', 'password');
-    expect(field).toHaveAttribute('autocomplete', 'off');
+    expect(field).toHaveAttribute('autocomplete', 'new-password');
     type('482915');
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
     await expect(answer).resolves.toBe(true);

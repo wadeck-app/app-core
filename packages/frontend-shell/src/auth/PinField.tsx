@@ -9,14 +9,35 @@ export interface PinFieldProps {
   busy: boolean;
   description?: string;
   error?: string;
-  // 'new-password' on a PIN being chosen, so the browser neither offers a saved one nor paints an autofill fill; 'off' on the one being asked.
+  // Kept for the callers: both values mean "no saved password" (see PinField).
   autoComplete?: 'off' | 'new-password';
   autoFocus?: boolean;
 }
 
-// A PIN field of the design system (FieldText): masked, no browser autofill, read-only while busy.
-export function PinField({ label, value, onChange, busy, description, error, autoComplete = 'off', autoFocus }: PinFieldProps): React.ReactElement {
-  return <FieldText label={label} description={description} value={value} onChange={onChange} readOnly={busy} error={error} type="password" autoComplete={autoComplete} autoFocus={autoFocus} aria-busy={busy} />;
+// A PIN field of the design system (FieldText): masked, read-only while busy, and never offered a saved password. Chrome ignores
+// autocomplete="off" on a password field (a user saw the passphrase of another module offered in the PIN field), it respects
+// "new-password": so every PIN field says that, whatever the caller asks. A name of its own keeps it out of any login group, and the
+// data-* hints are the ones of 1Password, LastPass and Bitwarden for "not a login".
+export function PinField({ label, value, onChange, busy, description, error, autoFocus }: PinFieldProps): React.ReactElement {
+  const id = React.useId();
+  return (
+    <FieldText
+      label={label}
+      description={description}
+      value={value}
+      onChange={onChange}
+      readOnly={busy}
+      error={error}
+      type="password"
+      name={`app-core-pin-${id}`}
+      autoComplete="new-password"
+      autoFocus={autoFocus}
+      aria-busy={busy}
+      data-1p-ignore="true"
+      data-lpignore="true"
+      data-bwignore="true"
+    />
+  );
 }
 
 // What stops the primary button, said in its tooltip: nothing is "just dim". `undefined` when it can be used.
