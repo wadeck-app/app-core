@@ -53,7 +53,7 @@ export async function runPin(args: string[], deps: PinDeps): Promise<number> {
     deps.stdout.write(
       `${replaced ? 'PIN replaced' : 'PIN set'}. It is per machine: it unlocks sensitive actions on this computer only, and is stored as a scrypt hash in ${authFilePath(deps.configDir)}.\n` +
         `Every session opened so far is closed: the dashboard asks for the PIN again at the next sensitive action.\n` +
-        (process.platform === 'win32' ? 'On Windows the file mode is not enforced: any process of your user account can read that file (a 6-digit PIN can then be found offline).\n' : ''),
+        (process.platform === 'win32' ? 'On Windows the file mode is not enforced: any process of your user account can read that file (a short PIN can then be found offline).\n' : ''),
     );
     return 0;
   } catch (err) {

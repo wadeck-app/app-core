@@ -10,13 +10,16 @@ import { SessionStore } from './tokens.js';
 //
 // What this does not protect, said plainly:
 //  - A process of the same user that can read auth.json can try PINs offline. scrypt makes each try slow (about a tenth of a
-//    second here), it does not make a 6-digit PIN safe: use a longer secret if that matters.
+//    second here), it does not make a 4 to 12 character PIN safe (the user chose that range, D10).
 //  - File modes: the file is written with mode 0600, which Node enforces on macOS and Linux. On Windows the mode is NOT enforced:
 //    the file is readable by whoever can read your user profile (the same user, administrators).
 
-export const MIN_PIN_LENGTH = 6;
-// Longer is refused before hashing: a request must not make the server hash megabytes.
-export const MAX_PIN_LENGTH = 256;
+export const MIN_PIN_LENGTH = 4;
+// The longest PIN that can be chosen.
+export const MAX_PIN_LENGTH = 12;
+// What a request may carry as a PIN text: far above MAX_PIN_LENGTH so that a PIN chosen under an older, looser rule can still log in,
+// while a request cannot make the server hash megabytes.
+export const MAX_PIN_REQUEST_LENGTH = 256;
 
 const SCRYPT = { N: 32768, r: 8, p: 1, keyLength: 32 } as const;
 const SALT_BYTES = 16;

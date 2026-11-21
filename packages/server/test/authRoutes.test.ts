@@ -91,13 +91,17 @@ describe('auth routes and sensitive routes', () => {
     });
 
     it('set refuses a PIN that is too short, too long or not a text (400), and writes nothing', async () => {
-      const short = await post('/api/auth/pin/set', { pin: '12345' });
+      const short = await post('/api/auth/pin/set', { pin: '123' });
       expect(short.statusCode).toBe(400);
       expect(short.json()).toMatchObject({ error: 'pin-invalid' });
-      expect((short.json() as { message: string }).message).toMatch(/at least 6 characters/);
+      expect((short.json() as { message: string }).message).toMatch(/at least 4 characters/);
       for (const body of [{}, { pin: 123456 }, { pin: 'x'.repeat(5000) }, { pin: 'x'.repeat(257) }]) {
         expect((await post('/api/auth/pin/set', body)).statusCode).toBe(400);
       }
+      // 13 characters is the first one too long to choose; 12 is accepted (checked in pin.test.ts).
+      const long = await post('/api/auth/pin/set', { pin: 'x'.repeat(13) });
+      expect(long.statusCode).toBe(400);
+      expect((long.json() as { message: string }).message).toMatch(/at most 12 characters \(got 13\)/);
       expect(fs.existsSync(authFilePath(configDir))).toBe(false);
     });
 
@@ -282,8 +286,8 @@ describe('auth routes and sensitive routes', () => {
     it('status: elevated only with a live refresh cookie, and it never returns a secret', async () => {
       const { cookie } = await login();
       const status = await app.server.inject({ method: 'GET', url: '/api/auth/status', headers: { cookie } });
-      expect(status.json()).toEqual({ pinSet: true, locked: false, elevated: true, resetHint: expect.any(Object), minPinLength: 6 });
-      expect((await app.server.inject({ method: 'GET', url: '/api/auth/status' })).json()).toEqual({ pinSet: true, locked: false, elevated: false, resetHint: expect.any(Object), minPinLength: 6 });
+      expect(status.json()).toEqual({ pinSet: true, locked: false, elevated: true, resetHint: expect.any(Object), minPinLength: 4, maxPinLength: 12 });
+      expect((await app.server.inject({ method: 'GET', url: '/api/auth/status' })).json()).toEqual({ pinSet: true, locked: false, elevated: false, resetHint: expect.any(Object), minPinLength: 4, maxPinLength: 12 });
     });
 
     it('a new PIN (the CLI) logs everyone out: refresh and old access tokens are refused', async () => {
@@ -370,7 +374,7 @@ describe('auth routes and sensitive routes', () => {
     });
 
     it('change refuses a bad body or a new PIN that is too short (400) without counting a try', async () => {
-      const short = await change(PIN, '12345');
+      const short = await change(PIN, '123');
       expect(short.statusCode).toBe(400);
       expect(short.json()).toMatchObject({ error: 'pin-invalid' });
       for (const body of [{}, { currentPin: PIN }, { newPin: NEW_PIN }, { currentPin: 1, newPin: NEW_PIN }, { currentPin: PIN, newPin: 5 }, { currentPin: 'x'.repeat(5000), newPin: NEW_PIN }]) {
@@ -393,7 +397,7 @@ describe('auth routes and sensitive routes', () => {
         bodies.push((await post('/api/auth/pin/set', { pin: '135790' })).body);
         bodies.push((await change('246801', '975310')).body);
         bodies.push((await change(PIN, PIN)).body);
-        bodies.push((await change(PIN, '12345')).body);
+        bodies.push((await change(PIN, '123')).body);
         for (let i = 0; i < 5; i++) {
           bodies.push((await change('246801', '975310')).body);
         }

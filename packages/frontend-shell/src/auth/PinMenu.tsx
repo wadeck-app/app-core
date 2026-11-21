@@ -4,11 +4,12 @@ import { IconButton, Popover } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
 import { changePin, choosePin } from './elevation.js';
 import { PIN_BUTTON, PIN_INPUT } from './PinPromptHost.js';
+import { lengthRule } from './pinStatus.js';
 import { ResetHint, usePinStatus } from './ResetHint.js';
 import { useLockCountdown } from './useLockCountdown.js';
 
 // The "Change PIN" form: current PIN, new PIN, confirmation. The server checks the current PIN with the lockout of the login.
-function ChangePinForm({ minimum }: { minimum: number | undefined }): React.ReactElement {
+function ChangePinForm({ rule }: { rule: string }): React.ReactElement {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -60,7 +61,7 @@ function ChangePinForm({ minimum }: { minimum: number | undefined }): React.Reac
         void submit();
       }}
     >
-      <p className="mb-2 text-sm text-muted">{`Change the PIN. Every session is closed: you stay unlocked here, other browsers are asked again.${minimum === undefined ? '' : ` At least ${minimum} characters.`}`}</p>
+      <p className="mb-2 text-sm text-muted">{`Change the PIN. Every session is closed: you stay unlocked here, other browsers are asked again.${rule === '' ? '' : ` PIN: ${rule}.`}`}</p>
       <label className="block text-sm text-content">
         Current PIN
         <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={current} disabled={busy} onChange={(event) => setCurrent(event.target.value)} />
@@ -111,7 +112,7 @@ function PinMenuContent(): React.ReactElement {
       {status === undefined && error === undefined ? <p className="text-muted">Reading the PIN status...</p> : null}
       {status?.pinSet === false ? (
         <>
-          <p className="mb-2 text-muted">{`No PIN is set yet: sensitive actions are refused until you choose one${status.minPinLength === undefined ? '' : ` (at least ${status.minPinLength} characters)`}.`}</p>
+          <p className="mb-2 text-muted">{`No PIN is set yet: sensitive actions are refused until you choose one${lengthRule(status.minPinLength, status.maxPinLength) === '' ? '' : ` (${lengthRule(status.minPinLength, status.maxPinLength)})`}.`}</p>
           <button type="button" className={PIN_BUTTON} onClick={() => void choose()}>
             Choose a PIN
           </button>
@@ -122,7 +123,7 @@ function PinMenuContent(): React.ReactElement {
           )}
         </>
       ) : null}
-      {status?.pinSet === true ? <ChangePinForm minimum={status.minPinLength} /> : null}
+      {status?.pinSet === true ? <ChangePinForm rule={lengthRule(status.minPinLength, status.maxPinLength)} /> : null}
       <ResetHint status={status} error={error} />
     </div>
   );

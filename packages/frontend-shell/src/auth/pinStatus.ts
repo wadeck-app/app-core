@@ -4,6 +4,12 @@ export interface PinStatus {
   // Absent when the server is older than this page.
   resetHint?: { files: string[]; instruction: string };
   minPinLength?: number;
+  maxPinLength?: number;
+}
+
+// "at least 4 characters, at most 12" from what the server says; empty when it says nothing (a server older than this page).
+export function lengthRule(min: number | undefined, max: number | undefined): string {
+  return [min === undefined ? '' : `at least ${min} characters`, max === undefined ? '' : `at most ${max}`].filter((part) => part !== '').join(', ');
 }
 
 export async function readPinStatus(): Promise<PinStatus> {
@@ -11,7 +17,7 @@ export async function readPinStatus(): Promise<PinStatus> {
   if (!res.ok) {
     throw new Error(`GET /api/auth/status answered ${res.status}. app-core may be restarting or down: retry in a few seconds.`);
   }
-  const body = (await res.json()) as { pinSet?: unknown; resetHint?: { files?: unknown; instruction?: unknown }; minPinLength?: unknown };
+  const body = (await res.json()) as { pinSet?: unknown; resetHint?: { files?: unknown; instruction?: unknown }; minPinLength?: unknown; maxPinLength?: unknown };
   if (typeof body.pinSet !== 'boolean') {
     throw new Error('GET /api/auth/status has no boolean "pinSet"; the server is older than this frontend. Restart app-core after updating it.');
   }
@@ -21,5 +27,6 @@ export async function readPinStatus(): Promise<PinStatus> {
     pinSet: body.pinSet,
     ...(validHint ? { resetHint: { files: hint.files as string[], instruction: hint.instruction as string } } : {}),
     ...(typeof body.minPinLength === 'number' ? { minPinLength: body.minPinLength } : {}),
+    ...(typeof body.maxPinLength === 'number' ? { maxPinLength: body.maxPinLength } : {}),
   };
 }

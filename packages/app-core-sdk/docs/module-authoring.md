@@ -305,7 +305,7 @@ Limits:
 
 - Only routes declared `sensitive` are protected; `write` is not gated yet.
 - The access token (10 minutes) sits in the browser's localStorage: page scripts and a process of the same user can read it.
-- A process of the same user that reads `auth.json` can find a 6-digit PIN offline; file modes are not enforced on Windows.
+- A process of the same user that reads `auth.json` can find a 4 to 12 character PIN offline (a 4-digit one quickly); file modes are not enforced on Windows.
 - With daily use the PIN is asked about once; again after 7 days idle.
 
 Setup, files and lockout: [`app-core-cli/docs/pin.md`](../../app-core-cli/docs/pin.md). The route list of `GET /api/modules` does not show effects (it lists no routes).

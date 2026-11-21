@@ -36,25 +36,26 @@ describe('PIN storage', () => {
   });
 
   it('verifies the right PIN and refuses a wrong one', async () => {
-    await setPin(dir, 'correct horse');
-    expect(await verifyPin(dir, 'correct horse')).toBe(true);
-    expect(await verifyPin(dir, 'correct horsf')).toBe(false);
+    await setPin(dir, 'correct pony');
+    expect(await verifyPin(dir, 'correct pony')).toBe(true);
+    expect(await verifyPin(dir, 'correct ponz')).toBe(false);
     expect(await verifyPin(dir, '')).toBe(false);
   });
 
   it('refuses a new PIN shorter than the minimum, saying how long it must be', async () => {
-    expect(MIN_PIN_LENGTH).toBe(6);
-    await expect(setPin(dir, '12345')).rejects.toThrow(/at least 6 characters/);
+    expect(MIN_PIN_LENGTH).toBe(4);
+    await expect(setPin(dir, '123')).rejects.toThrow(/at least 4 characters/);
     expect(isPinSet(dir)).toBe(false);
   });
 
-  it('pinProblem is the one rule for a new PIN (the CLI and the routes use it): length in characters, minimum and maximum', () => {
-    expect(pinProblem('123456')).toBeUndefined();
-    expect(pinProblem('12345')).toMatch(/at least 6 characters \(got 5\)/);
-    // Counted in characters, not in UTF-16 units: six emoji are six characters.
-    expect(pinProblem('😀😀😀😀😀😀')).toBeUndefined();
+  it('pinProblem is the one rule for a new PIN (the CLI and the routes use it): length in characters, minimum 4 and maximum 12', () => {
+    expect(MAX_PIN_LENGTH).toBe(12);
+    expect(pinProblem('1234')).toBeUndefined();
+    expect(pinProblem('123')).toMatch(/at least 4 characters \(got 3\)/);
+    // Counted in characters, not in UTF-16 units: four emoji are four characters.
+    expect(pinProblem('😀😀😀😀')).toBeUndefined();
     expect(pinProblem('x'.repeat(MAX_PIN_LENGTH))).toBeUndefined();
-    expect(pinProblem('x'.repeat(MAX_PIN_LENGTH + 1))).toMatch(/at most 256 characters/);
+    expect(pinProblem('x'.repeat(MAX_PIN_LENGTH + 1))).toMatch(/at most 12 characters \(got 13\)/);
   });
 
   it('says what to do when auth.json is not valid, instead of treating it as "no PIN"', async () => {

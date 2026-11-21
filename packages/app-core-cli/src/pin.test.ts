@@ -58,10 +58,10 @@ describe('app-core-cli pin', () => {
     expect(isPinSet(dir)).toBe(false);
   });
 
-  it('refuses a PIN of fewer than 6 characters before asking twice', async () => {
-    answers = ['12345'];
+  it('refuses a PIN of fewer than 4 characters before asking twice', async () => {
+    answers = ['123'];
     expect(await runPin(['set'], deps())).toBe(1);
-    expect(err.join('')).toMatch(/at least 6 characters/);
+    expect(err.join('')).toMatch(/at least 4 characters/);
     expect(prompts).toHaveLength(1);
     expect(isPinSet(dir)).toBe(false);
   });

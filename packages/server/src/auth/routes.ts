@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { PinLockout } from './lockout.js';
-import { isPinSet, MAX_PIN_LENGTH, MIN_PIN_LENGTH, PIN_NOT_SET_MESSAGE, pinProblem, pinResetHint, setPin, verifyPin } from './pin.js';
+import { isPinSet, MAX_PIN_LENGTH, MAX_PIN_REQUEST_LENGTH, MIN_PIN_LENGTH, PIN_NOT_SET_MESSAGE, pinProblem, pinResetHint, setPin, verifyPin } from './pin.js';
 import { ACCESS_TOKEN_SECONDS, REFRESH_WINDOW_MS, SessionStore, signAccessToken } from './tokens.js';
 
 export interface AuthRoutesOptions {
@@ -93,12 +93,12 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
     return true;
   };
 
-  const textOf = (value: unknown): string | undefined => (typeof value === 'string' && value.length <= MAX_PIN_LENGTH ? value : undefined);
+  const textOf = (value: unknown): string | undefined => (typeof value === 'string' && value.length <= MAX_PIN_REQUEST_LENGTH ? value : undefined);
 
   server.post('/api/auth/pin', async (request, reply) => {
     const pin = (request.body as { pin?: unknown } | null | undefined)?.pin;
-    if (typeof pin !== 'string' || pin === '' || pin.length > MAX_PIN_LENGTH) {
-      return reply.code(400).send({ error: 'bad-request', message: `The body must be {"pin": "<the PIN>"}, a text of 1 to ${MAX_PIN_LENGTH} characters.` });
+    if (typeof pin !== 'string' || pin === '' || pin.length > MAX_PIN_REQUEST_LENGTH) {
+      return reply.code(400).send({ error: 'bad-request', message: `The body must be {"pin": "<the PIN>"}, a text of 1 to ${MAX_PIN_REQUEST_LENGTH} characters.` });
     }
     return oneAtATime(async () => ((await checkCurrentPin(reply, pin)) ? issue(reply, sessions.createRefresh()) : reply));
   });
@@ -108,7 +108,7 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
   server.post('/api/auth/pin/set', async (request, reply) => {
     const pin = textOf((request.body as { pin?: unknown } | null | undefined)?.pin);
     if (pin === undefined) {
-      return reply.code(400).send({ error: 'bad-request', message: `The body must be {"pin": "<the new PIN>"}, a text of at most ${MAX_PIN_LENGTH} characters.` });
+      return reply.code(400).send({ error: 'bad-request', message: `The body must be {"pin": "<the new PIN>"}, a text of at most ${MAX_PIN_REQUEST_LENGTH} characters.` });
     }
     return oneAtATime(async () => {
       if (isPinSet(configDir)) {
@@ -131,7 +131,7 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
     const currentPin = textOf(body?.currentPin);
     const newPin = textOf(body?.newPin);
     if (currentPin === undefined || currentPin === '' || newPin === undefined) {
-      return reply.code(400).send({ error: 'bad-request', message: `The body must be {"currentPin": "<the PIN>", "newPin": "<the new PIN>"}, texts of at most ${MAX_PIN_LENGTH} characters.` });
+      return reply.code(400).send({ error: 'bad-request', message: `The body must be {"currentPin": "<the PIN>", "newPin": "<the new PIN>"}, texts of at most ${MAX_PIN_REQUEST_LENGTH} characters.` });
     }
     // Before the current PIN is looked at: neither of these is a guess, so neither counts as a wrong try.
     const problem = pinProblem(newPin);
@@ -170,6 +170,6 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
     const token = refreshTokenOf(request);
     const pinSet = isPinSet(configDir);
     // A session left over from a PIN deleted by hand does not unlock anything: no PIN, no elevation.
-    return { pinSet, locked: pinSet && lockout.check().locked, elevated: pinSet && token !== undefined && sessions.findRefresh(token), resetHint: pinResetHint(configDir), minPinLength: MIN_PIN_LENGTH };
+    return { pinSet, locked: pinSet && lockout.check().locked, elevated: pinSet && token !== undefined && sessions.findRefresh(token), resetHint: pinResetHint(configDir), minPinLength: MIN_PIN_LENGTH, maxPinLength: MAX_PIN_LENGTH };
   });
 };

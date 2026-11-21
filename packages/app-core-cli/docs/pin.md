@@ -7,7 +7,7 @@ A module declares a route `sensitive` (`ctx.registerRoute(method, path, handler,
 In the dashboard, or in a terminal:
 
 ```
-app-core-cli pin set      # typed twice, hidden, at least 6 characters
+app-core-cli pin set      # typed twice, hidden, 4 to 12 characters
 app-core-cli pin status   # set or not; never prints the hash
 ```
 
@@ -43,7 +43,7 @@ Tokens: access = JWT HS256, 10 minutes, kept by the dashboard in localStorage `a
 ## Limits
 
 - The access token in localStorage is readable by page scripts and by a process of the same user during its 10 minutes.
-- A process of the same user that can read `auth.json` can find a 6-digit PIN offline; scrypt makes it slow, not impossible. Use a longer secret if that matters.
+- A process of the same user that can read `auth.json` can find a 4 to 12 character PIN offline (a 4-digit one in minutes: scrypt slows each try, it cannot stop a try of 10,000 values). Only the salted scrypt hash is stored, never the PIN.
 - File modes (0600) are not enforced on Windows: the files are readable by your whole user account.
 - Only routes declared `sensitive` are protected. Ordinary write routes, and `/api/modules/register|update|unregister`, are not.
 - A restart resets the lockout; an access token not yet expired survives a restart (secret and generation are on disk).

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Dialog } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
 import { setPinAsker, type PinAsker, type PinPromptMode, type PinVerdict } from './pinPrompt.js';
+import { lengthRule } from './pinStatus.js';
 import { ResetHint, usePinStatus } from './ResetHint.js';
 import { useLockCountdown } from './useLockCountdown.js';
 
@@ -93,7 +94,7 @@ export function PinPromptHost(): React.ReactElement {
   };
 
   const shown = locked ? `Too many wrong PINs. Try again in ${remaining} ${remaining === 1 ? 'second' : 'seconds'}.` : message;
-  const minimum = status?.minPinLength;
+  const rule = lengthRule(status?.minPinLength, status?.maxPinLength);
   const canSubmit = !(busy || locked || pin === '' || (choosing && confirm === ''));
 
   return (
@@ -124,7 +125,7 @@ export function PinPromptHost(): React.ReactElement {
         }}
       >
         {choosing ? (
-          <p className="mb-3 text-sm text-muted">{`No PIN is set yet. Choose the PIN that unlocks sensitive actions${minimum === undefined ? '' : ` (at least ${minimum} characters)`}. You can also run "app-core-cli pin set" in a terminal.`}</p>
+          <p className="mb-3 text-sm text-muted">{`No PIN is set yet. Choose the PIN that unlocks sensitive actions${rule === '' ? '' : ` (${rule})`}. You can also run "app-core-cli pin set" in a terminal.`}</p>
         ) : (
           <p className="mb-3 text-sm text-muted">This action needs your PIN. It stays unlocked while you use the dashboard.</p>
         )}
