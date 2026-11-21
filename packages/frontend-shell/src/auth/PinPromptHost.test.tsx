@@ -97,9 +97,10 @@ describe('PinPromptHost', () => {
     await waitFor(() => expect(screen.queryByLabelText('PIN')).toBeNull());
   });
 
-  // user-event is not a dependency of this package: a browser submits a form with Enter only when a submit button belongs to it, so the
-  // test checks that the button outside the <form> (in the dialog actions) is wired to it, and that it submits through the form.
-  it('choose mode: the "Choose PIN" button is the submit button of the form, so Enter in a field submits', async () => {
+  // user-event is not a dependency of this package: a browser submits a form with Enter only when a submit button belongs to it. The
+  // dialog button sits outside the <form> (and ButtonAction has no `form` attribute), so the form carries an invisible submit button
+  // for Enter, and the visible one asks the form to submit: both go through the same submit event.
+  it('choose mode: the form owns a submit button for Enter, and the "Choose PIN" button submits through the form', async () => {
     render(<PinPromptHost />);
     const verify = vi.fn(async (): Promise<PinVerdict> => ({ ok: true }));
     let answer!: Promise<boolean>;
@@ -109,14 +110,17 @@ describe('PinPromptHost', () => {
     const first = await screen.findByLabelText('New PIN');
     const form = first.closest('form') as HTMLFormElement;
     const button = screen.getByRole('button', { name: 'Choose PIN' });
-    expect(form.id).not.toBe('');
-    expect(button).toHaveAttribute('type', 'submit');
-    expect(button).toHaveAttribute('form', form.id);
+    const hidden = screen.getByTestId('pin-hidden-submit');
+    expect(hidden.closest('form')).toBe(form);
+    expect(hidden).toHaveAttribute('type', 'submit');
+    expect(hidden).toHaveAttribute('tabindex', '-1');
+    expect(button).toHaveAttribute('type', 'button');
     const onSubmit = vi.fn();
     form.addEventListener('submit', onSubmit);
     fireEvent.change(first, { target: { value: '482915' } });
     fireEvent.change(screen.getByLabelText('Confirm the PIN'), { target: { value: '482915' } });
-    fireEvent.click(button);
+    // Not `button`: a disabled one is wrapped in its tooltip, so the enabled one is a new element.
+    fireEvent.click(screen.getByRole('button', { name: 'Choose PIN' }));
     await expect(answer).resolves.toBe(true);
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(verify).toHaveBeenCalledTimes(1);
@@ -161,6 +165,54 @@ describe('PinPromptHost', () => {
     type('482915');
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('app-core-cli pin set');
+  });
+
+  it('unlock mode: Enter (the invisible submit button of the form) asks the server once', async () => {
+    render(<PinPromptHost />);
+    const verify = vi.fn(async (): Promise<PinVerdict> => ({ ok: true }));
+    let answer!: Promise<boolean>;
+    act(() => {
+      answer = askForPin(verify);
+    });
+    await screen.findByLabelText('PIN');
+    type('482915');
+    fireEvent.click(screen.getByTestId('pin-hidden-submit'));
+    await expect(answer).resolves.toBe(true);
+    expect(verify).toHaveBeenCalledTimes(1);
+  });
+
+  it('the fields are masked, are not offered a saved PIN, and a new PIN is told apart from the one being asked', async () => {
+    render(<PinPromptHost />);
+    act(() => {
+      void askForPin(async () => ({ ok: true }), 'choose');
+    });
+    expect(await screen.findByLabelText('New PIN')).toHaveAttribute('autocomplete', 'new-password');
+    expect(screen.getByLabelText('Confirm the PIN')).toHaveAttribute('autocomplete', 'new-password');
+  });
+
+  it('the main button is a primary one, and a disabled one is not silent: the text of its reason is wired', async () => {
+    render(<PinPromptHost />);
+    act(() => {
+      void askForPin(async () => ({ ok: true }));
+    });
+    await screen.findByLabelText('PIN');
+    const unlock = screen.getByRole('button', { name: 'Unlock' });
+    expect(unlock).toBeDisabled();
+    expect(unlock.className).toMatch(/color-primary-solid/);
+    expect(screen.getByRole('button', { name: 'Cancel' }).className).not.toMatch(/color-primary-solid/);
+  });
+
+  it('choose mode: two entries that differ are reported on the confirmation field itself', async () => {
+    render(<PinPromptHost />);
+    act(() => {
+      void askForPin(async () => ({ ok: true }), 'choose');
+    });
+    fireEvent.change(await screen.findByLabelText('New PIN'), { target: { value: '482915' } });
+    fireEvent.change(screen.getByLabelText('Confirm the PIN'), { target: { value: '482916' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Choose PIN' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('do not match');
+    expect(screen.getByLabelText('Confirm the PIN')).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('does not leave the asker set after unmount', () => {

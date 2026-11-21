@@ -26,9 +26,30 @@ describe('App: PIN dialog and the lock control', () => {
     await expect(answer).resolves.toBe(false);
   });
 
-  it('shows the lock control in the top bar when an access token is stored', async () => {
+  const stubStatus = (elevated: boolean): void => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => new Response(JSON.stringify(url === '/api/auth/status' ? { pinSet: true, locked: false, elevated } : {}), { status: 200, headers: { 'content-type': 'application/json' } })),
+    );
+  };
+
+  it('shows "Enter PIN" in the top bar while locked, even with a stale token stored', async () => {
+    stubStatus(false);
     storeAccessToken('t.o.k', 600);
     render(<App />);
-    expect(await within(screen.getByRole('banner')).findByRole('button', { name: 'Lock sensitive actions' })).toBeInTheDocument();
+    const banner = within(screen.getByRole('banner'));
+    expect(await banner.findByRole('button', { name: 'Enter PIN' })).toBeInTheDocument();
+    expect(banner.queryByText('Sudo')).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows the Sudo badge with its leave button in the top bar when the server says the session is live', async () => {
+    stubStatus(true);
+    storeAccessToken('t.o.k', 600);
+    render(<App />);
+    const banner = within(screen.getByRole('banner'));
+    expect(await banner.findByText('Sudo')).toBeInTheDocument();
+    expect(banner.getByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' })).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 });

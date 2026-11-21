@@ -1,13 +1,11 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Dialog } from '@wadeck-app/dsl-ui';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ButtonAction, Dialog } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
+import { HiddenSubmit, PinField, submitBlockedReason } from './PinField.js';
 import { setPinAsker, type PinAsker, type PinPromptMode, type PinVerdict } from './pinPrompt.js';
 import { lengthRule } from './pinStatus.js';
 import { ResetHint, usePinStatus } from './ResetHint.js';
 import { useLockCountdown } from './useLockCountdown.js';
-
-export const PIN_INPUT = 'w-full rounded border border-border bg-surface px-2 py-1.5 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
-export const PIN_BUTTON = 'inline-flex items-center rounded border border-border bg-surface px-3 py-1.5 text-sm text-content transition-colors hover:bg-bg-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
 
 interface Pending {
   mode: PinPromptMode;
@@ -25,14 +23,15 @@ export function PinPromptHost(): React.ReactElement {
   const [message, setMessage] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const pendingRef = useRef<Pending | null>(null);
-  const pinFieldRef = useRef<HTMLInputElement>(null);
+  const [mismatch, setMismatch] = useState<string | undefined>(undefined);
+  const formRef = useRef<HTMLFormElement>(null);
   const [refocus, setRefocus] = useState(0);
   useEffect(() => {
     if (refocus > 0) {
-      pinFieldRef.current?.focus();
+      // FieldText does not forward a ref: the PIN field is the first input of the form.
+      formRef.current?.querySelector('input')?.focus();
     }
   }, [refocus]);
-  const formId = useId();
   const countdown = useLockCountdown();
   const { status, error: statusError } = usePinStatus(pending !== null);
 
@@ -54,6 +53,7 @@ export function PinPromptHost(): React.ReactElement {
         setPin('');
         setConfirm('');
         setMessage(undefined);
+        setMismatch(undefined);
         countdown.clear();
         setBusy(false);
         setPending(next);
@@ -78,9 +78,11 @@ export function PinPromptHost(): React.ReactElement {
       return;
     }
     if (choosing && confirm !== pin) {
-      setMessage('The two entries do not match. Type the same PIN twice.');
+      setMessage(undefined);
+      setMismatch('The two entries do not match. Type the same PIN twice.');
       return;
     }
+    setMismatch(undefined);
     setBusy(true);
     try {
       const verdict = await pending.verify(pin);
@@ -107,7 +109,9 @@ export function PinPromptHost(): React.ReactElement {
 
   const shown = locked ? `Too many wrong PINs. Try again in ${remaining} ${remaining === 1 ? 'second' : 'seconds'}.` : message;
   const rule = lengthRule(status?.minPinLength, status?.maxPinLength);
-  const canSubmit = !(busy || locked || pin === '' || (choosing && confirm === ''));
+  const filled = pin !== '' && (!choosing || confirm !== '');
+  const canSubmit = !(busy || locked || !filled);
+  const blockedReason = submitBlockedReason({ busy, locked, remaining, filled, fieldsHint: choosing ? 'Fill both fields' : 'Type the PIN' });
 
   return (
     <Dialog
@@ -121,43 +125,33 @@ export function PinPromptHost(): React.ReactElement {
       size="sm"
       actions={
         <>
-          <button type="button" className={PIN_BUTTON} onClick={() => pending?.settle(false)}>
-            Cancel
-          </button>
-                    {/* The button lives in the dialog actions, outside the form: `form` makes it the submit button of it, so Enter in a field submits too. */}
-          <button type="submit" form={formId} className={PIN_BUTTON} disabled={!canSubmit}>
-            {choosing ? 'Choose PIN' : 'Unlock'}
-          </button>
+          <ButtonAction label="Cancel" variant="secondary" onClick={() => pending?.settle(false)} />
+          {/* The button lives in the dialog actions, outside the form (ButtonAction has no `form` attribute): it asks the form to submit, which runs the same path as Enter (see HiddenSubmit). */}
+          <ButtonAction label={choosing ? 'Choose PIN' : 'Unlock'} variant="primary" disabled={!canSubmit} disabledReason={blockedReason} loading={busy} onClick={() => formRef.current?.requestSubmit()} />
         </>
       }
     >
       <form
-        id={formId}
+        ref={formRef}
+        className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
         }}
       >
         {choosing ? (
-          <p className="mb-3 text-sm text-muted">{`No PIN is set yet. Choose the PIN that unlocks sensitive actions${rule === '' ? '' : ` (${rule})`}. You can also run "app-core-cli pin set" in a terminal.`}</p>
+          <p className="text-sm text-muted">{`No PIN is set yet. Choose the PIN that unlocks sensitive actions${rule === '' ? '' : ` (${rule})`}. You can also run "app-core-cli pin set" in a terminal.`}</p>
         ) : (
-          <p className="mb-3 text-sm text-muted">This action needs your PIN. It stays unlocked while you use the dashboard.</p>
+          <p className="text-sm text-muted">This action needs your PIN. It stays unlocked while you use the dashboard.</p>
         )}
-        <label className="block text-sm text-content">
-          {choosing ? 'New PIN' : 'PIN'}
-          <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" autoFocus ref={pinFieldRef} value={pin} readOnly={busy} aria-busy={busy} onChange={(event) => setPin(event.target.value)} />
-        </label>
-        {choosing ? (
-          <label className="mt-2 block text-sm text-content">
-            Confirm the PIN
-            <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={confirm} readOnly={busy} aria-busy={busy} onChange={(event) => setConfirm(event.target.value)} />
-          </label>
-        ) : null}
+        <PinField label={choosing ? 'New PIN' : 'PIN'} value={pin} onChange={setPin} busy={busy} autoFocus autoComplete={choosing ? 'new-password' : 'off'} />
+        {choosing ? <PinField label="Confirm the PIN" value={confirm} onChange={setConfirm} busy={busy} autoComplete="new-password" error={mismatch} /> : null}
         {shown !== undefined ? (
-          <p role="alert" className="mt-2 text-sm text-danger">
+          <p role="alert" className="text-sm text-danger">
             {shown}
           </p>
         ) : null}
+        <HiddenSubmit />
         <ResetHint status={status} error={statusError} />
       </form>
     </Dialog>

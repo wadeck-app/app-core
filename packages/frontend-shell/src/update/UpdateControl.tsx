@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { CircleArrowUp, Info, LoaderCircle, TriangleAlert } from 'lucide-react';
-import { IconButton, Popover } from '@wadeck-app/dsl-ui';
+import { CircleArrowUp, Download, LoaderCircle, RefreshCwOff, TriangleAlert } from 'lucide-react';
+import { ButtonAction, IconButton, Popover } from '@wadeck-app/dsl-ui';
 import { readJson } from '../auth/readJson.js';
 import { getErrorMessage } from '../errors.js';
 import { fetcher } from '../fetcher.js';
@@ -103,6 +103,7 @@ export function UpdateControl({ reload = () => window.location.reload(), restart
     }
   };
 
+  // One icon per state, and none that another control of the top bar uses (Info is the versions menu, KeyRound the PIN settings...).
   const icon =
     update.state === 'restart-needed' ? (
       <CircleArrowUp size={14} className="text-success-text" />
@@ -111,9 +112,9 @@ export function UpdateControl({ reload = () => window.location.reload(), restart
     ) : update.state === 'applying' ? (
       <LoaderCircle size={14} className="animate-spin text-muted" />
     ) : update.state === 'update-available' ? (
-      <CircleArrowUp size={14} className="text-muted" />
+      <Download size={14} className="text-muted" />
     ) : (
-      <Info size={14} className="text-muted" />
+      <RefreshCwOff size={14} className="text-muted" />
     );
 
   return (
@@ -124,14 +125,9 @@ export function UpdateControl({ reload = () => window.location.reload(), restart
             <p className="font-semibold text-content">{`${update.installed} is installed, restart to use it`}</p>
             <p className="text-muted">Running: {update.running}</p>
             {update.canRestart ? (
-              <button
-                type="button"
-                disabled={restarting}
-                onClick={() => void restart()}
-                className="w-full rounded-md border border-border px-2 py-1.5 hover:bg-muted-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
-              >
-                {restarting ? 'Restarting...' : 'Restart now'}
-              </button>
+              <div className="flex justify-end pt-1">
+                <ButtonAction label={restarting ? 'Restarting...' : 'Restart now'} variant="primary" loading={restarting} onClick={() => void restart()} />
+              </div>
             ) : (
               <p className="text-muted">This server cannot restart itself: restart app-core yourself, then reload the page.</p>
             )}

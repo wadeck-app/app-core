@@ -1,17 +1,24 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ToastProvider } from '@wadeck-app/dsl-ui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAccessToken, storeAccessToken } from './accessToken.js';
+import { ACCESS_TOKEN_KEY, getAccessToken, storeAccessToken } from './accessToken.js';
 import { LockControl } from './LockControl.js';
+import { PinPromptHost } from './PinPromptHost.js';
+import { setPinAsker } from './pinPrompt.js';
+
+const json = (status: number, body: unknown): Response => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 describe('LockControl', () => {
   let calls: string[];
-  let status: { elevated: boolean } | 'fail';
+  let status: { elevated: boolean; pinSet: boolean } | 'fail';
+  // What the server does with a valid PIN: the session becomes live.
+  let pinAccepted: string;
 
   beforeEach(() => {
     localStorage.clear();
     calls = [];
-    status = { elevated: false };
+    status = { elevated: false, pinSet: true };
+    pinAccepted = '482915';
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -20,77 +27,181 @@ describe('LockControl', () => {
           if (status === 'fail') {
             return new Response('down', { status: 502 });
           }
-          return new Response(JSON.stringify({ pinSet: true, locked: false, ...status }), { status: 200, headers: { 'content-type': 'application/json' } });
+          return json(200, { locked: false, ...status });
         }
-        return new Response(null, { status: 204 });
+        if (url === '/api/auth/refresh') {
+          return json(401, { error: 'refresh-required', message: 'PIN needed' });
+        }
+        if (url === '/api/auth/pin') {
+          const { pin } = JSON.parse(init.body as string) as { pin: string };
+          if (pin !== pinAccepted) {
+            return json(401, { error: 'pin-wrong', message: 'Wrong PIN. 4 tries left.' });
+          }
+          if (status !== 'fail') {
+            status = { ...status, elevated: true };
+          }
+          return json(200, { accessToken: 'new.tok.en', expiresInSeconds: 600 });
+        }
+        if (url === '/api/auth/logout') {
+          if (status !== 'fail') {
+            status = { ...status, elevated: false };
+          }
+          return new Response(null, { status: 204 });
+        }
+        throw new Error(`unexpected ${url}`);
       }),
     );
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    setPinAsker(undefined);
+  });
 
   const renderControl = () =>
     render(
       <ToastProvider>
+        <PinPromptHost />
         <LockControl />
       </ToastProvider>,
     );
+  const enterPinButton = () => screen.queryByRole('button', { name: 'Enter PIN' });
+  const leaveButton = () => screen.queryByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' });
 
-  it('is hidden when the server says not elevated and no token is stored', async () => {
+  it('locked: shows "Enter PIN" and the PIN settings, no Sudo badge, no leave button', async () => {
+    renderControl();
+    expect(await screen.findByRole('button', { name: 'Enter PIN' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'PIN settings' })).toBeInTheDocument();
+    await waitFor(() => expect(calls).toContain('GET /api/auth/status'));
+    expect(screen.queryByText('Sudo')).toBeNull();
+    expect(leaveButton()).toBeNull();
+  });
+
+  it('"Enter PIN" opens the unlock dialog straight away; a valid PIN replaces the button with the Sudo badge and its leave button', async () => {
+    renderControl();
+    fireEvent.click(await screen.findByRole('button', { name: 'Enter PIN' }));
+    const field = await screen.findByLabelText('PIN');
+    fireEvent.change(field, { target: { value: '482915' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    expect(await screen.findByText('Sudo')).toBeInTheDocument();
+    expect(leaveButton()).not.toBeNull();
+    expect(enterPinButton()).toBeNull();
+    expect(getAccessToken()).toBe('new.tok.en');
+  });
+
+  it('cancelling the dialog stays locked, without an error toast', async () => {
+    renderControl();
+    fireEvent.click(await screen.findByRole('button', { name: 'Enter PIN' }));
+    await screen.findByLabelText('PIN');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByLabelText('PIN')).toBeNull());
+    expect(enterPinButton()).not.toBeNull();
+    expect(screen.queryByText(/Could not unlock/)).toBeNull();
+  });
+
+  it('with no PIN set, "Enter PIN" opens the Choose a PIN dialog', async () => {
+    status = { elevated: false, pinSet: false };
+    renderControl();
+    fireEvent.click(await screen.findByRole('button', { name: 'Enter PIN' }));
+    expect(await screen.findByLabelText('New PIN')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirm the PIN')).toBeInTheDocument();
+  });
+
+  it('is Sudo at once when the server says a refresh session is live', async () => {
+    status = { elevated: true, pinSet: true };
+    renderControl();
+    expect(await screen.findByText('Sudo')).toBeInTheDocument();
+    expect(enterPinButton()).toBeNull();
+  });
+
+  it('the leave button has the tooltip text of the design', async () => {
+    status = { elevated: true, pinSet: true };
+    renderControl();
+    expect(await screen.findByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' })).toHaveAttribute('title', 'Sensitive actions are unlocked. Click × to lock them.');
+  });
+
+  it('a stale token alone is not sudo: the status says elevated:false, so "Enter PIN" stays', async () => {
+    storeAccessToken('t.o.k', 600);
     renderControl();
     await waitFor(() => expect(calls).toContain('GET /api/auth/status'));
-    expect(screen.queryByRole('button', { name: 'Lock sensitive actions' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Enter PIN' })).toBeInTheDocument();
+    expect(screen.queryByText('Sudo')).toBeNull();
   });
 
-  it('keeps the PIN settings button reachable while locked (no lock button then)', async () => {
-    renderControl();
-    expect(await screen.findByRole('button', { name: 'PIN settings' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Lock sensitive actions' })).toBeNull();
-  });
-
-  it('is shown when the server says a refresh cookie is live', async () => {
-    status = { elevated: true };
-    renderControl();
-    expect(await screen.findByRole('button', { name: 'Lock sensitive actions' })).toBeInTheDocument();
-  });
-
-  it('is shown at once when a token is stored, and appears when one is stored later', async () => {
-    renderControl();
-    await waitFor(() => expect(calls).toContain('GET /api/auth/status'));
-    expect(screen.queryByRole('button', { name: 'Lock sensitive actions' })).toBeNull();
-    storeAccessToken('t.o.k', 600);
-    expect(await screen.findByRole('button', { name: 'Lock sensitive actions' })).toBeInTheDocument();
-  });
-
-  it('locks: POST logout, token removed, a toast says so, the control disappears', async () => {
+  it('leaves sudo: POST logout, token removed, a toast says so, "Enter PIN" comes back', async () => {
+    status = { elevated: true, pinSet: true };
     storeAccessToken('t.o.k', 600);
     renderControl();
-    fireEvent.click(await screen.findByRole('button', { name: 'Lock sensitive actions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' }));
     await waitFor(() => expect(calls).toContain('POST /api/auth/logout'));
     expect(await screen.findByText(/locked/i)).toBeInTheDocument();
     expect(getAccessToken()).toBeUndefined();
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Lock sensitive actions' })).toBeNull());
+    expect(await screen.findByRole('button', { name: 'Enter PIN' })).toBeInTheDocument();
+    expect(screen.queryByText('Sudo')).toBeNull();
   });
 
-  it('keeps the token and says why when the logout fails', async () => {
+  it('keeps sudo and the token, and says why, when the logout fails', async () => {
+    status = { elevated: true, pinSet: true };
     storeAccessToken('t.o.k', 600);
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ message: 'auth-sessions.json is not valid. Delete it.' }), { status: 500, headers: { 'content-type': 'application/json' } })));
+    const base = fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => (url === '/api/auth/logout' ? json(500, { message: 'auth-sessions.json is not valid. Delete it.' }) : base(url, init))),
+    );
     renderControl();
-    fireEvent.click(await screen.findByRole('button', { name: 'Lock sensitive actions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' }));
     expect(await screen.findByText(/auth-sessions\.json is not valid/)).toBeInTheDocument();
     expect(getAccessToken()).toBe('t.o.k');
+    expect(screen.getByText('Sudo')).toBeInTheDocument();
   });
 
-  it('says in the console why it cannot tell, when the status route fails, and stays hidden without a token', async () => {
+  it('follows another tab: a token stored there (storage event) shows Sudo, one removed there brings "Enter PIN" back', async () => {
+    renderControl();
+    await screen.findByRole('button', { name: 'Enter PIN' });
+    status = { elevated: true, pinSet: true };
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent('storage', { key: ACCESS_TOKEN_KEY }));
+    });
+    expect(await screen.findByText('Sudo')).toBeInTheDocument();
+    status = { elevated: false, pinSet: true };
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent('storage', { key: ACCESS_TOKEN_KEY }));
+    });
+    expect(await screen.findByRole('button', { name: 'Enter PIN' })).toBeInTheDocument();
+  });
+
+  it('ignores the storage events of other keys', async () => {
+    renderControl();
+    await screen.findByRole('button', { name: 'Enter PIN' });
+    const before = calls.filter((c) => c === 'GET /api/auth/status').length;
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'theme' }));
+    });
+    expect(calls.filter((c) => c === 'GET /api/auth/status').length).toBe(before);
+  });
+
+  it('asks the status again when the window gets the focus', async () => {
+    renderControl();
+    await screen.findByRole('button', { name: 'Enter PIN' });
+    status = { elevated: true, pinSet: true };
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(await screen.findByText('Sudo')).toBeInTheDocument();
+  });
+
+  it('says in the console why it cannot tell, when the status route fails, and never shows Sudo on a guess', async () => {
     status = 'fail';
+    storeAccessToken('t.o.k', 600);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     renderControl();
     await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringContaining('/api/auth/status')));
-    expect(screen.queryByRole('button', { name: 'Lock sensitive actions' })).toBeNull();
+    expect(screen.queryByText('Sudo')).toBeNull();
+    expect(enterPinButton()).not.toBeNull();
     warn.mockRestore();
   });
 
   it('puts the message of the server (what to repair) in the console when the status route answers it', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'internal', message: 'auth.json is not valid. Delete it, then choose a new PIN.' }), { status: 500, headers: { 'content-type': 'application/json' } })));
+    vi.stubGlobal('fetch', vi.fn(async () => json(500, { error: 'internal', message: 'auth.json is not valid. Delete it, then choose a new PIN.' })));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     renderControl();
     await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringContaining('auth.json is not valid. Delete it, then choose a new PIN.')));

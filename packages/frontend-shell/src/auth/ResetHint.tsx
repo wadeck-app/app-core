@@ -29,25 +29,44 @@ export function usePinStatus(active: boolean): { status: PinStatus | undefined; 
   return { status, error };
 }
 
+// A path with a line-break opportunity after each separator: a long one wraps between folders, and only breaks inside a name when
+// one name alone is wider than the block. The <wbr> are empty: the text of the path stays whole (select, copy, search).
+function breakableAtSeparators(path: string): React.ReactNode[] {
+  return path.split(/(?<=[\\/])/).flatMap((part, index) => (index === 0 ? [part] : [<wbr key={index} />, part]));
+}
+
+// A separated, small and muted block under a form, so the reset is findable but never competes with the main action.
+function HintBlock({ children }: { children: React.ReactNode }): React.ReactElement {
+  return <div className="mt-4 min-w-0 space-y-1.5 border-t border-border pt-3 text-xs leading-relaxed text-muted">{children}</div>;
+}
+
 // "Forgot the PIN?": what to delete in the file system to start again, with the real paths (select-all: one click selects a path).
 export function ResetHint({ status, error }: { status: PinStatus | undefined; error: string | undefined }): React.ReactElement | null {
   if (error !== undefined) {
-    return <p className="mt-3 text-xs text-muted">{`Forgot the PIN? Could not read the reset instructions: ${error}`}</p>;
+    return (
+      <HintBlock>
+        <p>{`Forgot the PIN? Could not read the reset instructions: ${error}`}</p>
+      </HintBlock>
+    );
   }
   if (status === undefined) {
     return null;
   }
   if (status.resetHint === undefined) {
-    return <p className="mt-3 text-xs text-muted">Forgot the PIN? Delete auth.json in the app-core config dir (APP_CORE_CONFIG_DIR, else ~/.config/app-core), then choose a new PIN. This server is older than the page and does not give the path.</p>;
+    return (
+      <HintBlock>
+        <p>Forgot the PIN? Delete auth.json in the app-core config dir (APP_CORE_CONFIG_DIR, else ~/.config/app-core), then choose a new PIN. This server is older than the page and does not give the path.</p>
+      </HintBlock>
+    );
   }
   return (
-    <div className="mt-3 text-xs text-muted">
+    <HintBlock>
       <p>{`Forgot the PIN? ${status.resetHint.instruction}`}</p>
       {status.resetHint.files.map((file) => (
-        <p key={file} className="mt-1 select-all break-all font-mono text-content">
-          {file}
-        </p>
+        <code key={file} className="block min-w-0 select-all break-words rounded border border-border bg-bg-secondary px-2 py-1 font-mono text-content">
+          {breakableAtSeparators(file)}
+        </code>
       ))}
-    </div>
+    </HintBlock>
   );
 }

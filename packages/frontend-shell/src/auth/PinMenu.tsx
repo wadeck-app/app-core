@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { KeyRound } from 'lucide-react';
-import { IconButton, Popover } from '@wadeck-app/dsl-ui';
+import { ButtonAction, IconButton, Popover } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
 import { changePin, choosePin } from './elevation.js';
-import { PIN_BUTTON, PIN_INPUT } from './PinPromptHost.js';
+import { PinField, submitBlockedReason } from './PinField.js';
 import { lengthRule } from './pinStatus.js';
 import { ResetHint, usePinStatus } from './ResetHint.js';
 import { useLockCountdown } from './useLockCountdown.js';
@@ -14,11 +14,15 @@ function ChangePinForm({ rule }: { rule: string }): React.ReactElement {
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState<string | undefined>(undefined);
+  const [mismatch, setMismatch] = useState<string | undefined>(undefined);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
-  const currentRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const countdown = useLockCountdown();
   const { locked, remaining } = countdown;
+
+  // FieldText does not forward a ref: the current PIN is the first input of the form.
+  const focusCurrent = (): void => formRef.current?.querySelector('input')?.focus();
 
   const submit = async (): Promise<void> => {
     if (busy || locked || current === '' || next === '') {
@@ -26,9 +30,11 @@ function ChangePinForm({ rule }: { rule: string }): React.ReactElement {
     }
     setDone(false);
     if (confirm !== next) {
-      setMessage('The two new entries do not match. Type the same PIN twice.');
+      setMessage(undefined);
+      setMismatch('The two new entries do not match. Type the same PIN twice.');
       return;
     }
+    setMismatch(undefined);
     setBusy(true);
     try {
       const verdict = await changePin(current, next);
@@ -44,54 +50,50 @@ function ChangePinForm({ rule }: { rule: string }): React.ReactElement {
       setCurrent('');
       setMessage(verdict.message);
       // The fields are read-only while asking (not disabled), but the focus went to the button that was clicked: type the current PIN again at once.
-      currentRef.current?.focus();
+      focusCurrent();
       if (verdict.retryAfterSeconds !== undefined) {
         countdown.lock(verdict.retryAfterSeconds);
       }
     } catch (err) {
       setMessage(getErrorMessage(err));
-      currentRef.current?.focus();
+      focusCurrent();
     } finally {
       setBusy(false);
     }
   };
 
   const shown = locked ? `Too many wrong PINs. Try again in ${remaining} ${remaining === 1 ? 'second' : 'seconds'}.` : message;
+  const filled = current !== '' && next !== '' && confirm !== '';
+  const blockedReason = submitBlockedReason({ busy, locked, remaining, filled, fieldsHint: 'Fill the three fields' });
 
   return (
     <form
+      ref={formRef}
+      className="space-y-3"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      <p className="mb-2 text-sm text-muted">{`Change the PIN. Every session is closed: you stay unlocked here, other browsers are asked again.${rule === '' ? '' : ` PIN: ${rule}.`}`}</p>
-      <label className="block text-sm text-content">
-        Current PIN
-        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" ref={currentRef} value={current} readOnly={busy} aria-busy={busy} onChange={(event) => setCurrent(event.target.value)} />
-      </label>
-      <label className="mt-2 block text-sm text-content">
-        New PIN
-        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={next} readOnly={busy} aria-busy={busy} onChange={(event) => setNext(event.target.value)} />
-      </label>
-      <label className="mt-2 block text-sm text-content">
-        Confirm the new PIN
-        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={confirm} readOnly={busy} aria-busy={busy} onChange={(event) => setConfirm(event.target.value)} />
-      </label>
+      <div className="space-y-1">
+        <h3 className="text-base font-semibold text-content">Change PIN</h3>
+        <p className="text-xs leading-relaxed text-muted">Every session is closed: you stay unlocked here, other browsers are asked again.</p>
+      </div>
+      <PinField label="Current PIN" value={current} onChange={setCurrent} busy={busy} />
+      <PinField label="New PIN" value={next} onChange={setNext} busy={busy} autoComplete="new-password" description={rule === '' ? undefined : rule} />
+      <PinField label="Confirm the new PIN" value={confirm} onChange={setConfirm} busy={busy} autoComplete="new-password" error={mismatch} />
       {shown !== undefined ? (
-        <p role="alert" className="mt-2 text-sm text-danger">
+        <p role="alert" className="text-sm text-danger">
           {shown}
         </p>
       ) : null}
       {done ? (
-        <p role="status" className="mt-2 text-sm text-success-text">
+        <p role="status" className="text-sm text-success-text">
           PIN changed. The new PIN is in force now.
         </p>
       ) : null}
-      <div className="mt-3 flex justify-end">
-        <button type="submit" className={PIN_BUTTON} disabled={busy || locked || current === '' || next === '' || confirm === ''}>
-          Change PIN
-        </button>
+      <div className="flex justify-end">
+        <ButtonAction type="submit" label="Change PIN" variant="primary" disabled={busy || locked || !filled} disabledReason={blockedReason} loading={busy} />
       </div>
     </form>
   );
@@ -112,20 +114,23 @@ function PinMenuContent(): React.ReactElement {
   };
 
   return (
-    <div className="w-72 text-sm">
+    <div className="w-80 max-w-full text-sm">
       {status === undefined && error === undefined ? <p className="text-muted">Reading the PIN status...</p> : null}
       {status?.pinSet === false ? (
-        <>
-          <p className="mb-2 text-muted">{`No PIN is set yet: sensitive actions are refused until you choose one${lengthRule(status.minPinLength, status.maxPinLength) === '' ? '' : ` (${lengthRule(status.minPinLength, status.maxPinLength)})`}.`}</p>
-          <button type="button" className={PIN_BUTTON} onClick={() => void choose()}>
-            Choose a PIN
-          </button>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold text-content">Choose a PIN</h3>
+            <p className="text-xs leading-relaxed text-muted">{`No PIN is set yet: sensitive actions are refused until you choose one${lengthRule(status.minPinLength, status.maxPinLength) === '' ? '' : ` (${lengthRule(status.minPinLength, status.maxPinLength)})`}.`}</p>
+          </div>
           {chooseError === undefined ? null : (
-            <p role="alert" className="mt-2 text-danger">
+            <p role="alert" className="text-sm text-danger">
               {chooseError}
             </p>
           )}
-        </>
+          <div className="flex justify-end">
+            <ButtonAction label="Choose a PIN" variant="primary" onClick={() => void choose()} />
+          </div>
+        </div>
       ) : null}
       {status?.pinSet === true ? <ChangePinForm rule={lengthRule(status.minPinLength, status.maxPinLength)} /> : null}
       <ResetHint status={status} error={error} />
