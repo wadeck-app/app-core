@@ -115,7 +115,7 @@ async function buildBackendFile(moduleDir: string, outDir: string, what: string,
       outfile: path.join(outDir, output),
       bundle: true,
       platform: 'node',
-      target: 'node22',
+      target: 'node24',
       format: 'cjs',
       treeShaking: true,
       // Readable production stack traces; the sourcemap maps them back to src/.

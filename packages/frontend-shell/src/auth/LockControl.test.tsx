@@ -132,9 +132,16 @@ describe('LockControl', () => {
     renderControl();
     const leave = await screen.findByRole('button', { name: 'Leave sudo mode' });
     const chip = screen.getByText('Sudo');
-    for (const token of ['border-danger', 'bg-danger-bg', 'text-danger-text']) {
+    for (const token of ['ring-danger', 'bg-danger-bg', 'text-danger-text']) {
       expect(chip.className.split(/\s+/)).toContain(token);
     }
+    // Same height as a dsl-ui Badge size 'sm' (py-0.5, text-xs, no border: a border adds 2px and the chip sat a pixel off the other
+    // badges of the bar, such as the one of queue): the outline is an inset ring.
+    const classes = chip.className.split(/\s+/);
+    for (const token of ['py-0.5', 'text-xs', 'rounded-full', 'font-medium', 'ring-inset']) {
+      expect(classes).toContain(token);
+    }
+    expect(classes).not.toContain('border');
     for (const token of ['hover:bg-danger', 'hover:text-on-solid', 'focus-visible:ring-danger-text']) {
       expect(leave.className.split(/\s+/)).toContain(token);
     }

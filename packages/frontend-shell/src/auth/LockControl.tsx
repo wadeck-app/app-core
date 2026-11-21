@@ -95,7 +95,7 @@ export function LockControl(): React.ReactElement {
         // One chip, one tooltip: the native title of the chip also covers the × inside it (which has none of its own).
         <span
           title="Sudo mode: sensitive actions are unlocked until you leave it (x) or the session expires."
-          className="inline-flex items-center rounded-full border border-danger bg-danger-bg py-0.5 pl-2.5 pr-1 text-xs font-medium text-danger-text"
+          className="inline-flex items-center rounded-full bg-danger-bg py-0.5 pl-2 pr-1 text-xs font-medium text-danger-text ring-1 ring-inset ring-danger"
         >
           Sudo
           <button

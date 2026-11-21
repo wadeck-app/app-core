@@ -14,7 +14,7 @@ A local dashboard host. Daemons (Queue, Orchestrator, Flow...) ship an `app-modu
 
 ## Build, test, run
 
-Node >= 22.
+Node >= 24.
 
 ```sh
 npm install

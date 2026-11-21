@@ -43,7 +43,7 @@
     "vitest": "^4.0.14"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "optionalDependencies": {
     "@wadeck-app/app-core-cli-darwin-arm64": "latest",

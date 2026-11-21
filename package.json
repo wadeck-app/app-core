@@ -29,7 +29,7 @@
     "vitest": "^4.0.14"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "dependencies": {
     "@wadeck-app/dsl-renderer": "latest",

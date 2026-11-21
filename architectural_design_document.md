@@ -12,7 +12,7 @@
 | Storage | None provided. A module keeps its files in `ctx.dataDir` (`<config dir>/data/<id>/`), which app-core never deletes. There is no storage service, no atomic-write helper, no ingestion endpoint. |
 | Frontend | The shell is fixed. Modules contribute DSL views (YAML/JSON, `@wadeck-app/dsl-ui`) to the slots `dashboard`, `nav`, `route`, `navbar`, `overlay` and to other modules' slots (`<providerId>:<slot>`, `ExtensionSlot`). A module may ship React components (dsl-lib) loaded at runtime. Discovery: `GET /api/modules`, `GET /api/slots/:slotId`. |
 | Module to module | `requires` (id to semver range) and `expose` (types, slots) in the manifest. |
-| Stack | Node >= 22, Fastify, React + Vite shell. |
+| Stack | Node >= 24, Fastify, React + Vite shell. |
 
 ## Original design (historical)
 

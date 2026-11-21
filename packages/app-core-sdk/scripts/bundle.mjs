@@ -29,7 +29,7 @@ for (const entry of ['index', 'register', 'violations', 'indicators', 'shell']) 
     entryPoints: [path.join(root, `dist/${entry}.js`)],
     bundle: true,
     platform: browserEntries.includes(entry) ? 'browser' : 'node',
-    target: browserEntries.includes(entry) ? 'es2022' : 'node22',
+    target: browserEntries.includes(entry) ? 'es2022' : 'node24',
     format: 'esm',
     outfile: path.join(root, `dist/${entry}.bundle.js`),
     external: entry === 'indicators' ? ['react'] : entry === 'shell' ? [] : external,
