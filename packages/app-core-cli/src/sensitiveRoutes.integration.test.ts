@@ -128,7 +128,7 @@ describe('sensitive routes, real server (PIN, refresh cookie, access token)', ()
 
     // Status with the cookie says elevated, and holds no secret.
     const status = await (await call(server, 'GET', '/api/auth/status', { headers: { Cookie: cookie } })).json();
-    expect(status).toEqual({ pinSet: true, locked: false, elevated: true, minPinLength: 4, maxPinLength: 12, resetHint: { files: [path.join(work, 'auth.json')], instruction: expect.any(String) } });
+    expect(status).toEqual({ pinSet: true, locked: false, elevated: true, minPinLength: 4, maxPinLength: 12, registerProtection: 'warn', resetHint: { files: [path.join(work, 'auth.json')], instruction: expect.any(String) } });
 
     // Refresh with the cookie: a new token that works, the cookie sent again with the full window.
     const refreshed = await call(server, 'POST', '/api/auth/refresh', { headers: { Cookie: cookie } });

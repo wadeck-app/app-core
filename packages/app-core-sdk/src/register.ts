@@ -4,6 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { resolveConfigDir } from '@wadeck-app/app-core-server/configDir';
+import { CLI_TOKEN_HEADER, readCliToken } from '@wadeck-app/app-core-server/cliToken';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { MODULE_ID_PATTERN, MODULE_ID_RULE } from '@wadeck-app/app-core-server/moduleId';
 import { DEFAULT_PORT, parsePortEnv } from '@wadeck-app/app-core-server/port';
@@ -119,8 +120,16 @@ async function request(port: number, endpoint: string, init: RequestInit, timeou
   }
 }
 
-function postRequest(port: number, endpoint: string, body: object, timeoutMs: number): Promise<Response | RequestFailure> {
-  return request(port, endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, timeoutMs);
+function postRequest(port: number, endpoint: string, body: object, timeoutMs: number, token: string | undefined): Promise<Response | RequestFailure> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(token === undefined ? {} : { [CLI_TOKEN_HEADER]: token }) };
+  return request(port, endpoint, { method: 'POST', headers, body: JSON.stringify(body) }, timeoutMs);
+}
+
+// The machine token app-core wrote in its config dir (the one server.port.json is read from). No file means a server older than the
+// token, which creates none and accepts the request: nothing is sent then, and a newer server in warn mode logs it. A file that
+// cannot be read throws (readCliToken), never a silent "no token".
+function machineToken(env: NodeJS.ProcessEnv): string | undefined {
+  return readCliToken(resolveConfigDir(env));
 }
 
 // The version of the module as the manifest declares it, undefined when it cannot be read (app-core would refuse it anyway).
@@ -158,9 +167,11 @@ interface Refusal {
 async function refusalOf(response: Response): Promise<Refusal> {
   const text = await response.text().catch(() => '');
   try {
-    const { error, code, retained } = JSON.parse(text) as { error?: unknown; code?: unknown; retained?: unknown };
+    const { error, message, code, retained } = JSON.parse(text) as { error?: unknown; message?: unknown; code?: unknown; retained?: unknown };
     if (typeof error === 'string' && error.trim() !== '') {
-      return { reason: error, ...(typeof code === 'string' ? { code } : {}), ...(typeof retained === 'boolean' ? { retained } : {}) };
+      // Some refusals (the machine token, the request guard) answer a short code in `error` and the text to act on in `message`.
+      const reason = typeof message === 'string' && message.trim() !== '' ? `${error}: ${message}` : error;
+      return { reason,...(typeof code === 'string' ? { code } : {}), ...(typeof retained === 'boolean' ? { retained } : {}) };
     }
   } catch {
     // Not JSON: report what was actually said.
@@ -196,8 +207,9 @@ export async function registerModule(options: RegisterModuleOptions): Promise<Re
   }
 
   const port = resolveAppCorePort(env);
+  const token = machineToken(env);
   const payload = { id, source: { type: 'file', path: manifestPath } };
-  const result = await postRequest(port, '/register', payload, timeoutMs);
+  const result = await postRequest(port, '/register', payload, timeoutMs, token);
 
   let failure: RequestFailure | undefined;
   let response: Response | undefined;
@@ -265,7 +277,8 @@ export async function unregisterModule(options: UnregisterModuleOptions): Promis
   assertValidId(id);
 
   const port = resolveAppCorePort(env);
-  const result = await postRequest(port, '/unregister', { id }, timeoutMs);
+  const token = machineToken(env);
+  const result = await postRequest(port, '/unregister', { id }, timeoutMs, token);
   let response: Response | undefined;
   let failure: RequestFailure | undefined;
   if (result instanceof Response) {

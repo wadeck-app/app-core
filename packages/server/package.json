@@ -14,6 +14,7 @@
     "./configDir": { "import": "./dist/configDir.js", "types": "./dist/configDir.d.ts" },
     "./dslLib": { "import": "./dist/dslLib.js", "types": "./dist/dslLib.d.ts" },
     "./port": { "import": "./dist/port.js", "types": "./dist/port.d.ts" },
+    "./cliToken": { "import": "./dist/cliToken.js", "types": "./dist/cliToken.d.ts" },
     "./portFile": { "import": "./dist/portFile.js", "types": "./dist/portFile.d.ts" },
     "./contributions": { "import": "./dist/contributions.js", "types": "./dist/contributions.d.ts" },
     "./indicator": { "import": "./dist/indicator.js", "types": "./dist/indicator.d.ts" },

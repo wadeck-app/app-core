@@ -5,7 +5,9 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { modulesRoutes } from './routes/modules.js';
 import { slotsRoutes } from './routes/slots.js';
-import { allowedHostsFrom, registerRequestGuard } from './requestGuard.js';
+import { allowedHostSet, allowedHostsFrom, registerRequestGuard } from './requestGuard.js';
+import { ensureCliToken } from './cliToken.js';
+import { createRegisterGuard, resolveRegisterProtection } from './auth/registerGuard.js';
 import { libContentType, resolveLibRequest, sharedVersionsFromBuildInfo, type SharedVersions } from './dslLib.js';
 import { ModuleManager } from './loader.js';
 import { resolveConfigDir, resolveModulesDir } from './configDir.js';
@@ -32,6 +34,9 @@ export interface BuildServerOptions {
   allowedHosts?: string[];
   // The Content-Security-Policy of the HTML pages: `enforce` (default), `report-only` or `off`; else APP_CORE_CSP. See csp.ts.
   csp?: CspMode;
+  // Refuse register / update / unregister without the machine token or a PIN access token (true), or only warn (false); else
+  // APP_CORE_REQUIRE_CLI_TOKEN=1 decides, and the default is to warn. See auth/registerGuard.ts.
+  requireCliToken?: boolean;
   // Clock (epoch ms) of the PIN lockout and of the tokens; tests only.
   authClock?: () => number;
   // What GET /api/app-update and POST /api/app-update/restart need: given by `app-core-cli serve`; absent from a run from sources.
@@ -148,11 +153,15 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
     await manager.shutdown();
   });
   const configDir = opts.configDir ?? resolveConfigDir();
+  // The machine token that register / update / unregister need, created now when missing; throws on a file that is not a token.
+  const cliToken = ensureCliToken(configDir);
+  // Throws here when APP_CORE_REQUIRE_CLI_TOKEN is not 0 or 1.
+  const registerProtection = resolveRegisterProtection(opts.requireCliToken);
   // The PIN, the refresh cookie and the access token that unlock the routes modules declare `sensitive` (see auth/).
-  await server.register(authRoutes, { configDir, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
+  await server.register(authRoutes, { configDir, allowedHosts: allowedHostSet(allowedHostsFrom(opts.allowedHosts)), registerProtection, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
   // The update indicator of the top bar: what the updater recorded, and the restart that starts the installed version.
   await server.register(appUpdateRoutes, { update: opts.update ?? {}, configDir, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
-  await server.register(modulesRoutes, { modulesDir, manager });
+  await server.register(modulesRoutes, { modulesDir, manager, registerGuard: createRegisterGuard({ configDir, token: cliToken, mode: registerProtection, now: opts.authClock }) });
   await server.register(slotsRoutes, { manager });
   // What the shell cannot know from its build: settings of this server process, read once per page load.
   server.get('/api/shell-settings', { onSend: etagHook }, async () => ({ abTests: opts.abTests === true, ...(opts.standalone === undefined ? {} : { standalone: { moduleId: opts.standalone.moduleId } }) }));

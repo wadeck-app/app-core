@@ -37,7 +37,10 @@ describe('auth routes and sensitive routes', () => {
     fs.rmSync(configDir, { recursive: true, force: true });
   });
 
-  const post = (url: string, payload: unknown = {}, headers: Record<string, string> = {}) => app.server.inject({ method: 'POST', url, payload: payload as object, headers });
+  // What the shell's own calls carry: the first PIN is only taken from a request that looks like the dashboard's (D12).
+  const SHELL_HEADERS = { origin: 'http://127.0.0.1:4850' };
+  const post = (url: string, payload: unknown = {}, headers: Record<string, string> = {}) =>
+    app.server.inject({ method: 'POST', url, payload: payload as object, headers: { ...SHELL_HEADERS, ...headers } });
   const login = async (pin = PIN) => {
     const res = await post('/api/auth/pin', { pin });
     const cookie = String(res.headers['set-cookie'] ?? '').split(';')[0] ?? '';
@@ -88,6 +91,45 @@ describe('auth routes and sensitive routes', () => {
       expect((await login()).res.statusCode).toBe(200);
       const cookie = String(res.headers['set-cookie']).split(';')[0] ?? '';
       expect((await app.server.inject({ method: 'GET', url: '/api/auth/status', headers: { cookie } })).json()).toMatchObject({ pinSet: true, elevated: true });
+    });
+
+    describe('the first PIN needs the shell headers (D12)', () => {
+      const setBare = (headers: Record<string, string> = {}) => app.server.inject({ method: 'POST', url: '/api/auth/pin/set', payload: { pin: PIN }, headers });
+
+      it('is refused without Origin nor Sec-Fetch-Site: 403 browser-required, nothing written', async () => {
+        const res = await setBare();
+        expect(res.statusCode).toBe(403);
+        expect(res.json()).toEqual({
+          error: 'browser-required',
+          message: 'The first PIN is chosen in the app-core dashboard in your browser, or with "app-core-cli pin set" in a terminal.',
+        });
+        expect(res.headers['set-cookie']).toBeUndefined();
+        expect(fs.existsSync(authFilePath(configDir))).toBe(false);
+      });
+
+      it('is accepted with an Origin this server answers to (also the Vite dev proxy: its Host and Origin stay on localhost:5173)', async () => {
+        for (const origin of ['http://127.0.0.1:4850', 'http://localhost:4850', 'http://localhost:5173', 'http://[::1]:4850']) {
+          expect((await setBare({ origin })).statusCode, origin).toBe(200);
+          fs.rmSync(authFilePath(configDir));
+        }
+      });
+
+      it('is accepted with Sec-Fetch-Site: same-origin', async () => {
+        expect((await setBare({ 'sec-fetch-site': 'same-origin' })).statusCode).toBe(200);
+      });
+
+      it('is refused with a foreign Origin (by the request guard), or with Sec-Fetch-Site none / same-site, nothing written', async () => {
+        expect((await setBare({ origin: 'http://evil.example' })).statusCode).toBe(403);
+        expect((await setBare({ 'sec-fetch-site': 'none' })).json()).toMatchObject({ error: 'browser-required' });
+        expect((await setBare({ 'sec-fetch-site': 'same-site' })).statusCode).toBe(403);
+        expect(fs.existsSync(authFilePath(configDir))).toBe(false);
+      });
+
+      it('does not apply to the other auth routes (a wrong login without headers is a 401, not browser-required)', async () => {
+        await setPin(configDir, PIN, now);
+        const res = await app.server.inject({ method: 'POST', url: '/api/auth/pin', payload: { pin: 'wrong1' } });
+        expect(res.statusCode).toBe(401);
+      });
     });
 
     it('set refuses a PIN that is too short, too long or not a text (400), and writes nothing', async () => {
@@ -310,8 +352,8 @@ describe('auth routes and sensitive routes', () => {
     it('status: elevated only with a live refresh cookie, and it never returns a secret', async () => {
       const { cookie } = await login();
       const status = await app.server.inject({ method: 'GET', url: '/api/auth/status', headers: { cookie } });
-      expect(status.json()).toEqual({ pinSet: true, locked: false, elevated: true, resetHint: expect.any(Object), minPinLength: 4, maxPinLength: 12 });
-      expect((await app.server.inject({ method: 'GET', url: '/api/auth/status' })).json()).toEqual({ pinSet: true, locked: false, elevated: false, resetHint: expect.any(Object), minPinLength: 4, maxPinLength: 12 });
+      expect(status.json()).toEqual({ pinSet: true, locked: false, elevated: true, resetHint: expect.any(Object), minPinLength: 4, maxPinLength: 12, registerProtection: 'warn' });
+      expect((await app.server.inject({ method: 'GET', url: '/api/auth/status' })).json()).toEqual({ pinSet: true, locked: false, elevated: false, resetHint: expect.any(Object), minPinLength: 4, maxPinLength: 12, registerProtection: 'warn' });
     });
 
     it('a new PIN (the CLI) logs everyone out: refresh and old access tokens are refused', async () => {

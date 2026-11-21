@@ -26,7 +26,7 @@ Install the CLI once: `npm install -g @wadeck-app/app-core-cli`.
 4. **Run it.** `app-core-cli dev ./app-module-<name> --watch` starts a real app-core with your module (and the modules it `requires`), prints the URL, and rebuilds on every change under `src/` and `manifest.json`.
 5. **Package.** `BUNDLE_VERSION=<version> app-core-cli package ./app-module-<name>` writes `dist-module/`.
 6. **Publish** the package (`npm publish` ships only `dist-module`): run step 5 in CI first.
-7. **Register** from your daemon with the [SDK `register` subpath](registering-a-module.md): `registerModule({ id, manifestPath: '<install dir>/dist-module/manifest.json' })`. The `id` must equal the manifest's.
+7. **Register** from your daemon with the [SDK `register` subpath](registering-a-module.md): `registerModule({ id, manifestPath: '<install dir>/dist-module/manifest.json' })`. The `id` must equal the manifest's. `registerModule` sends the machine token `<config dir>/cli-token` in `X-App-Core-Token`; a script that registers without the SDK must read that file and send it too (details in `registering-a-module.md`).
 
 Anything fails: see [Troubleshooting](#troubleshooting).
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { buildServer } from '@wadeck-app/app-core-server/server';
 import { writeRegistryEntry } from '@wadeck-app/app-core-server/registry';
 import { resolveModulesDir } from '@wadeck-app/app-core-server/configDir';
+import { CLI_TOKEN_HEADER, readCliToken } from '@wadeck-app/app-core-server/cliToken';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 import { writeLoadedVersion } from '@wadeck-app/app-core-server/moduleState';
 import { OUTPUT_DIR } from './outputDir.js';
@@ -187,10 +188,15 @@ function packageRootOf(moduleDir: string): string {
   return path.basename(moduleDir) === OUTPUT_DIR ? path.dirname(moduleDir) : moduleDir;
 }
 
-async function postUpdate(port: number, id: string, manifestPath: string): Promise<void> {
+async function postUpdate(port: number, configDir: string, id: string, manifestPath: string): Promise<void> {
+  // The machine token the dev server created in its own config dir. buildServer always creates it, so a missing file is an error.
+  const token = readCliToken(configDir);
+  if (token === undefined) {
+    throw new Error(`the machine token ${path.join(configDir, 'cli-token')} is missing although the dev server created it at startup. Restart dev (--reset recreates the config dir).`);
+  }
   const response = await fetch(`http://127.0.0.1:${port}/api/modules/update`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', [CLI_TOKEN_HEADER]: token },
     body: JSON.stringify({ id, source: { type: 'file', path: manifestPath } }),
   });
   if (!response.ok) {
@@ -363,7 +369,7 @@ export async function runDev(appModuleDir: string, opts: DevOptions = {}): Promi
         const started = performance.now();
         try {
           const packaged = await packageModule({ moduleDir, outDir, version: DEV_VERSION, links });
-          await postUpdate(actualPort, moduleId, packaged.manifestPath);
+          await postUpdate(actualPort, configDir, moduleId, packaged.manifestPath);
           onRebuild({ ok: true, durationMs: performance.now() - started, version: DEV_VERSION, warnings: packaged.warnings });
         } catch (err) {
           onRebuild({ ok: false, durationMs: performance.now() - started, error: getErrorMessage(err) });

@@ -15,6 +15,8 @@ interface Recorded {
   method: string | undefined;
   url: string | undefined;
   contentType: string | undefined;
+  // The X-App-Core-Token header.
+  token: string | undefined;
   body: string;
 }
 
@@ -34,7 +36,7 @@ async function startFakeAppCore(respond: Responder): Promise<FakeAppCore> {
       body += chunk.toString();
     });
     req.on('end', () => {
-      const recorded = { method: req.method, url: req.url, contentType: req.headers['content-type'], body };
+      const recorded = { method: req.method, url: req.url, contentType: req.headers['content-type'], token: req.headers['x-app-core-token'] as string | undefined, body };
       requests.push(recorded);
       respond(res, recorded);
     });
@@ -120,6 +122,56 @@ describe('app-core module registration from a daemon', () => {
       fs.mkdirSync(configDir);
       fs.writeFileSync(path.join(configDir, 'server.port.json'), 'not json');
       expect(resolveAppCorePort({ APP_CORE_CONFIG_DIR: configDir, APP_CORE_PORT: '' })).toBe(4850);
+    });
+  });
+
+  describe('the machine token', () => {
+    const TOKEN = 'ab'.repeat(32);
+    const withTokenFile = (content: string | undefined): string => {
+      const configDir = path.join(tmp, 'cfg');
+      fs.mkdirSync(configDir, { recursive: true });
+      if (content !== undefined) {
+        fs.writeFileSync(path.join(configDir, 'cli-token'), content);
+      }
+      return configDir;
+    };
+
+    it('registerModule sends <configDir>/cli-token in X-App-Core-Token when the file exists', async () => {
+      fake = await startFakeAppCore(replyJson(201, { id: 'queue' }));
+      await registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, withTokenFile(`${TOKEN}\n`)) });
+      expect(fake.requests.map((r) => r.token)).toEqual([TOKEN]);
+    });
+
+    it('registerModule sends no token when the file does not exist (a server older than the token creates none)', async () => {
+      fake = await startFakeAppCore(replyJson(201, { id: 'queue' }));
+      await registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, withTokenFile(undefined)) });
+      expect(fake.requests).toHaveLength(1);
+      expect(fake.requests[0]?.token).toBeUndefined();
+    });
+
+    it('unregisterModule sends it too, and nothing when the file is absent', async () => {
+      fake = await startFakeAppCore(replyJson(200, { id: 'queue', removed: true }));
+      await unregisterModule({ id: 'queue', env: envFor(fake.port, withTokenFile(TOKEN)) });
+      fs.rmSync(path.join(tmp, 'cfg', 'cli-token'));
+      await unregisterModule({ id: 'queue', env: envFor(fake.port, path.join(tmp, 'cfg')) });
+      expect(fake.requests.map((r) => r.token)).toEqual([TOKEN, undefined]);
+    });
+
+    it('registerModule and unregisterModule throw a clear error when the file exists but cannot be read, and send nothing', async () => {
+      fake = await startFakeAppCore(replyJson(201, { id: 'queue' }));
+      const configDir = withTokenFile(undefined);
+      // A folder in place of the file: reading it fails on every platform.
+      fs.mkdirSync(path.join(configDir, 'cli-token'));
+      await expect(registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, configDir) })).rejects.toThrow(/machine token .*cli-token.* cannot be read/);
+      await expect(unregisterModule({ id: 'queue', env: envFor(fake.port, configDir) })).rejects.toThrow(/cannot be read/);
+      expect(fake.requests).toEqual([]);
+    });
+
+    it('a refusal for the missing token says what app-core answered, message included', async () => {
+      fake = await startFakeAppCore(replyJson(401, { error: 'cli-token-required', message: 'Register with the SDK registerModule.' }));
+      const outcome = await registerModule({ id: 'queue', manifestPath, env: envFor(fake.port, withTokenFile(undefined)) });
+      expect(outcome).toMatchObject({ status: 'refused', httpStatus: 401 });
+      expect((outcome as { reason: string }).reason).toBe('cli-token-required: Register with the SDK registerModule.');
     });
   });
 

@@ -1,10 +1,16 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import { looksLikeShellRequest } from '../requestGuard.js';
+import type { RegisterProtection } from './registerGuard.js';
 import { PinLockout } from './lockout.js';
 import { isPinSet, MAX_PIN_LENGTH, MAX_PIN_REQUEST_LENGTH, MIN_PIN_LENGTH, PIN_NOT_SET_MESSAGE, pinProblem, pinResetHint, setPin, verifyPin } from './pin.js';
 import { ACCESS_TOKEN_SECONDS, REFRESH_WINDOW_MS, SessionStore, signAccessToken } from './tokens.js';
 
 export interface AuthRoutesOptions {
   configDir: string;
+  // The host names the server answers to (see requestGuard.ts): the first PIN is taken only from a request that looks like the shell's.
+  allowedHosts: ReadonlySet<string>;
+  // Shown in the status so a later screen can say whether register / update / unregister without the machine token is refused.
+  registerProtection: RegisterProtection;
   // Epoch milliseconds; tests inject their own clock.
   now?: () => number;
 }
@@ -106,6 +112,10 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
   // Chooses the first PIN. Only while none exists: the check and the write run in oneAtATime, so two simultaneous calls cannot both
   // find "no PIN". Answers like the login, so the user is unlocked at once.
   server.post('/api/auth/pin/set', async (request, reply) => {
+    // A bare curl is refused (D12); a script that forges Origin still passes. Checked first: nothing else is said to such a request.
+    if (!looksLikeShellRequest(request.headers, options.allowedHosts)) {
+      return reply.code(403).send({ error: 'browser-required', message: 'The first PIN is chosen in the app-core dashboard in your browser, or with "app-core-cli pin set" in a terminal.' });
+    }
     const pin = textOf((request.body as { pin?: unknown } | null | undefined)?.pin);
     if (pin === undefined) {
       return reply.code(400).send({ error: 'bad-request', message: `The body must be {"pin": "<the new PIN>"}, a text of at most ${MAX_PIN_REQUEST_LENGTH} characters.` });
@@ -173,6 +183,6 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
     const token = refreshTokenOf(request);
     const pinSet = isPinSet(configDir);
     // A session left over from a PIN deleted by hand does not unlock anything: no PIN, no elevation.
-    return { pinSet, locked: pinSet && lockout.check().locked, elevated: pinSet && token !== undefined && sessions.findRefresh(token), resetHint: pinResetHint(configDir), minPinLength: MIN_PIN_LENGTH, maxPinLength: MAX_PIN_LENGTH };
+    return { pinSet, locked: pinSet && lockout.check().locked, elevated: pinSet && token !== undefined && sessions.findRefresh(token), resetHint: pinResetHint(configDir), minPinLength: MIN_PIN_LENGTH, maxPinLength: MAX_PIN_LENGTH, registerProtection: options.registerProtection };
   });
 };

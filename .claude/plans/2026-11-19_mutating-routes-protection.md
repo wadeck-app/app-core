@@ -35,6 +35,9 @@ A header, a cookie or a token can always be copied by L3. The goal is that L2 ne
 
 O4 as the frame, with O3 for the browser, O5 for CLIs and daemons, O6 only for routes declared `sensitive` (agent-manager's reply into a session). O1 is what O4 enforces for `write`. Skip O2 and O7 for now.
 
+O5 status (2026-11-21, D11): built as header `X-App-Core-Token` (not `Authorization: Bearer`), on register/update/unregister only; warn first, `APP_CORE_REQUIRE_CLI_TOKEN=1` enforces; a PIN access token also passes.
+Still open: flip the default to enforce once the module owners run the new SDK; module routes that opt in are not built.
+
 Order: O4 + O1 + O5 first (modules unchanged, daemons keep registering), then O3, then O6.
 
 Left to the user: accept L3 as out of reach; the cost of O3 (open once per browser); one click per action or per session for O6.

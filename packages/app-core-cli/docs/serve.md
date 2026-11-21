@@ -8,6 +8,9 @@ Runs the same server as `packages/server`, with the frontend built into this pac
 | `APP_CORE_CONFIG_DIR` | `~/.config/app-core` | Module registry (`modules/<id>.json`), `server.port.json`, and per module `data/<id>/` and `state/<id>.json`. |
 | `APP_CORE_CSP` | `enforce` | `report-only` logs what the policy would block without blocking it; `off` sends no policy (a warning says so). Any other value stops the server at startup. See "Content-Security-Policy". |
 | `APP_CORE_HOOK_TIMEOUT_MS` | `30000` | Timeout of a module's import, setup and each lifecycle hook. A value that is not a positive integer stops the server at startup. |
+| `APP_CORE_REQUIRE_CLI_TOKEN` | unset (`0`) | `1` makes `POST /api/modules/register\|update\|unregister` answer 401 `cli-token-required` without the machine token or a PIN access token; unset only logs one warning per module id. Any other value stops the server at startup. `GET /api/auth/status` shows the mode as `registerProtection`. |
+
+`<config dir>/cli-token` (32 random bytes in hex, mode 0600; not enforced on Windows) is created at startup when missing and never logged or returned by a route. The SDK's `registerModule` / `unregisterModule` and `app-core-cli dev --watch` send it in `X-App-Core-Token`. A file that is not 64 hex characters stops the server: delete it and start again.
 
 `server.port.json` (`{"pid": ..., "port": ...}`) is written after the server listens and removed on a clean stop. After a forced kill it stays on disk; consumers must check that `pid` is alive.
 

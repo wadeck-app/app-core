@@ -45,9 +45,10 @@ Tokens: access = JWT HS256, 10 minutes, kept by the dashboard in localStorage `a
 - The access token in localStorage is readable by page scripts and by a process of the same user during its 10 minutes.
 - A process of the same user that can read `auth.json` can find a 4 to 12 character PIN offline (a 4-digit one in minutes: scrypt slows each try, it cannot stop a try of 10,000 values). Only the salted scrypt hash is stored, never the PIN.
 - File modes (0600) are not enforced on Windows: the files are readable by your whole user account.
-- Only routes declared `sensitive` are protected. Ordinary write routes, and `/api/modules/register|update|unregister`, are not.
+- Only routes declared `sensitive` are protected. Ordinary write routes are not (`/api/modules/register|update|unregister` have the machine token, below).
 - A restart resets the lockout; an access token not yet expired survives a restart (secret and generation are on disk).
 - `sensitive` guards HTTP callers: code of a module running inside the shell page can reach the PIN session through `appFetcher`/`elevate` (a module bundle is trusted like the shell).
-- `POST /api/modules/register`, `update` and `unregister` are not protected by the PIN today (they load code into the server), so the PIN is not a boundary against a process of the same user that can reach port 4850. A decision about them is pending.
+- `POST /api/modules/register`, `update` and `unregister` (they load code into the server) are protected by the machine token `<config dir>/cli-token` (warn first, `APP_CORE_REQUIRE_CLI_TOKEN=1` refuses; see `serve.md`), not by the PIN. A process that can read `<config dir>/cli-token` still passes.
+- `POST /api/auth/pin/set` (first PIN from the dashboard) needs an `Origin` of this server or `Sec-Fetch-Site: same-origin`: it stops a bare `curl`, not a script that sends these headers.
 - `auth-sessions.json` is read, changed and written without a lock across processes: a session created by the server at the instant `app-core-cli pin set` revokes all could survive that change.
 - Anyone who can reach `POST /api/auth/logout` can lock the session (the request guard still applies).

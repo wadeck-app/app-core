@@ -47,6 +47,7 @@ directory and sent as an absolute path. `env` defaults to `process.env`. `timeou
   `unconfirmed`. `GET /api/modules` does not list a module while it reloads, so a slow load stays `unconfirmed`.
   Only a refused connection or unknown host means app-core is down: `deferred` or `skipped`.
   `unregisterModule` does the same: after a missing answer, a module no longer served -> `unregistered` with a `note`; still served -> `unconfirmed` (the pending pickup file is left alone); only an unreachable app-core gives `cleared` or `skipped`.
+- **Machine token:** both calls read `<config dir>/cli-token` (the config dir `server.port.json` comes from) and send it as `X-App-Core-Token`. No file (a server older than the token): nothing is sent. A file that exists but cannot be read throws. A new server only logs a warning for a request without it, and refuses it with 401 `cli-token-required` when started with `APP_CORE_REQUIRE_CLI_TOKEN=1`; a wrong token is always 401 `cli-token-invalid`. A script or CLI that does not use the SDK sends the content of that file in `X-App-Core-Token` itself (a valid PIN access token in `Authorization: Bearer` also passes). The `reason` of a `refused` outcome is `error: message` when app-core sent both.
 - **App-core down is not an error.** The functions reject only for what the caller must fix: an
   invalid id, a malformed `APP_CORE_PORT`, or a manifest that does not exist.
 - **Files:** `<config dir>/modules/<id>.json` is written only when app-core is down AND the config dir already

@@ -34,8 +34,29 @@ export function allowedHostsFrom(option: readonly string[] | undefined, env: Nod
   return [...(option ?? []), ...fromEnv].map((h) => h.trim().toLowerCase()).filter((h) => h !== '');
 }
 
+// The host names this server answers to: loopback plus the extra ones.
+export function allowedHostSet(extraHosts: readonly string[] = []): Set<string> {
+  return new Set([...LOOPBACK_HOSTS, ...extraHosts]);
+}
+
+// True when the Origin header names one of this server's hosts (the port is not compared: the Vite dev proxy on 5173 keeps its own
+// Origin and Host, and the guard accepts them the same way). "null" and anything that is not an origin are not ours.
+export function isOwnOrigin(origin: string, allowedHosts: ReadonlySet<string>): boolean {
+  const originHost = origin === 'null' ? undefined : originHostnameOf(origin);
+  return originHost !== undefined && allowedHosts.has(originHost);
+}
+
+// The request looks like one the dashboard in a browser sends: an Origin that is ours, or Sec-Fetch-Site: same-origin. A script can
+// forge both headers; this only stops a bare curl.
+export function looksLikeShellRequest(headers: { origin?: string | undefined; 'sec-fetch-site'?: string | string[] | undefined }, allowedHosts: ReadonlySet<string>): boolean {
+  if (headers.origin !== undefined && isOwnOrigin(headers.origin, allowedHosts)) {
+    return true;
+  }
+  return headers['sec-fetch-site'] === 'same-origin';
+}
+
 export function registerRequestGuard(server: FastifyInstance, extraHosts: readonly string[] = []): void {
-  const allowedHosts = new Set([...LOOPBACK_HOSTS, ...extraHosts]);
+  const allowedHosts = allowedHostSet(extraHosts);
   server.addHook('onRequest', async (request, reply) => {
     // Any request, reads included: rebinding is how a foreign page reads the API.
     const hostHeader = request.headers.host;
@@ -54,8 +75,7 @@ export function registerRequestGuard(server: FastifyInstance, extraHosts: readon
       // Browsers that do not send Sec-Fetch-Site (older Safari) still send Origin on a request that changes something.
       const origin = request.headers.origin;
       if (origin !== undefined) {
-        const originHost = origin === 'null' ? undefined : originHostnameOf(origin);
-        if (originHost === undefined || !allowedHosts.has(originHost)) {
+        if (!isOwnOrigin(origin, allowedHosts)) {
           return reply.code(403).send({
             error: 'cross-site-request',
             message: `${request.method} ${request.url.split('?')[0]} was refused: it comes from the origin "${origin}", which is not this app-core. A page of another site must not change anything here. Do it from the app-core dashboard itself, or from a tool that is not a web page (curl, the CLI).`,

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -142,6 +142,18 @@ describe('dev --watch (real server)', () => {
       expect(errors).toEqual([]);
     }, 120_000);
   }
+
+  it('hot-updates with APP_CORE_REQUIRE_CLI_TOKEN=1: the update carries the machine token of the dev config dir', async () => {
+    vi.stubEnv('APP_CORE_REQUIRE_CLI_TOKEN', '1');
+    try {
+      const { dir, handle, results } = await watch(false);
+      fs.writeFileSync(greetingFile(dir), "export const GREETING: string = 'with-token';\n");
+      await waitFor('the changed answer to be served', () => greeting(handle), (v) => JSON.stringify(v) === JSON.stringify({ greeting: 'with-token' }));
+      expect(results.at(-1)).toMatchObject({ ok: true });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  }, 120_000);
 
   it('collapses a burst of changes into at most one rebuild per burst and serves the last one', async () => {
     const { dir, handle, results } = await watch(false);

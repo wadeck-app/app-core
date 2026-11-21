@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import * as path from 'node:path';
 import { getErrorMessage } from '../errors.js';
 import { SharedVersionError } from '../dslLib.js';
@@ -12,6 +12,8 @@ import { etagHook } from '../conditionalGet.js';
 export interface ModulesRoutesOptions {
   modulesDir: string;
   manager: ModuleManager;
+  // Runs before register, update and unregister: the machine token / PIN check (see auth/registerGuard.ts).
+  registerGuard: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 }
 
 // A 400 whose message already says what is wrong and where; `issues` keeps the raw validation detail.
@@ -120,7 +122,7 @@ async function handleRegisterOrUpdate(
 }
 
 export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutesOptions): Promise<void> {
-  const { modulesDir, manager } = opts;
+  const { modulesDir, manager, registerGuard } = opts;
 
   const registration = (status: number) => async (req: { body: unknown }, reply: FastifyReply) => {
     const report = newChangeReport();
@@ -135,13 +137,13 @@ export async function modulesRoutes(server: FastifyInstance, opts: ModulesRoutes
     }
   };
 
-  server.post('/api/modules/register', registration(201));
-  server.post('/api/modules/update', registration(200));
+  server.post('/api/modules/register', { preHandler: registerGuard }, registration(201));
+  server.post('/api/modules/update', { preHandler: registerGuard }, registration(200));
 
   // Removes a module for good: stops routing to it, disposes its moduleContext and deletes its
   // registry file, so it does not come back on the next start. A daemon calls this on uninstall.
   // The modules that require it are unloaded first (listed in `cascaded`) and stay registered.
-  server.post('/api/modules/unregister', async (req, reply) => {
+  server.post('/api/modules/unregister', { preHandler: registerGuard }, async (req, reply) => {
     try {
       const { id } = parseUnregisterPayload(req.body);
       const report = newChangeReport();
