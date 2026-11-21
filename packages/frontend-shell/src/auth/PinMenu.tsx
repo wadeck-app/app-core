@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { KeyRound } from 'lucide-react';
-import { ButtonAction, IconButton, Popover } from '@wadeck-app/dsl-ui';
+import { ButtonAction } from '@wadeck-app/dsl-ui';
+import { TopBarPopover } from '../layout/TopBarPopover.js';
 import { getErrorMessage } from '../errors.js';
 import { changePin, choosePin } from './elevation.js';
 import { PinField, submitBlockedReason } from './PinField.js';
@@ -142,8 +143,8 @@ function PinMenuContent(): React.ReactElement {
 // current one. The lock button (LockControl) stays the way to lock.
 export function PinMenu(): React.ReactElement {
   return (
-    <Popover side="bottom" align="end" trigger={<IconButton icon={<KeyRound size={14} />} aria-label="PIN settings" title="PIN settings" variant="ghost" size="icon-sm" />}>
+    <TopBarPopover icon={<KeyRound size={14} />} label="PIN settings">
       <PinMenuContent />
-    </Popover>
+    </TopBarPopover>
   );
 }

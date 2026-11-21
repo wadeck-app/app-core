@@ -7,6 +7,7 @@ import net from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { installedCliEnv } from '../packages/server/dev/installedCli.mjs';
 import { serverWatchExcludes } from '../packages/server/dev/watchExcludes.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -15,12 +16,21 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // modules installed by `<cli> cli update` (global npm packages, swapped in by rename) and the ones registered from a build folder must
 // stay out of the watch, or every such update fails with EPERM while dev:all runs. A module registered after this start is not covered:
 // restart dev:all if its update fails with EPERM.
-function watchExcludes() {
+function readGlobalNodeModules() {
   const npmRoot = spawnSync('npm root -g', { encoding: 'utf8', shell: true });
   const globalNodeModules = npmRoot.status === 0 ? npmRoot.stdout.trim() : undefined;
   if (globalNodeModules === undefined) {
     console.warn(`[dev-all] WARNING: "npm root -g" failed (${(npmRoot.stderr || npmRoot.error?.message || 'no output').trim()}): the installed CLIs are not kept out of the server watch, so "<cli> cli update" may fail with EPERM on Windows while dev:all runs.`);
   }
+  return globalNodeModules;
+}
+const globalNodeModules = readGlobalNodeModules();
+
+// The server runs from sources, but the machine has an installed app-core-cli that updates itself: the update indicator follows it.
+const installedCli = installedCliEnv({ globalNodeModules, isReadable: existsSync });
+console.log(installedCli.message);
+
+function watchExcludes() {
   const modulesDir = join(process.env.APP_CORE_CONFIG_DIR ?? join(homedir(), '.config', 'app-core'), 'modules');
   const registryEntries = [];
   if (existsSync(modulesDir)) {
@@ -44,6 +54,7 @@ const services = [
     cwd: resolve(root, 'packages/server'),
     bin: resolve(root, 'node_modules/tsx/dist/cli.mjs'),
     args: ['watch', ...watchExcludes(), 'src/index.ts'],
+    env: installedCli.env,
   },
   {
     name: 'frontend',
@@ -115,7 +126,7 @@ const { FORCE_COLOR: _forceColor, ...inheritedEnv } = process.env;
 const childEnv = { ...inheritedEnv, NO_COLOR: '1' };
 
 const running = services.map((s) => {
-  const child = spawn(process.execPath, [s.bin, ...s.args], { cwd: s.cwd, env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, [s.bin, ...s.args], { cwd: s.cwd, env: { ...childEnv, ...s.env }, stdio: ['ignore', 'pipe', 'pipe'] });
   const prefix = `[${s.name}] `;
   pipeWithPrefix(child.stdout, process.stdout, prefix);
   pipeWithPrefix(child.stderr, process.stderr, prefix);

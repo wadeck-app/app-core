@@ -65,7 +65,7 @@ describe('LockControl', () => {
       </ToastProvider>,
     );
   const enterPinButton = () => screen.queryByRole('button', { name: 'Enter PIN' });
-  const leaveButton = () => screen.queryByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' });
+  const leaveButton = () => screen.queryByRole('button', { name: 'Leave sudo mode' });
 
   it('locked: shows "Enter PIN" and the PIN settings, no Sudo badge, no leave button', async () => {
     renderControl();
@@ -113,10 +113,32 @@ describe('LockControl', () => {
     expect(enterPinButton()).toBeNull();
   });
 
-  it('the leave button has the tooltip text of the design', async () => {
+  it('Sudo and its × are ONE chip with ONE tooltip: the × is a button inside the chip and has no title of its own', async () => {
     status = { elevated: true, pinSet: true };
     renderControl();
-    expect(await screen.findByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' })).toHaveAttribute('title', 'Sensitive actions are unlocked. Click × to lock them.');
+    const leave = await screen.findByRole('button', { name: 'Leave sudo mode' });
+    const chip = screen.getByText('Sudo');
+    expect(chip).toContainElement(leave);
+    expect(chip).toHaveAttribute('title', 'Sudo mode: sensitive actions are unlocked until you leave it (x) or the session expires.');
+    expect(leave).not.toHaveAttribute('title');
+    expect(chip.querySelectorAll('[title]')).toHaveLength(0);
+    // The × is visible at rest, at the ink of the chip: no opacity-0 / hover-only reveal.
+    expect(leave.className).not.toMatch(/opacity-0|invisible|hidden/);
+    expect(leave.querySelector('svg')).not.toBeNull();
+  });
+
+  it('the chip is drawn with the danger tokens (text, border, fill, × hover and focus ring), none of the warning ones', async () => {
+    status = { elevated: true, pinSet: true };
+    renderControl();
+    const leave = await screen.findByRole('button', { name: 'Leave sudo mode' });
+    const chip = screen.getByText('Sudo');
+    for (const token of ['border-danger', 'bg-danger-bg', 'text-danger-text']) {
+      expect(chip.className.split(/\s+/)).toContain(token);
+    }
+    for (const token of ['hover:bg-danger', 'hover:text-on-solid', 'focus-visible:ring-danger-text']) {
+      expect(leave.className.split(/\s+/)).toContain(token);
+    }
+    expect(chip.outerHTML).not.toMatch(/warning/);
   });
 
   it('a stale token alone is not sudo: the status says elevated:false, so "Enter PIN" stays', async () => {
@@ -131,7 +153,7 @@ describe('LockControl', () => {
     status = { elevated: true, pinSet: true };
     storeAccessToken('t.o.k', 600);
     renderControl();
-    fireEvent.click(await screen.findByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Leave sudo mode' }));
     await waitFor(() => expect(calls).toContain('POST /api/auth/logout'));
     expect(await screen.findByText(/locked/i)).toBeInTheDocument();
     expect(getAccessToken()).toBeUndefined();
@@ -148,7 +170,7 @@ describe('LockControl', () => {
       vi.fn(async (url: string, init?: RequestInit) => (url === '/api/auth/logout' ? json(500, { message: 'auth-sessions.json is not valid. Delete it.' }) : base(url, init))),
     );
     renderControl();
-    fireEvent.click(await screen.findByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Leave sudo mode' }));
     expect(await screen.findByText(/auth-sessions\.json is not valid/)).toBeInTheDocument();
     expect(getAccessToken()).toBe('t.o.k');
     expect(screen.getByText('Sudo')).toBeInTheDocument();

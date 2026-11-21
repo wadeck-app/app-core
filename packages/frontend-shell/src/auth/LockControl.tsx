@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { LockKeyhole, X } from 'lucide-react';
-import { Badge, IconButton, ToastContext } from '@wadeck-app/dsl-ui';
+import { IconButton, ToastContext } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
 import { ACCESS_TOKEN_KEY, clearAccessToken, onAccessTokenChange } from './accessToken.js';
 import { CANCELLED_MESSAGE, CHOOSE_CANCELLED_MESSAGE, choosePin, elevate } from './elevation.js';
@@ -92,16 +92,20 @@ export function LockControl(): React.ReactElement {
   return (
     <>
       {elevated ? (
-        <span className="flex items-center gap-0.5">
-          <Badge label="Sudo" variant="warning" tone="subtle" />
-          <IconButton
-            icon={<X size={14} />}
-            aria-label="Leave sudo mode (lock sensitive actions)"
-            title="Sensitive actions are unlocked. Click × to lock them."
-            variant="ghost"
-            size="icon-sm"
+        // One chip, one tooltip: the native title of the chip also covers the × inside it (which has none of its own).
+        <span
+          title="Sudo mode: sensitive actions are unlocked until you leave it (x) or the session expires."
+          className="inline-flex items-center rounded-full border border-danger bg-danger-bg py-0.5 pl-2.5 pr-1 text-xs font-medium text-danger-text"
+        >
+          Sudo
+          <button
+            type="button"
+            aria-label="Leave sudo mode"
             onClick={() => void lock()}
-          />
+            className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-danger hover:text-on-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-danger-text"
+          >
+            <X size={12} aria-hidden="true" />
+          </button>
         </span>
       ) : (
         <IconButton icon={<LockKeyhole size={14} />} aria-label="Enter PIN" title="Enter PIN to unlock sensitive actions" variant="ghost" size="icon-sm" onClick={() => void enterPin()} />

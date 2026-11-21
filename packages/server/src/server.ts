@@ -19,7 +19,7 @@ import { registerCsp, resolveCspMode, type CspMode } from './csp.js';
 import { inventoryAbTests } from './abTestScan.js';
 import { authRoutes } from './auth/routes.js';
 import { refuseUnlessElevated } from './auth/guard.js';
-import { appUpdateRoutes, type AppUpdateOptions } from './appUpdate.js';
+import { appUpdateRoutes, resolveUpdateOptions, type AppUpdateOptions } from './appUpdate.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -160,7 +160,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   // The PIN, the refresh cookie and the access token that unlock the routes modules declare `sensitive` (see auth/).
   await server.register(authRoutes, { configDir, allowedHosts: allowedHostSet(allowedHostsFrom(opts.allowedHosts)), registerProtection, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
   // The update indicator of the top bar: what the updater recorded, and the restart that starts the installed version.
-  await server.register(appUpdateRoutes, { update: opts.update ?? {}, configDir, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
+  await server.register(appUpdateRoutes, { update: resolveUpdateOptions(opts.update ?? {}), configDir, ...(opts.authClock === undefined ? {} : { now: opts.authClock }) });
   await server.register(modulesRoutes, { modulesDir, manager, registerGuard: createRegisterGuard({ configDir, token: cliToken, mode: registerProtection, now: opts.authClock }) });
   await server.register(slotsRoutes, { manager });
   // What the shell cannot know from its build: settings of this server process, read once per page load.

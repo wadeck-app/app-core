@@ -49,7 +49,7 @@ describe('App: PIN dialog and the lock control', () => {
     render(<App />);
     const banner = within(screen.getByRole('banner'));
     expect(await banner.findByText('Sudo')).toBeInTheDocument();
-    expect(banner.getByRole('button', { name: 'Leave sudo mode (lock sensitive actions)' })).toBeInTheDocument();
+    expect(banner.getByRole('button', { name: 'Leave sudo mode' })).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 });

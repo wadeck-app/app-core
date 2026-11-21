@@ -70,7 +70,18 @@ Every `app-core-cli` invocation, including `serve`, schedules the background sel
 ### Update indicator and restart
 
 - A running `serve` starts the updater again every 6 hours (the 30 minute cache of `shared-updater` makes a call that comes too soon a file read). No timer with `--no-update`.
-- `GET /api/app-update` reads `update-state.json`, `update-cache.json` (in `APP_CORE_CLI_CONFIG_DIR`, else `~/.config/app-core-cli`) and the `package.json` of the installed package; no network. It answers `state`: `up-to-date`, `restart-needed` (installed differs from running), `update-failed` (`failure`: message, `step` is the updater's `phase` in `update-state.json`, when it recorded one; log file of the day), `update-available`, `applying`, or `unknown` with a `reason` (a run from sources such as `dev:all`, a missing or unreadable file). `canRestart` says whether the restart below is offered.
+- `GET /api/app-update` reads `update-state.json`, `update-cache.json` (in `APP_CORE_CLI_CONFIG_DIR`, else `~/.config/app-core-cli`) and the `package.json` of the installed package; no network. It answers `state`: `up-to-date`, `restart-needed` (installed differs from running), `update-failed` (`failure`: message, `step` is the updater's `phase` in `update-state.json`, when it recorded one; log file of the day), `update-available`, `applying`, `untracked` (see below) or `unknown` with a `reason` (a real problem: a missing or unreadable file). `canRestart` says whether the restart below is offered. The shell shows nothing for `up-to-date` and `untracked`.
+- A run from sources (`dev:all`, `npm run dev`; `running` is `null`) reports on the app-core-cli installed on the machine, which updates itself: `installed` is the `package.json` of `APP_CORE_INSTALLED_CLI_DIR`, `latest` comes from `update-cache.json`. `dev:all` sets that variable to `<npm root -g>/@wadeck-app/app-core-cli` and logs `[dev-all] APP_CORE_INSTALLED_CLI_DIR=...`, or a WARNING saying why it is unset. Same updater dir as above.
+
+  | State in a run from sources | When |
+  | --- | --- |
+  | `up-to-date` | installed equals latest, or the updater has written nothing yet |
+  | `update-available` | latest is newer than installed (not merely different) |
+  | `update-failed`, `applying` | as the updater recorded |
+  | `untracked` | no `APP_CORE_INSTALLED_CLI_DIR` |
+  | `unknown` | an unreadable file |
+
+  Never `restart-needed`; `canRestart` is always false.
 - The top bar shows the state (hidden when up to date) and polls every 5 minutes and on window focus.
 - `POST /api/app-update/restart` needs the PIN (same rules as a `sensitive` module route, `pin.md`), answers 202, then runs the tray's Restart. The shell waits for the server to answer with the installed version and reloads. 409 `restart-unavailable` when the server is not started by `serve`.
 

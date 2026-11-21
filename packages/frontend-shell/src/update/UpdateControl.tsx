@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CircleArrowUp, Download, LoaderCircle, RefreshCwOff, TriangleAlert } from 'lucide-react';
-import { ButtonAction, IconButton, Popover } from '@wadeck-app/dsl-ui';
+import { ButtonAction } from '@wadeck-app/dsl-ui';
+import { TopBarPopover } from '../layout/TopBarPopover.js';
 import { readJson } from '../auth/readJson.js';
 import { getErrorMessage } from '../errors.js';
 import { fetcher } from '../fetcher.js';
@@ -12,8 +13,10 @@ const RESTART_WAIT_MS = 90_000;
 
 // The answer of GET /api/app-update (server/src/appUpdate.ts).
 interface AppUpdate {
-  state: 'up-to-date' | 'restart-needed' | 'update-failed' | 'update-available' | 'applying' | 'unknown';
+  // 'untracked': a run from sources with no installed app-core-cli to look at. Like 'up-to-date', nothing is shown.
+  state: 'up-to-date' | 'restart-needed' | 'update-failed' | 'update-available' | 'applying' | 'unknown' | 'untracked';
   reason?: string;
+  // null: a run from sources (dev:all), which reports on the app-core-cli installed on the machine.
   running: string | null;
   installed: string | null;
   latest: string | null;
@@ -69,7 +72,7 @@ export function UpdateControl({ reload = () => window.location.reload(), restart
     };
   }, [check]);
 
-  if (update === undefined || update.state === 'up-to-date') {
+  if (update === undefined || update.state === 'up-to-date' || update.state === 'untracked') {
     return null;
   }
 
@@ -117,8 +120,22 @@ export function UpdateControl({ reload = () => window.location.reload(), restart
       <RefreshCwOff size={14} className="text-muted" />
     );
 
+  // A run from sources does not run the installed app-core-cli: it is told about it, and has nothing to restart.
+  const fromSources = update.running === null;
+  const installedLabel = update.installed ?? 'unknown version';
+  const tooltip =
+    update.state === 'restart-needed'
+      ? `Updates: ${update.installed} installed, restart to use it`
+      : update.state === 'update-failed'
+        ? `Updates: the update to ${update.latest ?? 'a newer version'} failed`
+        : update.state === 'applying'
+          ? `Updates: installing ${update.latest ?? 'a new version'}`
+          : update.state === 'update-available'
+            ? `Updates: ${update.latest} is available`
+            : 'Updates: state unknown';
+
   return (
-    <Popover side="bottom" align="end" trigger={<IconButton icon={icon} aria-label="app-core update" title="app-core update" variant="ghost" size="icon-sm" />}>
+    <TopBarPopover icon={icon} label="app-core update" title={tooltip}>
       <div className="max-w-80 space-y-2 text-sm">
         {update.state === 'restart-needed' ? (
           <>
@@ -152,13 +169,19 @@ export function UpdateControl({ reload = () => window.location.reload(), restart
                 Log: <span className="break-all font-mono">{update.failure.logFile}</span>
               </p>
             )}
-            <p className="text-muted">{`${update.running} keeps running. The updater tries again at its next check.`}</p>
+            <p className="text-muted">{fromSources ? `${installedLabel} stays installed. The updater tries again at its next check.` : `${update.running} keeps running. The updater tries again at its next check.`}</p>
           </>
         ) : null}
         {update.state === 'applying' ? <p>{`Installing ${update.latest ?? 'a new version'}...`}</p> : null}
-        {update.state === 'update-available' ? <p>{`${update.latest} is available: it is installed at the next update check.`}</p> : null}
+        {update.state === 'update-available' ? (
+          fromSources ? (
+            <p>{`app-core-cli ${update.latest} is available (installed: ${installedLabel}). It installs itself at the next start of any app-core-cli command, or run: app-core-cli update`}</p>
+          ) : (
+            <p>{`${update.latest} is available: it is installed at the next update check.`}</p>
+          )
+        ) : null}
         {update.state === 'unknown' ? <p>{update.reason}</p> : null}
       </div>
-    </Popover>
+    </TopBarPopover>
   );
 }

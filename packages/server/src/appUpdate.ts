@@ -3,12 +3,14 @@ import * as path from 'node:path';
 import type { FastifyPluginAsync } from 'fastify';
 import { getErrorMessage } from './errors.js';
 import { refuseUnlessElevated } from './auth/guard.js';
+import { resolveUpdaterDir } from './configDir.js';
 
 // What the server knows about itself as an installed program; given by `app-core-cli serve`, absent from a run from sources (dev:all).
 export interface AppUpdateOptions {
-  // The version this process booted with. Absent: not an installed release, the update state is not tracked.
+  // The version this process booted with. Absent: a run from sources, which reports on the app-core-cli installed on the machine instead.
   runningVersion?: string;
-  // The folder of the installed app-core-cli package holding the running bundle: its package.json is the installed version.
+  // The folder of the installed app-core-cli package: its package.json is the installed version. For an installed run it holds the
+  // running bundle; for a run from sources it comes from APP_CORE_INSTALLED_CLI_DIR (dev:all sets it) and is absent without it.
   packageDir?: string;
   // The CLI config dir where the updater writes update-state.json and update-cache.json (APP_CORE_CLI_CONFIG_DIR, else ~/.config/app-core-cli).
   updaterDir?: string;
@@ -16,11 +18,13 @@ export interface AppUpdateOptions {
   restart?: () => void;
 }
 
-export type AppUpdateStateName = 'up-to-date' | 'restart-needed' | 'update-failed' | 'update-available' | 'applying' | 'unknown';
+// 'untracked': a run from sources with no installed app-core-cli to look at (nothing is wrong; the shell shows nothing).
+// 'unknown': a real problem (an unreadable file).
+export type AppUpdateStateName = 'up-to-date' | 'restart-needed' | 'update-failed' | 'update-available' | 'applying' | 'unknown' | 'untracked';
 
 export interface AppUpdateAnswer {
   state: AppUpdateStateName;
-  // Why the state is unknown (what to look at); only with `unknown`.
+  // Why the state is unknown or untracked (what to look at); only with those.
   reason?: string;
   running: string | null;
   installed: string | null;
@@ -76,8 +80,8 @@ function logFileOf(updaterDir: string, timestamp: number | undefined): string | 
   return fs.existsSync(file) ? file : undefined;
 }
 
-const unknown = (reason: string, base: Partial<AppUpdateAnswer>, canRestart: boolean): AppUpdateAnswer => ({
-  state: 'unknown',
+const unknown = (reason: string, base: Partial<AppUpdateAnswer>, canRestart: boolean, state: 'unknown' | 'untracked' = 'unknown'): AppUpdateAnswer => ({
+  state,
   reason,
   running: null,
   installed: null,
@@ -93,11 +97,46 @@ const unknown = (reason: string, base: Partial<AppUpdateAnswer>, canRestart: boo
 // rolled-back): the interface must not show "installing" for ever.
 export const APPLYING_STALE_MS = 30 * 60_000;
 
+// Each segment as a number, like shared-updater's semverLte (calver "2026.11.14-193-c7bfd3f7" and semver); a non-numeric one (the hash) counts as equal.
+export function isNewerVersion(candidate: string, than: string): boolean {
+  const parts = (v: string): number[] => v.replace(/^v/, '').split(/[-.]/).map(Number);
+  const a = parts(candidate);
+  const b = parts(than);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? 0;
+    const y = b[i] ?? 0;
+    if (x > y) {
+      return true;
+    }
+    if (x < y) {
+      return false;
+    }
+  }
+  return false;
+}
+
+// What a run from sources learns from its environment: the app-core-cli installed on the machine (APP_CORE_INSTALLED_CLI_DIR, set by
+// scripts/dev-all.mjs) and the updater dir. Whatever the caller gave wins; an installed run is left as it is.
+export function resolveUpdateOptions(given: AppUpdateOptions, env: NodeJS.ProcessEnv = process.env): AppUpdateOptions {
+  const installedDir = env['APP_CORE_INSTALLED_CLI_DIR'];
+  return {
+    ...given,
+    ...(given.updaterDir === undefined ? { updaterDir: resolveUpdaterDir(env) } : {}),
+    ...(given.runningVersion === undefined && given.packageDir === undefined && installedDir !== undefined && installedDir !== '' ? { packageDir: installedDir } : {}),
+  };
+}
+
 export function describeAppUpdate(opts: AppUpdateOptions, now: () => number = Date.now): AppUpdateAnswer {
-  const canRestart = opts.restart !== undefined;
-  const { runningVersion: running, packageDir, updaterDir } = opts;
-  if (running === undefined || packageDir === undefined || updaterDir === undefined) {
-    return unknown('This server is not run from an installed app-core-cli (a run from sources, npm run dev:all): its updates are not tracked. Install the package (npm install -g @wadeck-app/app-core-cli) and start it with "app-core-cli serve" to see them here.', { running }, canRestart);
+  const { runningVersion, packageDir, updaterDir } = opts;
+  // A run from sources reports on the installed app-core-cli, which it does not run: nothing to restart, and never "restart-needed".
+  const sourceRun = runningVersion === undefined;
+  const canRestart = !sourceRun && opts.restart !== undefined;
+  const running = runningVersion ?? null;
+  if (packageDir === undefined || updaterDir === undefined) {
+    if (sourceRun) {
+      return unknown('This server runs from sources and no installed app-core-cli is known (APP_CORE_INSTALLED_CLI_DIR is not set, as outside npm run dev:all): its updates are not tracked here.', {}, false, 'untracked');
+    }
+    return unknown('The server was started without the folder of the installed app-core-cli: its updates cannot be read. Start it with "app-core-cli serve".', { running }, canRestart);
   }
   const manifest = path.join(packageDir, 'package.json');
   const pkg = readJsonFile<{ version?: unknown }>(manifest);
@@ -118,7 +157,7 @@ export function describeAppUpdate(opts: AppUpdateOptions, now: () => number = Da
   }
   const updater = state.ok ? state.value : null;
   const latest = text(cache.ok ? cache.value?.latestVersion : null) ?? text(updater?.targetVersion);
-  if (updater === null && latest === null) {
+  if (updater === null && latest === null && !sourceRun) {
     return unknown(`The updater has written no ${stateFile} nor ${cacheFile} yet: it has not run on this machine (is it disabled, or is this server started with --no-update?).`, { running, installed }, canRestart);
   }
   const status = text(updater?.status);
@@ -130,7 +169,7 @@ export function describeAppUpdate(opts: AppUpdateOptions, now: () => number = Da
       return unknown(`the updater stopped while applying; see ${logFile ?? path.join(updaterDir, 'logs')}`, { running, installed, latest, status, previousVersion: answer.previousVersion }, canRestart);
     }
     answer.state = 'applying';
-  } else if (installed !== running) {
+  } else if (!sourceRun && installed !== running) {
     answer.state = 'restart-needed';
   } else if (failed) {
     answer.state = 'update-failed';
@@ -140,7 +179,7 @@ export function describeAppUpdate(opts: AppUpdateOptions, now: () => number = Da
       ...(text(updater?.phase) === null ? {} : { step: text(updater?.phase) as string }),
       ...(logFile === undefined ? {} : { logFile }),
     };
-  } else if (latest !== null && latest !== running) {
+  } else if (latest !== null && (sourceRun ? isNewerVersion(latest, installed) : latest !== running)) {
     answer.state = 'update-available';
   }
   return answer;

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { IconButton, Popover, useAbExperiments } from '@wadeck-app/dsl-ui';
+import { useAbExperiments } from '@wadeck-app/dsl-ui';
+import { TopBarPopover } from './layout/TopBarPopover.js';
 import { AbTestsSection } from './AbTestsSection.js';
 import { AppCoreVersionRow } from './AppCoreVersionRow.js';
 import { VersionRow } from './VersionRow.js';
@@ -19,11 +20,7 @@ export function VersionsMenu({ modules, failed }: { modules: LoadedModuleSummary
   const withWarnings = modules.filter((m) => (m.warnings ?? []).length > 0).length;
 
   return (
-    <Popover
-      side="bottom"
-      align="end"
-      trigger={<IconButton icon={<Info size={14} />} aria-label="Versions" variant="ghost" size="icon-sm" />}
-    >
+    <TopBarPopover icon={<Info size={14} />} label="Versions">
       <div className="min-w-72 text-sm">
         <h3 className="mb-1 font-semibold text-content">Versions</h3>
         <dl>
@@ -71,6 +68,6 @@ export function VersionsMenu({ modules, failed }: { modules: LoadedModuleSummary
           </>
         ) : null}
       </div>
-    </Popover>
+    </TopBarPopover>
   );
 }
