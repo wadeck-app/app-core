@@ -347,6 +347,129 @@ describe('stagedServerHealthCheck', () => {
     expect(result.output).toContain('answered 500');
   });
 
+  describe('retry of the module health after a cold start', () => {
+    const notHealthy = (detail: string): Reply => ({ status: 200, body: { ok: false, checks: [{ name: 'daemon', ok: false, detail }] } });
+    const healthy: Reply = { status: 200, body: { ok: true, checks: [{ name: 'daemon', ok: true }] } };
+    const HEALTH = '/api/modules/alpha/health';
+
+    // A route that answers the given replies in turn (a function throws: the request fails like a timeout); counts the calls.
+    function sequence(steps: Array<Reply | Error>): { route: () => Reply; calls: () => number } {
+      let calls = 0;
+      return {
+        route: () => {
+          const step = steps[Math.min(calls, steps.length - 1)]!;
+          calls += 1;
+          if (step instanceof Error) {
+            throw step;
+          }
+          return step;
+        },
+        calls: () => calls,
+      };
+    }
+
+    // The pauses between attempts: the fake sleep of the deps records them (no real wait).
+    function withPauses(routes: Routes): { overrides: Partial<StagedHealthDeps>; pauses: number[] } {
+      const overrides = deps({ routes });
+      const pauses: number[] = [];
+      const fakeSleep = overrides.sleep!;
+      overrides.sleep = async (ms) => {
+        if (ms >= 1_000) {
+          pauses.push(ms);
+        }
+        await fakeSleep(ms);
+      };
+      return { overrides, pauses };
+    }
+
+    it('recovers on attempt 2', async () => {
+      const seq = sequence([notHealthy('the daemon check did not answer within 2000 ms'), healthy]);
+      const { overrides, pauses } = withPauses({ ...healthyRoutes(), [HEALTH]: seq.route });
+      const result = await stagedServerHealthCheck(input(), overrides);
+      expect(result.ok, result.output).toBe(true);
+      expect(seq.calls()).toBe(2);
+      expect(pauses).toEqual([3_000]);
+      expect(result.output).toContain('module alpha: healthy on attempt 2 (first attempt: daemon (the daemon check did not answer within 2000 ms))');
+    });
+
+    it('recovers on attempt 3', async () => {
+      const seq = sequence([notHealthy('cold one'), notHealthy('cold two'), healthy]);
+      const { overrides, pauses } = withPauses({ ...healthyRoutes(), [HEALTH]: seq.route });
+      const result = await stagedServerHealthCheck(input(), overrides);
+      expect(result.ok, result.output).toBe(true);
+      expect(seq.calls()).toBe(3);
+      expect(pauses).toEqual([3_000, 3_000]);
+      expect(result.output).toContain('module alpha: healthy on attempt 3');
+      expect(result.output).toContain('cold one');
+      expect(result.output).toContain('cold two');
+    });
+
+    it('fails after 3 attempts with all attempts listed', async () => {
+      const seq = sequence([notHealthy('first detail'), notHealthy('second detail'), notHealthy('third detail')]);
+      const { overrides } = withPauses({ ...healthyRoutes(), [HEALTH]: seq.route });
+      const result = await stagedServerHealthCheck(input(), overrides);
+      expect(result.ok).toBe(false);
+      expect(seq.calls()).toBe(3);
+      expect(result.output).toContain('step "health", module "alpha"');
+      expect(result.output).toContain('3 attempts');
+      expect(result.output).toContain('the first ones failed too');
+      expect(result.output).toContain('1: daemon (first detail)');
+      expect(result.output).toContain('2: daemon (second detail)');
+      expect(result.output).toContain('3: daemon (third detail)');
+      expectCleanedUp(true);
+    });
+
+    it('does not retry a 404 (no check proposed)', async () => {
+      const { overrides, pauses } = withPauses(healthyRoutes());
+      const result = await stagedServerHealthCheck(input(), overrides);
+      expect(result.ok, result.output).toBe(true);
+      expect(requested.filter((r) => r.endsWith(HEALTH))).toHaveLength(1);
+      expect(pauses).toEqual([]);
+    });
+
+    it('does not retry an ok:true answer', async () => {
+      const seq = sequence([healthy]);
+      const { overrides, pauses } = withPauses({ ...healthyRoutes(), [HEALTH]: seq.route });
+      const result = await stagedServerHealthCheck(input(), overrides);
+      expect(result.ok, result.output).toBe(true);
+      expect(seq.calls()).toBe(1);
+      expect(pauses).toEqual([]);
+      expect(result.output).not.toContain('healthy on attempt');
+    });
+
+    it('does not retry a malformed answer', async () => {
+      const seq = sequence([{ status: 200, body: { ok: true } }]);
+      const { overrides, pauses } = withPauses({ ...healthyRoutes(), [HEALTH]: seq.route });
+      const result = await stagedServerHealthCheck(input(), overrides);
+      expect(result.ok).toBe(false);
+      expect(result.output).toContain('not in the health format');
+      expect(seq.calls()).toBe(1);
+      expect(pauses).toEqual([]);
+    });
+
+    it('counts the timeout of one attempt as a failed attempt', async () => {
+      const seq = sequence([new Error('The operation was aborted due to timeout'), healthy]);
+      const { overrides, pauses } = withPauses({ ...healthyRoutes(), [HEALTH]: seq.route });
+      const result = await stagedServerHealthCheck(input(), overrides);
+      expect(result.ok, result.output).toBe(true);
+      expect(seq.calls()).toBe(2);
+      expect(pauses).toEqual([3_000]);
+      expect(result.output).toContain('healthy on attempt 2 (first attempt: ');
+      expect(result.output).toContain('aborted due to timeout');
+    });
+
+    it('lists a persistent timeout on every attempt', async () => {
+      const seq = sequence([new Error('timeout A'), new Error('timeout B'), new Error('timeout C')]);
+      const { overrides } = withPauses({ ...healthyRoutes(), [HEALTH]: seq.route });
+      const result = await stagedServerHealthCheck(input(), overrides);
+      expect(result.ok).toBe(false);
+      expect(seq.calls()).toBe(3);
+      for (const label of ['timeout A', 'timeout B', 'timeout C']) {
+        expect(result.output).toContain(label);
+      }
+    });
+  });
+
   describe('base pages (/health answers 404)', () => {
     const withPages = (extensionPoints: unknown[], more: Routes = {}): Routes => ({ ...healthyRoutes(), '/api/modules': modulesAnswer([{ id: 'alpha', extensionPoints }]), ...more });
 

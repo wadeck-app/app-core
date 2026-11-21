@@ -67,6 +67,10 @@ export interface StagedHealthDeps {
   warn: (message: string) => void;
 }
 
+// A module's /health is asked up to this many times in all, with this pause between two asks: the first answer after a start can be a
+// cold start of the module's own connections. The verdict is the last attempt's.
+const HEALTH_ATTEMPTS = 3;
+const HEALTH_RETRY_PAUSE_MS = 3_000;
 const TAIL_LINES = 40;
 const OUTPUT_CAP = 64 * 1024;
 const POLL_MS = 100;
@@ -593,25 +597,70 @@ function urlOfReadableSource(source: unknown): string | undefined {
   return match[1];
 }
 
-// (d) the module's own check (D7), else (e) its base pages.
-async function checkModule(http: Http, mod: ListedModule, compare: Compare): Promise<void> {
-  const url = `/api/modules/${encodeURIComponent(mod.id)}/health`;
-  const response = await http.get(url, 'health', mod.id);
+// One ask of GET /health: the answer is final (`done`), or an attempt that failed (`failed`, worth asking again after a pause).
+// A malformed 200 throws at once: it is a bug of the module, not a cold start.
+type HealthAttempt = { kind: 'no-check' } | { kind: 'healthy' } | { kind: 'failed'; detail: string; failure: CheckFailure; unhealthy: boolean };
+
+async function askHealth(http: Http, mod: ListedModule, url: string): Promise<HealthAttempt> {
+  let response: Awaited<ReturnType<Http['get']>>;
+  try {
+    response = await http.get(url, 'health', mod.id);
+  } catch (err) {
+    if (err instanceof CheckFailure) {
+      return { kind: 'failed', detail: err.message, failure: err, unhealthy: false };
+    }
+    throw err;
+  }
   if (response.status === 404) {
-    await checkBasePages(http, mod, compare);
-    return;
+    return { kind: 'no-check' };
   }
   if (response.status !== 200) {
-    throw new CheckFailure('health', `module "${mod.id}": GET ${url} answered ${response.status}; it must answer 200 with { ok, checks } or 404 when it proposes no check.`, mod.id);
+    const detail = `module "${mod.id}": GET ${url} answered ${response.status}; it must answer 200 with { ok, checks } or 404 when it proposes no check.`;
+    return { kind: 'failed', detail, failure: new CheckFailure('health', detail, mod.id), unhealthy: false };
   }
   const health = asModuleHealth(response.body);
   if (health === undefined) {
     throw new CheckFailure('health', `module "${mod.id}" answers ${url} but not in the health format { ok: boolean, checks: [{ name: string, ok: boolean, detail?: string }] }. Fix the route, or rename it if it means something else.`, mod.id);
   }
-  if (!health.ok) {
-    const failed = health.checks.filter((c) => !c.ok);
-    const listed = failed.length === 0 ? 'no check is listed as failed' : failed.map((c) => `${c.name}${c.detail === undefined ? '' : ` (${c.detail})`}`).join('; ');
-    const message = `module "${mod.id}" reports it is not healthy: ${listed}.`;
+  if (health.ok) {
+    return { kind: 'healthy' };
+  }
+  const failed = health.checks.filter((c) => !c.ok);
+  const listed = failed.length === 0 ? 'no check is listed as failed' : failed.map((c) => `${c.name}${c.detail === undefined ? '' : ` (${c.detail})`}`).join('; ');
+  const message = `module "${mod.id}" reports it is not healthy: ${listed}.`;
+  return { kind: 'failed', detail: listed, failure: new CheckFailure('health', message, mod.id), unhealthy: true };
+}
+
+// (d) the module's own check (D7), else (e) its base pages. A check that fails is asked again (a cold start of the module's connections
+// makes the first answer fail): the verdict is the last attempt's, and every attempt is named in the failure.
+async function checkModule(deps: StagedHealthDeps, http: Http, mod: ListedModule, compare: Compare): Promise<void> {
+  const url = `/api/modules/${encodeURIComponent(mod.id)}/health`;
+  const failedAttempts: string[] = [];
+  let last: HealthAttempt;
+  for (let attempt = 1; ; attempt += 1) {
+    last = await askHealth(http, mod, url);
+    if (last.kind !== 'failed' || attempt >= HEALTH_ATTEMPTS) {
+      break;
+    }
+    failedAttempts.push(last.detail);
+    await deps.sleep(HEALTH_RETRY_PAUSE_MS);
+  }
+  if (last.kind === 'failed') {
+    failedAttempts.push(last.detail);
+  } else if (failedAttempts.length > 0) {
+    const earlier = failedAttempts.length === 1 ? `first attempt: ${failedAttempts[0]}` : `earlier attempts: ${failedAttempts.map((d, i) => `${i + 1}: ${d}`).join('; ')}`;
+    compare.warnings.push(`module ${mod.id}: healthy on attempt ${failedAttempts.length + 1} (${earlier})`);
+  }
+  if (last.kind === 'no-check') {
+    await checkBasePages(http, mod, compare);
+    return;
+  }
+  if (last.kind === 'failed') {
+    const attempts = ` Failed after ${failedAttempts.length} attempts (${HEALTH_RETRY_PAUSE_MS} ms apart), the first ones failed too: ${failedAttempts.map((d, i) => `attempt ${i + 1}: ${d}`).join(' | ')}.`;
+    const message = `${last.failure.message}${attempts}`;
+    if (!last.unhealthy) {
+      throw new CheckFailure('health', message, mod.id);
+    }
     if (compare.running === undefined) {
       throw new CheckFailure('health', `${message} ${NO_BASELINE}`, mod.id);
     }
@@ -691,7 +740,7 @@ export async function stagedServerHealthCheck(input: StagedHealthInput, override
     const modules = await checkModules(http, expectedIds, baseline.answer);
     const compare: Compare = { running: baseline.http, warnings: [] };
     for (const mod of modules) {
-      await checkModule(http, mod, compare);
+      await checkModule(deps, http, mod, compare);
     }
     const warned = compare.warnings.length === 0 ? '' : `\n${compare.warnings.join('\n')}`;
     return { ok: true, output: withWarnings(`staged server answered on port ${portFile.port}; ${modules.length} module(s) checked${baseline.note === '' ? '' : `; ${baseline.note}`}${warned}`) };
