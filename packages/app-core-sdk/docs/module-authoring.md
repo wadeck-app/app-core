@@ -304,6 +304,8 @@ Calls from the dashboard need nothing from you: its fetcher refreshes the token 
 Limits:
 
 - Only routes declared `sensitive` are protected; `write` is not gated yet.
+- `sensitive` guards HTTP callers: code of a module running inside the shell page can reach the PIN session through `appFetcher`/`elevate` (a module bundle is trusted like the shell).
+- `POST /api/modules/register`, `update` and `unregister` are not protected by the PIN today (they load code into the server), so the PIN is not a boundary against a process of the same user that can reach port 4850. A decision about them is pending.
 - The access token (10 minutes) sits in the browser's localStorage: page scripts and a process of the same user can read it.
 - A process of the same user that reads `auth.json` can find a 4 to 12 character PIN offline (a 4-digit one quickly); file modes are not enforced on Windows.
 - With daily use the PIN is asked about once; again after 7 days idle.

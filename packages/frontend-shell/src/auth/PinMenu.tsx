@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { KeyRound } from 'lucide-react';
 import { IconButton, Popover } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
@@ -16,6 +16,7 @@ function ChangePinForm({ rule }: { rule: string }): React.ReactElement {
   const [message, setMessage] = useState<string | undefined>(undefined);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  const currentRef = useRef<HTMLInputElement>(null);
   const countdown = useLockCountdown();
   const { locked, remaining } = countdown;
 
@@ -42,11 +43,14 @@ function ChangePinForm({ rule }: { rule: string }): React.ReactElement {
       // The wrong current PIN is retyped; the new one stays.
       setCurrent('');
       setMessage(verdict.message);
+      // The fields are read-only while asking (not disabled), but the focus went to the button that was clicked: type the current PIN again at once.
+      currentRef.current?.focus();
       if (verdict.retryAfterSeconds !== undefined) {
         countdown.lock(verdict.retryAfterSeconds);
       }
     } catch (err) {
       setMessage(getErrorMessage(err));
+      currentRef.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -64,15 +68,15 @@ function ChangePinForm({ rule }: { rule: string }): React.ReactElement {
       <p className="mb-2 text-sm text-muted">{`Change the PIN. Every session is closed: you stay unlocked here, other browsers are asked again.${rule === '' ? '' : ` PIN: ${rule}.`}`}</p>
       <label className="block text-sm text-content">
         Current PIN
-        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={current} disabled={busy} onChange={(event) => setCurrent(event.target.value)} />
+        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" ref={currentRef} value={current} readOnly={busy} aria-busy={busy} onChange={(event) => setCurrent(event.target.value)} />
       </label>
       <label className="mt-2 block text-sm text-content">
         New PIN
-        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={next} disabled={busy} onChange={(event) => setNext(event.target.value)} />
+        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={next} readOnly={busy} aria-busy={busy} onChange={(event) => setNext(event.target.value)} />
       </label>
       <label className="mt-2 block text-sm text-content">
         Confirm the new PIN
-        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={confirm} disabled={busy} onChange={(event) => setConfirm(event.target.value)} />
+        <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={confirm} readOnly={busy} aria-busy={busy} onChange={(event) => setConfirm(event.target.value)} />
       </label>
       {shown !== undefined ? (
         <p role="alert" className="mt-2 text-sm text-danger">

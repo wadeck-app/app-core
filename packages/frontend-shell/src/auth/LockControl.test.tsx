@@ -88,4 +88,12 @@ describe('LockControl', () => {
     expect(screen.queryByRole('button', { name: 'Lock sensitive actions' })).toBeNull();
     warn.mockRestore();
   });
+
+  it('puts the message of the server (what to repair) in the console when the status route answers it', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'internal', message: 'auth.json is not valid. Delete it, then choose a new PIN.' }), { status: 500, headers: { 'content-type': 'application/json' } })));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    renderControl();
+    await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringContaining('auth.json is not valid. Delete it, then choose a new PIN.')));
+    warn.mockRestore();
+  });
 });

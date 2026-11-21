@@ -162,8 +162,11 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
   });
 
   server.post('/api/auth/logout', async (request, reply) => {
-    sessions.logout(refreshTokenOf(request));
-    return reply.code(204).header('Set-Cookie', cookieHeader('', 0)).send();
+    // Only a live session locks: without one (no cookie, an expired or unknown one) nothing is revoked, so a caller that holds no
+    // session cannot log the user out. The cookie is cleared either way.
+    const loggedOut = sessions.logout(refreshTokenOf(request));
+    reply.header('Set-Cookie', cookieHeader('', 0));
+    return loggedOut ? { loggedOut } : { loggedOut, message: 'No valid session was presented (no refresh cookie, or it expired): nothing was locked. If sensitive actions are still unlocked in another browser, lock them from that browser.' };
   });
 
   server.get('/api/auth/status', async (request) => {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { authFilePath, isPinSet, verifyPin } from '@wadeck-app/app-core-server/auth/pin';
+import { authFilePath, isPinSet, MAX_PIN_LENGTH, MIN_PIN_LENGTH, verifyPin } from '@wadeck-app/app-core-server/auth/pin';
 import { SessionStore } from '@wadeck-app/app-core-server/auth/tokens';
 import { runPin, type PinDeps } from './pin.js';
 
@@ -44,6 +44,7 @@ describe('app-core-cli pin', () => {
     answers = ['482915', '482915'];
     expect(await runPin(['set'], deps())).toBe(0);
     expect(prompts).toHaveLength(2);
+    expect(prompts[0]).toContain(`${MIN_PIN_LENGTH} to ${MAX_PIN_LENGTH} characters`);
     expect(await verifyPin(dir, '482915')).toBe(true);
     const text = out.join('');
     expect(text).toContain('per machine');

@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// The real rule of the server: a change of it breaks the fixtures below instead of leaving them stale.
+import { MAX_PIN_LENGTH, MIN_PIN_LENGTH } from '@wadeck-app/app-core-server/auth/pin';
 import { getAccessToken } from './accessToken.js';
 import { PinMenu } from './PinMenu.js';
 import { setPinAsker, type PinAsker } from './pinPrompt.js';
@@ -22,7 +24,7 @@ describe('PinMenu', () => {
       vi.fn(async (url: string, init: RequestInit = {}) => {
         calls.push({ url, body: init.body === undefined ? undefined : JSON.parse(init.body as string) });
         if (url === '/api/auth/status') {
-          return json(200, { pinSet, locked: false, elevated: false, resetHint: HINT, minPinLength: 6 });
+          return json(200, { pinSet, locked: false, elevated: false, resetHint: HINT, minPinLength: MIN_PIN_LENGTH, maxPinLength: MAX_PIN_LENGTH });
         }
         if (url === '/api/auth/pin/change') {
           const next = changeAnswers.shift();
@@ -72,7 +74,7 @@ describe('PinMenu', () => {
     expect(await screen.findByLabelText('Current PIN')).toHaveAttribute('type', 'password');
     expect(screen.getByLabelText('New PIN')).toHaveAttribute('type', 'password');
     expect(screen.getByLabelText('Confirm the new PIN')).toHaveAttribute('type', 'password');
-    expect(screen.getByText(/at least 6 characters/i)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`at least ${MIN_PIN_LENGTH} characters, at most ${MAX_PIN_LENGTH}`, 'i'))).toBeInTheDocument();
     expect(await screen.findByText(HINT.files[0] as string)).toBeInTheDocument();
   });
 
@@ -100,6 +102,40 @@ describe('PinMenu', () => {
     expect(getAccessToken()).toBeUndefined();
     expect((screen.getByLabelText('New PIN') as HTMLInputElement).value).toBe('999888');
     expect((screen.getByLabelText('Current PIN') as HTMLInputElement).value).toBe('');
+  });
+
+  it('focuses the current PIN field again after a wrong PIN (the fields are read-only, not disabled, while it asks)', async () => {
+    let release!: () => void;
+    changeAnswers = [
+      () => {
+        throw new Error('replaced below');
+      },
+    ];
+    await open();
+    await screen.findByLabelText('Current PIN');
+    const pending = new Promise<void>((resolve) => (release = resolve));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/api/auth/pin/change') {
+          await pending;
+          return json(401, { error: 'pin-wrong', message: 'Wrong PIN. 4 tries left.' });
+        }
+        return json(200, { pinSet: true, locked: false, elevated: false, resetHint: HINT });
+      }),
+    );
+    fill('Current PIN', '000000');
+    fill('New PIN', '999888');
+    fill('Confirm the new PIN', '999888');
+    fireEvent.click(screen.getByRole('button', { name: 'Change PIN' }));
+    const current = screen.getByLabelText('Current PIN') as HTMLInputElement;
+    await waitFor(() => expect(current).toHaveAttribute('readonly'));
+    expect(current).not.toBeDisabled();
+    expect(current).toHaveAttribute('aria-busy', 'true');
+    screen.getByRole('button', { name: 'Change PIN' }).focus();
+    release();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Wrong PIN');
+    await waitFor(() => expect(document.activeElement).toBe(current));
   });
 
   it('shows the wait of a lock and disables the button while it lasts', async () => {

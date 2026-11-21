@@ -47,4 +47,7 @@ Tokens: access = JWT HS256, 10 minutes, kept by the dashboard in localStorage `a
 - File modes (0600) are not enforced on Windows: the files are readable by your whole user account.
 - Only routes declared `sensitive` are protected. Ordinary write routes, and `/api/modules/register|update|unregister`, are not.
 - A restart resets the lockout; an access token not yet expired survives a restart (secret and generation are on disk).
+- `sensitive` guards HTTP callers: code of a module running inside the shell page can reach the PIN session through `appFetcher`/`elevate` (a module bundle is trusted like the shell).
+- `POST /api/modules/register`, `update` and `unregister` are not protected by the PIN today (they load code into the server), so the PIN is not a boundary against a process of the same user that can reach port 4850. A decision about them is pending.
+- `auth-sessions.json` is read, changed and written without a lock across processes: a session created by the server at the instant `app-core-cli pin set` revokes all could survive that change.
 - Anyone who can reach `POST /api/auth/logout` can lock the session (the request guard still applies).

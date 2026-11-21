@@ -63,7 +63,7 @@ function readRecord(configDir: string): PinRecord | undefined {
     pin = undefined;
   }
   if (pin?.algorithm !== 'scrypt' || !isCount(pin.N) || !isCount(pin.r) || !isCount(pin.p) || !isCount(pin.keyLength) || typeof pin.salt !== 'string' || typeof pin.hash !== 'string') {
-    throw new Error(`${file} is not valid (no scrypt PIN record in it). Run "app-core-cli pin set" to write it again; sensitive actions stay refused until then.`);
+    throw new Error(`${file} is not valid (no scrypt PIN record in it). Delete it, or repair it by running "app-core-cli pin set" to write it again; sensitive actions stay refused until then.`);
   }
   return pin as PinRecord;
 }
@@ -107,7 +107,8 @@ export function pinResetHint(configDir: string): { files: string[]; instruction:
   return { files: [authFilePath(configDir)], instruction: 'Delete this file (no restart needed), then choose a new PIN.' };
 }
 
-// Chooses or changes the PIN, and revokes every session (a new PIN logs everybody out). Atomic write.
+// Chooses or changes the PIN, and revokes every session (a new PIN logs everybody out). Atomic write. The sessions are revoked FIRST:
+// a crash between the two steps leaves the old PIN with nobody logged in, never the new PIN with the old sessions still valid.
 export async function setPin(configDir: string, pin: string, now: () => number = Date.now): Promise<void> {
   const problem = pinProblem(pin);
   if (problem !== undefined) {
@@ -116,6 +117,6 @@ export async function setPin(configDir: string, pin: string, now: () => number =
   const salt = randomBytes(SALT_BYTES);
   const hash = await derive(pin, salt, SCRYPT);
   const record: PinRecord = { algorithm: 'scrypt', ...SCRYPT, salt: salt.toString('base64'), hash: hash.toString('base64') };
-  writeFileAtomic(authFilePath(configDir), JSON.stringify({ version: 1, pin: record }, null, 2));
   new SessionStore(configDir, now).revokeAll();
+  writeFileAtomic(authFilePath(configDir), JSON.stringify({ version: 1, pin: record }, null, 2));
 }

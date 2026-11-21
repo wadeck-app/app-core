@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Dialog } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
 import { setPinAsker, type PinAsker, type PinPromptMode, type PinVerdict } from './pinPrompt.js';
@@ -25,6 +25,14 @@ export function PinPromptHost(): React.ReactElement {
   const [message, setMessage] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const pendingRef = useRef<Pending | null>(null);
+  const pinFieldRef = useRef<HTMLInputElement>(null);
+  const [refocus, setRefocus] = useState(0);
+  useEffect(() => {
+    if (refocus > 0) {
+      pinFieldRef.current?.focus();
+    }
+  }, [refocus]);
+  const formId = useId();
   const countdown = useLockCountdown();
   const { status, error: statusError } = usePinStatus(pending !== null);
 
@@ -83,11 +91,15 @@ export function PinPromptHost(): React.ReactElement {
       setPin('');
       setConfirm('');
       setMessage(verdict.message);
+      // The fields are read-only while asking (not disabled), but the focus went to the button that was clicked: type again at once.
+      // After the render: the clicked button is disabled by it (empty field), and the dialog moves the focus off a disabled element.
+      setRefocus((count) => count + 1);
       if (verdict.retryAfterSeconds !== undefined) {
         countdown.lock(verdict.retryAfterSeconds);
       }
     } catch (err) {
       setMessage(getErrorMessage(err));
+      setRefocus((count) => count + 1);
     } finally {
       setBusy(false);
     }
@@ -112,13 +124,15 @@ export function PinPromptHost(): React.ReactElement {
           <button type="button" className={PIN_BUTTON} onClick={() => pending?.settle(false)}>
             Cancel
           </button>
-          <button type="button" className={PIN_BUTTON} disabled={!canSubmit} onClick={() => void submit()}>
+                    {/* The button lives in the dialog actions, outside the form: `form` makes it the submit button of it, so Enter in a field submits too. */}
+          <button type="submit" form={formId} className={PIN_BUTTON} disabled={!canSubmit}>
             {choosing ? 'Choose PIN' : 'Unlock'}
           </button>
         </>
       }
     >
       <form
+        id={formId}
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
@@ -131,12 +145,12 @@ export function PinPromptHost(): React.ReactElement {
         )}
         <label className="block text-sm text-content">
           {choosing ? 'New PIN' : 'PIN'}
-          <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" autoFocus value={pin} disabled={busy} onChange={(event) => setPin(event.target.value)} />
+          <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" autoFocus ref={pinFieldRef} value={pin} readOnly={busy} aria-busy={busy} onChange={(event) => setPin(event.target.value)} />
         </label>
         {choosing ? (
           <label className="mt-2 block text-sm text-content">
             Confirm the PIN
-            <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={confirm} disabled={busy} onChange={(event) => setConfirm(event.target.value)} />
+            <input className={`${PIN_INPUT} mt-1`} type="password" autoComplete="off" value={confirm} readOnly={busy} aria-busy={busy} onChange={(event) => setConfirm(event.target.value)} />
           </label>
         ) : null}
         {shown !== undefined ? (

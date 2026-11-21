@@ -14,6 +14,7 @@ import { parseLinkArgs } from './providers.js';
 import { INIT_USAGE, initModule, parseInitArgs } from './init.js';
 import { shellWarningsForModule } from './shellPreflight.js';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
+import { createRestartOnce, requireRestart } from './restartOnce.js';
 import { ConfigDir } from '@wadeck-app/shared-cli/ConfigDir';
 import { UpdateManager } from '@wadeck-app/shared-cli/UpdateManager';
 import { cliVersionCommand, cliUpdateCommand, warnUnknownArgs } from '@wadeck-app/shared-cli/CliMetaCommands';
@@ -294,7 +295,7 @@ async function main(): Promise<void> {
           // Only an installed release has a version to compare with its package.json; a bundle built from sources says so (state unknown).
           ...(isReleaseVersion(VERSION) ? { runningVersion: VERSION, packageDir: join(ownDir, '..') } : {}),
           updaterDir: configDir,
-          restart: () => restartServer?.(),
+          restart: () => requireRestart(restartServer),
         },
       });
       if (moduleId !== undefined) {
@@ -312,14 +313,16 @@ async function main(): Promise<void> {
         void (tray?.ok ? tray.companion.stop() : Promise.resolve()).then(stop).finally(() => process.exit(0));
       };
       // Starts a new serve once this one is down: the tray's Restart, and the end of "Update to vX and restart".
-      const restart = (): void => {
-        void (tray?.ok ? tray.companion.stop() : Promise.resolve())
-          .then(stop)
-          .then(() => {
-            spawn(process.execPath, [bundlePath, 'serve', ...args], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-          })
-          .finally(() => process.exit(0));
-      };
+      const restart = createRestartOnce({
+        run: async () => {
+          await (tray?.ok ? tray.companion.stop() : Promise.resolve());
+          await stop();
+          spawn(process.execPath, [bundlePath, 'serve', ...args], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+        },
+        report: (message) => console.error(message),
+        exit: () => process.exit(0),
+        manualCommand: ['app-core-cli', 'serve', ...args].join(' '),
+      });
       restartServer = restart;
       // A server that stays up for days: the updater runs again every 6 hours (not with --no-update).
       startPeriodicUpdate({ enabled: wantsUpdate, schedule: scheduleUpdate });

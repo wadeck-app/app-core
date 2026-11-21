@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// The real rule of the server: a change of it breaks the fixtures below instead of leaving them stale.
+import { MAX_PIN_LENGTH, MIN_PIN_LENGTH } from '@wadeck-app/app-core-server/auth/pin';
 import { askForPin, setPinAsker, type PinVerdict } from './pinPrompt.js';
 import { PinPromptHost } from './PinPromptHost.js';
 
@@ -95,6 +97,59 @@ describe('PinPromptHost', () => {
     await waitFor(() => expect(screen.queryByLabelText('PIN')).toBeNull());
   });
 
+  // user-event is not a dependency of this package: a browser submits a form with Enter only when a submit button belongs to it, so the
+  // test checks that the button outside the <form> (in the dialog actions) is wired to it, and that it submits through the form.
+  it('choose mode: the "Choose PIN" button is the submit button of the form, so Enter in a field submits', async () => {
+    render(<PinPromptHost />);
+    const verify = vi.fn(async (): Promise<PinVerdict> => ({ ok: true }));
+    let answer!: Promise<boolean>;
+    act(() => {
+      answer = askForPin(verify, 'choose');
+    });
+    const first = await screen.findByLabelText('New PIN');
+    const form = first.closest('form') as HTMLFormElement;
+    const button = screen.getByRole('button', { name: 'Choose PIN' });
+    expect(form.id).not.toBe('');
+    expect(button).toHaveAttribute('type', 'submit');
+    expect(button).toHaveAttribute('form', form.id);
+    const onSubmit = vi.fn();
+    form.addEventListener('submit', onSubmit);
+    fireEvent.change(first, { target: { value: '482915' } });
+    fireEvent.change(screen.getByLabelText('Confirm the PIN'), { target: { value: '482915' } });
+    fireEvent.click(button);
+    await expect(answer).resolves.toBe(true);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(verify).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the fields focusable while it asks (read-only, busy) and focuses the PIN field again after a wrong PIN', async () => {
+    render(<PinPromptHost />);
+    let release!: (verdict: PinVerdict) => void;
+    const verify = vi.fn(() => new Promise<PinVerdict>((resolve) => (release = resolve)));
+    act(() => {
+      void askForPin(verify);
+    });
+    const field = (await screen.findByLabelText('PIN')) as HTMLInputElement;
+    // The Dialog of dsl-ui moves the focus to its first control one animation frame after it opens: let it happen before the test starts.
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    });
+    type('000000');
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(verify).toHaveBeenCalled());
+    expect(field).not.toBeDisabled();
+    expect(field).toHaveAttribute('readonly');
+    expect(field).toHaveAttribute('aria-busy', 'true');
+    // The keyboard focus moves to the button that was clicked, as in a browser.
+    screen.getByRole('button', { name: 'Unlock' }).focus();
+    await act(async () => {
+      release({ ok: false, message: 'Wrong PIN. 4 tries left.' });
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Wrong PIN');
+    await waitFor(() => expect(document.activeElement).toBe(field));
+    expect(field).not.toHaveAttribute('readonly');
+  });
+
   it('shows an error that is not a wrong PIN (verify throws) and stays open', async () => {
     render(<PinPromptHost />);
     act(() => {
@@ -119,7 +174,7 @@ describe('PinPromptHost', () => {
     beforeEach(() => {
       vi.stubGlobal(
         'fetch',
-        vi.fn(async () => new Response(JSON.stringify({ pinSet: true, locked: false, elevated: false, resetHint: HINT, minPinLength: 6 }), { status: 200, headers: { 'content-type': 'application/json' } })),
+        vi.fn(async () => new Response(JSON.stringify({ pinSet: true, locked: false, elevated: false, resetHint: HINT, minPinLength: MIN_PIN_LENGTH, maxPinLength: MAX_PIN_LENGTH }), { status: 200, headers: { 'content-type': 'application/json' } })),
       );
     });
     afterEach(() => vi.unstubAllGlobals());
@@ -151,7 +206,7 @@ describe('PinPromptHost', () => {
         answer = askForPin(verify, 'choose');
       });
       expect(await screen.findByText('Choose a PIN')).toBeInTheDocument();
-      expect(await screen.findByText(/at least 6 characters/)).toBeInTheDocument();
+      expect(await screen.findByText(new RegExp(`at least ${MIN_PIN_LENGTH} characters, at most ${MAX_PIN_LENGTH}`))).toBeInTheDocument();
       expect(await screen.findByText(/Forgot the PIN\?/)).toBeInTheDocument();
       const first = screen.getByLabelText('New PIN');
       expect(first).toHaveAttribute('type', 'password');
@@ -178,12 +233,12 @@ describe('PinPromptHost', () => {
     it('choose mode: shows the error of the server in place and keeps the dialog open', async () => {
       render(<PinPromptHost />);
       act(() => {
-        void askForPin(async () => ({ ok: false, message: 'The PIN must have at least 6 characters (got 3). Choose a longer one.' }), 'choose');
+        void askForPin(async () => ({ ok: false, message: `The PIN must have at least ${MIN_PIN_LENGTH} characters (got 3). Choose a longer one.` }), 'choose');
       });
       fireEvent.change(await screen.findByLabelText('New PIN'), { target: { value: '123' } });
       fireEvent.change(screen.getByLabelText('Confirm the PIN'), { target: { value: '123' } });
       fireEvent.click(screen.getByRole('button', { name: 'Choose PIN' }));
-      expect(await screen.findByRole('alert')).toHaveTextContent('at least 6 characters (got 3)');
+      expect(await screen.findByRole('alert')).toHaveTextContent(`at least ${MIN_PIN_LENGTH} characters (got 3)`);
       expect(screen.getByLabelText('New PIN')).toBeInTheDocument();
     });
 
@@ -197,6 +252,18 @@ describe('PinPromptHost', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       await expect(answer).resolves.toBe(false);
     });
+  });
+
+  it('shows the repair message of the server when the status route answers a damaged auth file', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'internal', message: 'auth.json is not valid. Delete it, then choose a new PIN.' }), { status: 500, headers: { 'content-type': 'application/json' } })));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    render(<PinPromptHost />);
+    act(() => {
+      void askForPin(async () => ({ ok: true }));
+    });
+    expect(await screen.findByText(/auth\.json is not valid\. Delete it, then choose a new PIN\./)).toBeInTheDocument();
+    warn.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it('says in the dialog that the reset instructions could not be read, instead of staying silent', async () => {

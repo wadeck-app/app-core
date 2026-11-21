@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CircleArrowUp, Info, LoaderCircle, TriangleAlert } from 'lucide-react';
 import { IconButton, Popover } from '@wadeck-app/dsl-ui';
+import { readJson } from '../auth/readJson.js';
 import { getErrorMessage } from '../errors.js';
 import { fetcher } from '../fetcher.js';
 
@@ -22,10 +23,7 @@ interface AppUpdate {
 
 async function readUpdate(): Promise<AppUpdate> {
   const res = await fetch('/api/app-update');
-  if (!res.ok) {
-    throw new Error(`GET /api/app-update answered ${res.status}`);
-  }
-  const body = (await res.json()) as Partial<AppUpdate>;
+  const body = await readJson<Partial<AppUpdate>>(res, 'GET /api/app-update');
   if (typeof body.state !== 'string') {
     throw new Error('GET /api/app-update has no "state"; the server is older than this frontend');
   }

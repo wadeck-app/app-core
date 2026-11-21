@@ -89,7 +89,11 @@ const unknown = (reason: string, base: Partial<AppUpdateAnswer>, canRestart: boo
 });
 
 // Reads two small files and one package.json, never the network: cheap enough for the shell to ask every few minutes.
-export function describeAppUpdate(opts: AppUpdateOptions): AppUpdateAnswer {
+// An "applying" status that old is a dead updater (it records the status and the time it started, then ends in success, failed or
+// rolled-back): the interface must not show "installing" for ever.
+export const APPLYING_STALE_MS = 30 * 60_000;
+
+export function describeAppUpdate(opts: AppUpdateOptions, now: () => number = Date.now): AppUpdateAnswer {
   const canRestart = opts.restart !== undefined;
   const { runningVersion: running, packageDir, updaterDir } = opts;
   if (running === undefined || packageDir === undefined || updaterDir === undefined) {
@@ -121,6 +125,10 @@ export function describeAppUpdate(opts: AppUpdateOptions): AppUpdateAnswer {
   const failed = status === 'failed' || status === 'rolled-back';
   const answer: AppUpdateAnswer = { state: 'up-to-date', running, installed, latest, status, previousVersion: text(updater?.previousVersion), canRestart };
   if (status === 'applying') {
+    if (typeof updater?.timestamp === 'number' && now() - updater.timestamp > APPLYING_STALE_MS) {
+      const logFile = logFileOf(updaterDir, updater.timestamp);
+      return unknown(`the updater stopped while applying; see ${logFile ?? path.join(updaterDir, 'logs')}`, { running, installed, latest, status, previousVersion: answer.previousVersion }, canRestart);
+    }
     answer.state = 'applying';
   } else if (installed !== running) {
     answer.state = 'restart-needed';
@@ -141,7 +149,9 @@ export function describeAppUpdate(opts: AppUpdateOptions): AppUpdateAnswer {
 // GET /api/app-update (read only) and POST /api/app-update/restart (sensitive: the PIN of auth/ unlocks it, like a module route
 // declared `sensitive`).
 export const appUpdateRoutes: FastifyPluginAsync<{ update: AppUpdateOptions; configDir: string; now?: () => number }> = async (server, { update, configDir, now }) => {
-  server.get('/api/app-update', async (_req, reply) => reply.header('Cache-Control', 'no-store').send(describeAppUpdate(update)));
+  server.get('/api/app-update', async (_req, reply) => reply.header('Cache-Control', 'no-store').send(describeAppUpdate(update, now)));
+  // One restart at a time: a second request (or a second click) while one is on its way must not start a second server.
+  let restarting = false;
   server.post('/api/app-update/restart', async (req, reply) => {
     // Checked first: nothing to unlock when this run cannot restart itself.
     if (update.restart === undefined) {
@@ -152,8 +162,22 @@ export const appUpdateRoutes: FastifyPluginAsync<{ update: AppUpdateOptions; con
       return reply.code(refusal.status).send(refusal.body);
     }
     const restart = update.restart;
-    // After the answer left: the restart closes this server.
-    reply.raw.once('finish', () => setTimeout(restart, 100));
+    if (restarting) {
+      return reply.code(409).send({ error: 'restart-in-progress', message: 'A restart is already on its way: wait a few seconds, then reload the page.' });
+    }
+    restarting = true;
+    // After the answer left: the restart closes this server. A failure is said on the console (this process is still the only one
+    // running) and the flag is released, so the user can try again.
+    reply.raw.once('finish', () =>
+      setTimeout(() => {
+        try {
+          restart();
+        } catch (err) {
+          restarting = false;
+          console.error(`[app-core] restart failed: ${getErrorMessage(err)}; restart it by hand ("app-core-cli serve"), then reload the page.`);
+        }
+      }, 100),
+    );
     return reply.code(202).send({ restarting: true });
   });
 };

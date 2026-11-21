@@ -4,13 +4,11 @@ import { IconButton, ToastContext } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
 import { clearAccessToken, getAccessToken, onAccessTokenChange } from './accessToken.js';
 import { PinMenu } from './PinMenu.js';
+import { readJson } from './readJson.js';
 
 async function readElevated(): Promise<boolean> {
   const res = await fetch('/api/auth/status');
-  if (!res.ok) {
-    throw new Error(`GET /api/auth/status answered ${res.status}`);
-  }
-  const body = (await res.json()) as { elevated?: unknown };
+  const body = await readJson<{ elevated?: unknown }>(res, 'GET /api/auth/status');
   if (typeof body.elevated !== 'boolean') {
     throw new Error('GET /api/auth/status has no boolean "elevated"; the server is older than this frontend');
   }
@@ -47,9 +45,9 @@ export function LockControl(): React.ReactElement {
   const lock = async (): Promise<void> => {
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      // 204 or 200 (even {loggedOut:false}: no session on the server to end) both mean this browser is locked; a refusal throws with the server's message.
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: unknown };
-        throw new Error(typeof body.message === 'string' ? body.message : `POST /api/auth/logout answered ${res.status}`);
+        await readJson(res, 'POST /api/auth/logout');
       }
       setElevated(false);
       setHasToken(false);

@@ -154,9 +154,10 @@ describe('sensitive routes, real server (PIN, refresh cookie, access token)', ()
       expect((await launch(server, token)).status, token).toBe(401);
     }
 
-    // Logout: 204, cookie cleared, the old access tokens die at once, refresh is refused.
+    // Logout with a live session: 200 {loggedOut: true}, cookie cleared, the old access tokens die at once, refresh is refused.
     const out = await call(server, 'POST', '/api/auth/logout', { headers: { Cookie: cookie } });
-    expect(out.status).toBe(204);
+    expect(out.status).toBe(200);
+    expect(((await out.json()) as { loggedOut: boolean }).loggedOut).toBe(true);
     expect(out.headers.getSetCookie()[0]).toBe('app-core-refresh=; HttpOnly; SameSite=Strict; Path=/api/auth; Max-Age=0');
     expect((await launch(server, accessToken)).status).toBe(401);
     expect((await launch(server, second)).status).toBe(401);

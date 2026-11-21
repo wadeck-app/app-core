@@ -27,7 +27,17 @@ export const fetcher: Fetcher = async (
   const readOnly = method === 'GET' || method === 'HEAD';
   const payload = body !== undefined ? body : readOnly ? undefined : {};
   // The access token of the PIN goes to this app only (a path of this origin), never to another address.
-  const sameOrigin = path.startsWith('/') && !path.startsWith('//');
+  // Decided the way the browser will resolve it: it reads a backslash as a slash and drops tabs and newlines, so "/\evil.com/x" goes to
+  // evil.com. A path that is not an explicit address (scheme:) and still leaves this origin is refused, with no request at all.
+  let sameOrigin = false;
+  try {
+    sameOrigin = new URL(path, window.location.origin).origin === window.location.origin;
+  } catch {
+    sameOrigin = false;
+  }
+  if (!sameOrigin && !/^[a-z][a-z0-9+.-]*:/i.test(path)) {
+    throw new Error(`Refused ${method} ${JSON.stringify(path)}: it would be sent to another origin than ${window.location.origin}, and the PIN session must not leave this app. Use a path of this app such as /api/modules/<id>/...`);
+  }
   const send = async (): Promise<{ res: Response; text: string; data: unknown; parsed: boolean }> => {
     const token = sameOrigin ? getAccessToken() : undefined;
     const res = await fetch(path, {

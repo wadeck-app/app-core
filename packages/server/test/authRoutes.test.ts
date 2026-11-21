@@ -166,6 +166,18 @@ describe('auth routes and sensitive routes', () => {
     });
   });
 
+  describe('a damaged auth.json', () => {
+    it('answers a clear 500 on /api/auth/status and on a sensitive route, saying to delete or repair the file', async () => {
+      fs.writeFileSync(authFilePath(configDir), '{not json');
+      const status = await app.server.inject({ method: 'GET', url: '/api/auth/status' });
+      expect(status.statusCode).toBe(500);
+      expect((status.json() as { message: string }).message).toMatch(/auth.json.*not valid.*delete.*repair/is);
+      const sensitive = await post('/api/modules/fx/launch');
+      expect(sensitive.statusCode).toBe(500);
+      expect((sensitive.json() as { message: string }).message).toMatch(/auth.json.*not valid.*delete.*repair/is);
+    });
+  });
+
   describe('PIN set', () => {
     beforeEach(async () => {
       await setPin(configDir, PIN, now);
@@ -273,10 +285,22 @@ describe('auth routes and sensitive routes', () => {
       expect((await post('/api/auth/refresh', {}, { cookie })).json()).toMatchObject({ error: 'refresh-required' });
     });
 
-    it('logout: 204, cookie cleared, the old access token refused at once, refresh refused', async () => {
+    it('logout without a refresh cookie does not revoke anybody: 200 loggedOut false, access tokens stay valid', async () => {
+      const { token } = await login();
+      for (const headers of [{}, { cookie: 'app-core-refresh=not-a-session' }]) {
+        const res = await post('/api/auth/logout', {}, headers);
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).toMatchObject({ loggedOut: false });
+        expect((res.json() as { message: string }).message).toMatch(/no valid session/i);
+      }
+      expect((await post('/api/modules/fx/launch', {}, bearer(token))).statusCode).toBe(200);
+    });
+
+    it('logout: 200 loggedOut true, cookie cleared, the old access token refused at once, refresh refused', async () => {
       const { cookie, token } = await login();
       const res = await post('/api/auth/logout', {}, { cookie });
-      expect(res.statusCode).toBe(204);
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ loggedOut: true });
       expect(res.headers['set-cookie']).toBe(`app-core-refresh=; ${COOKIE_FLAGS}; Max-Age=0`);
       expect((await post('/api/modules/fx/launch', {}, bearer(token))).statusCode).toBe(401);
       expect((await post('/api/auth/refresh', {}, { cookie })).statusCode).toBe(401);

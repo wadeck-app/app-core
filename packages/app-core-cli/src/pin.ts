@@ -1,4 +1,4 @@
-import { authFilePath, isPinSet, MIN_PIN_LENGTH, pinProblem, setPin } from '@wadeck-app/app-core-server/auth/pin';
+import { authFilePath, isPinSet, MAX_PIN_LENGTH, MIN_PIN_LENGTH, pinProblem, setPin } from '@wadeck-app/app-core-server/auth/pin';
 import { getErrorMessage } from '@wadeck-app/app-core-server/errors';
 
 export const PIN_USAGE = 'app-core-cli pin <set|status> [--config-dir <dir>]';
@@ -38,7 +38,7 @@ export async function runPin(args: string[], deps: PinDeps): Promise<number> {
     if (!deps.interactive) {
       return fail('"pin set" needs an interactive terminal: the PIN is typed with the keyboard, hidden, and never taken from the command line, a pipe or a file. Run it in a terminal.');
     }
-    const pin = await deps.readHidden(`New PIN (at least ${MIN_PIN_LENGTH} characters, hidden): `);
+    const pin = await deps.readHidden(`New PIN (${MIN_PIN_LENGTH} to ${MAX_PIN_LENGTH} characters, hidden): `);
     // Same rule as the dashboard and setPin (one function), checked before asking twice.
     const problem = pinProblem(pin);
     if (problem !== undefined) {

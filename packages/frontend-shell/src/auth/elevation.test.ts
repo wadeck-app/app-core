@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// The real rule of the server: a change of it breaks the fixtures below instead of leaving them stale.
+import { MIN_PIN_LENGTH } from '@wadeck-app/app-core-server/auth/pin';
 import { fetcher } from '../fetcher.js';
 import { getAccessToken, storeAccessToken } from './accessToken.js';
 import { changePin } from './elevation.js';
@@ -52,9 +54,9 @@ describe('fetcher: sensitive routes (elevation)', () => {
     expect(authorizations()).toEqual(['Bearer tok.en.1']);
     script['GET https://elsewhere.example/x'] = [() => json(200, {})];
     await fetcher('GET https://elsewhere.example/x');
-    script['GET //elsewhere.example/y'] = [() => json(200, {})];
-    await fetcher('GET //elsewhere.example/y');
-    expect(calls.slice(1).map((c) => c.headers['Authorization'])).toEqual([undefined, undefined]);
+    // A scheme-less address of another host is refused (see fetcher.test.ts), nothing is sent.
+    await expect(fetcher('GET //elsewhere.example/y')).rejects.toThrow(/another origin/);
+    expect(calls.slice(1).map((c) => c.headers['Authorization'])).toEqual([undefined]);
   });
 
   it('sends no Authorization header without a token', async () => {
@@ -165,7 +167,7 @@ describe('fetcher: sensitive routes (elevation)', () => {
   it('gives the dialog the server error of set (too short, already set) and lets it try again', async () => {
     script['POST /api/modules/agent/launch'] = [notSet, () => json(200, { ok: true })];
     script['POST /api/auth/pin/set'] = [
-      () => json(400, { error: 'pin-invalid', message: 'The PIN must have at least 6 characters (got 3). Choose a longer one.' }),
+      () => json(400, { error: 'pin-invalid', message: `The PIN must have at least ${MIN_PIN_LENGTH} characters (got 3). Choose a longer one.` }),
       () => json(409, { error: 'pin-already-set', message: 'A PIN is already set, and it is not replaced from here.' }),
       () => json(200, { accessToken: 'chosen.tok.en', expiresInSeconds: 600 }),
     ];
@@ -182,7 +184,7 @@ describe('fetcher: sensitive routes (elevation)', () => {
     });
     await launch();
     expect(verdicts).toEqual([
-      { ok: false, message: 'The PIN must have at least 6 characters (got 3). Choose a longer one.' },
+      { ok: false, message: `The PIN must have at least ${MIN_PIN_LENGTH} characters (got 3). Choose a longer one.` },
       { ok: false, message: 'A PIN is already set, and it is not replaced from here.' },
       { ok: true },
     ]);

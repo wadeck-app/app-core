@@ -177,4 +177,12 @@ describe('UpdateControl', () => {
     expect(button()).toBeNull();
     warn.mockRestore();
   });
+
+  it('puts the message of the server in the console when the route answers one', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json({ error: 'internal', message: 'update-state.json is not valid. Delete it.' }, 500)));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    render(<UpdateControl />);
+    await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringContaining('update-state.json is not valid. Delete it.')));
+    warn.mockRestore();
+  });
 });

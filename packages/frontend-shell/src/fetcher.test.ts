@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { clearAccessToken, storeAccessToken } from './auth/accessToken.js';
 import { fetcher } from './fetcher.js';
 
 const answer = (body: string | null, init: ResponseInit): void => {
@@ -53,6 +54,44 @@ describe('fetcher', () => {
     answer('<!doctype html><html></html>', { status: 200, headers: { 'content-type': 'text/html' } });
     const err = await rejection('GET /api/modules/nowhere/x');
     expect(err.message).toContain('answered 200 but not with JSON (content-type "text/html")');
+  });
+});
+
+describe('fetcher: the access token goes to this origin only', () => {
+  beforeEach(() => storeAccessToken('secret-token', 600));
+  afterEach(() => {
+    clearAccessToken();
+    vi.unstubAllGlobals();
+  });
+
+  it('sends the Bearer token to a normal /api path of this origin', async () => {
+    const spy = vi.fn(async () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', spy);
+    await fetcher('GET /api/modules/task/tasks?x=1');
+    const init = (spy.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer secret-token' });
+  });
+
+  // The browser reads a backslash as a slash and drops a tab, so these start with "//evil.com": another host.
+  it.each([
+    ['a backslash', '/\\evil.com/x'],
+    ['a tab', '/\t/evil.com/x'],
+    ['two slashes', '//evil.com/x'],
+  ])('refuses %s that resolves to another host, and sends nothing', async (_name, path) => {
+    const spy = vi.fn(async () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', spy);
+    const err = await rejection(`GET ${path}`);
+    expect(err.message).toMatch(/another origin/);
+    expect(err.message).toMatch(/\/api\//);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('sends an explicit absolute address without the token', async () => {
+    const spy = vi.fn(async () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', spy);
+    await fetcher('GET https://other.example/api/x');
+    const init = (spy.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect(init.headers).not.toHaveProperty('Authorization');
   });
 });
 

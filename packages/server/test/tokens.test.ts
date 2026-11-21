@@ -104,7 +104,7 @@ describe('access token (JWT HS256)', () => {
 
   it('refuses every token of an older generation once the generation moved (logout)', () => {
     const token = signAccessToken(dir, now);
-    new SessionStore(dir, now).logout(undefined);
+    new SessionStore(dir, now).revokeAll();
     expect(verifyAccessToken(dir, token, now)).toEqual({ ok: false, reason: 'revoked' });
     expect(verifyAccessToken(dir, signAccessToken(dir, now), now)).toEqual({ ok: true });
   });
@@ -215,6 +215,26 @@ describe('refresh tokens', () => {
     expect(store.findRefresh(a)).toBe(false);
     expect(store.findRefresh(b)).toBe(true);
     expect(onDisk().generation).toBe(1);
+  });
+
+  it('logout with an unknown or missing token changes nothing and says so', () => {
+    const store = new SessionStore(dir, now);
+    const a = store.createRefresh();
+    expect(store.logout('x'.repeat(43))).toBe(false);
+    expect(store.logout(undefined)).toBe(false);
+    expect(store.generation()).toBe(0);
+    expect(store.findRefresh(a)).toBe(true);
+    expect(store.logout(a)).toBe(true);
+  });
+
+  it('reports an entry whose hash is not 64 hex characters instead of crashing the comparison later', () => {
+    new SessionStore(dir, now).createRefresh();
+    const file = onDisk();
+    (file.sessions[0] as Record<string, unknown>)['hash'] = 'abc';
+    fs.writeFileSync(sessionsFilePath(dir), JSON.stringify(file));
+    const store = new SessionStore(dir, now);
+    expect(() => store.findRefresh('x'.repeat(43))).toThrow(/auth-sessions.json.*not valid.*Delete it/s);
+    expect(() => store.useRefresh('x'.repeat(43))).toThrow(/auth-sessions.json.*not valid/s);
   });
 
   it('says what to do when the sessions file is damaged', () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_PIN_LENGTH, MIN_PIN_LENGTH } from '@wadeck-app/app-core-server/auth/pin';
 import { helpText, isHelpRequest, isVersionFlag, updatePlan } from './help.js';
 
 describe('isHelpRequest', () => {
@@ -33,6 +34,12 @@ describe('helpText', () => {
     expect(text).toContain('per machine');
     expect(text).toContain('never taken from the command line');
     expect(helpText(['--help'])).toContain('  pin ');
+  });
+
+  it('states the PIN length rule of the server (both limits), so a rule change shows here', () => {
+    const text = helpText(['pin', '--help']);
+    expect(text).toContain(`${MIN_PIN_LENGTH} to ${MAX_PIN_LENGTH} characters`);
+    expect(text).not.toContain('at least 6');
   });
 
   it('says that update installs a release, so nobody learns it by running it', () => {

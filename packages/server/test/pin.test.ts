@@ -64,6 +64,16 @@ describe('PIN storage', () => {
     await expect(verifyPin(dir, '123456')).rejects.toThrow(/auth\.json/);
   });
 
+  it('revokes the sessions BEFORE writing the new PIN: a crash in between must not leave old sessions valid with the new PIN', async () => {
+    const store = new SessionStore(dir);
+    const token = store.createRefresh();
+    // A directory in place of auth.json makes the write fail, as a crash right after the revoke would.
+    fs.mkdirSync(authFilePath(dir));
+    await expect(setPin(dir, '123456')).rejects.toThrow();
+    expect(store.generation()).toBe(1);
+    expect(store.findRefresh(token)).toBe(false);
+  });
+
   it('leaves no temporary file behind (atomic write)', async () => {
     await setPin(dir, '123456');
     expect(fs.readdirSync(dir).filter((f) => f.includes('.tmp'))).toEqual([]);

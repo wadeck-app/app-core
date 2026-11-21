@@ -125,9 +125,13 @@ interface SessionsFile {
 
 const hashOf = (token: string): string => createHash('sha256').update(token).digest('hex');
 
+// The hash is compared in constant time against a SHA-256: anything but 64 hex characters would make that comparison throw, so a file
+// holding it is refused as damaged (read() says what to do) instead of failing every refresh later.
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
 function isEntry(value: unknown): value is SessionEntry {
   const e = value as Partial<Record<keyof SessionEntry, unknown>> | null;
-  return typeof e === 'object' && e !== null && typeof e.hash === 'string' && typeof e.createdAt === 'number' && typeof e.lastUsedAt === 'number' && typeof e.expiresAt === 'number';
+  return typeof e === 'object' && e !== null && typeof e.hash === 'string' && SHA256_HEX.test(e.hash) && typeof e.createdAt === 'number' && typeof e.lastUsedAt === 'number' && typeof e.expiresAt === 'number';
 }
 
 // The refresh tokens and the generation counter, in auth-sessions.json. The file is read at every operation (the CLI changes it
@@ -237,15 +241,20 @@ export class SessionStore {
     return true;
   }
 
-  // "Lock now": every access token issued so far stops working (generation + 1), and this refresh token, when given, is deleted.
-  logout(token: string | undefined): void {
-    const { raw } = this.load();
-    raw.generation += 1;
-    if (token !== undefined) {
-      const entry = this.find(raw.sessions, token);
-      raw.sessions = raw.sessions.filter((candidate) => candidate !== entry);
+  // "Lock now": this refresh token is deleted and every access token issued so far stops working (generation + 1). Only a token that
+  // is a live session does that: with none, or an unknown one, nothing changes and the answer is false (whoever can reach the port
+  // must not be able to lock the user out).
+  logout(token: string | undefined): boolean {
+    const { raw, effective } = this.load();
+    const entry = token === undefined ? undefined : this.find(effective, token);
+    if (entry === undefined) {
+      return false;
     }
+    raw.generation += 1;
+    raw.sessions = raw.sessions.filter((candidate) => candidate.hash !== entry.hash);
+    this.pending.delete(entry.hash);
     this.write(raw);
+    return true;
   }
 
   // A new PIN: nobody stays logged in (generation + 1, every refresh token deleted).

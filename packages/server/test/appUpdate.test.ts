@@ -127,7 +127,7 @@ describe('GET /api/app-update and POST /api/app-update/restart', () => {
 
     it('is applying while the updater is installing', async () => {
       installed(RUNNING);
-      state({ status: 'applying', currentVersion: RUNNING, targetVersion: NEWER, phase: 'staged', pid: 1, timestamp: 1 });
+      state({ status: 'applying', currentVersion: RUNNING, targetVersion: NEWER, phase: 'staged', pid: 1, timestamp: Date.now() });
       cache(NEWER);
       const body = await get();
       expect(body['state']).toBe('applying');
@@ -172,6 +172,66 @@ describe('GET /api/app-update and POST /api/app-update/restart', () => {
       expect(res.statusCode).toBe(202);
       expect(res.json()).toEqual({ restarting: true });
       await vi.waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
+    });
+
+    it('restarts once even when two requests come: the second is refused with 409 restart-in-progress', async () => {
+      const restart = vi.fn();
+      await setPin(configDir, '482915');
+      const built = await start({ runningVersion: RUNNING, packageDir, updaterDir, restart });
+      const headers = { authorization: `Bearer ${signAccessToken(configDir)}` };
+      const first = await post(built, headers);
+      const second = await post(built, headers);
+      expect(first.statusCode).toBe(202);
+      expect(second.statusCode).toBe(409);
+      expect(second.json()).toMatchObject({ error: 'restart-in-progress' });
+      await vi.waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(restart).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a failed restart on the console, with what to do, and accepts a new request afterwards', async () => {
+      const restart = vi.fn(() => {
+        throw new Error('restart is not ready');
+      });
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        await setPin(configDir, '482915');
+        const built = await start({ runningVersion: RUNNING, packageDir, updaterDir, restart });
+        const headers = { authorization: `Bearer ${signAccessToken(configDir)}` };
+        expect((await post(built, headers)).statusCode).toBe(202);
+        await vi.waitFor(() => expect(consoleError).toHaveBeenCalledTimes(1));
+        expect(String(consoleError.mock.calls[0]?.[0])).toMatch(/restart failed: restart is not ready.*restart it by hand/);
+        expect((await post(built, headers)).statusCode).toBe(202);
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
+  });
+
+  describe('a stuck updater', () => {
+    it('is unknown, naming the log file, when "applying" is older than 30 minutes', async () => {
+      installed(RUNNING);
+      const startedAt = Date.UTC(2026, 10, 20, 10, 0, 0);
+      const logFile = path.join(updaterDir, 'logs', '2026-11-20.ndjson');
+      writeJson(logFile, '');
+      state({ status: 'applying', currentVersion: RUNNING, targetVersion: NEWER, phase: 'staged', pid: 1, timestamp: startedAt });
+      cache(NEWER);
+      const fakeNow = startedAt + 31 * 60_000;
+      const built = await buildServer({ configDir, publicDir: path.join(root, 'no-public'), authClock: () => fakeNow, update: { runningVersion: RUNNING, packageDir, updaterDir } });
+      app = built;
+      const body = (await built.server.inject({ method: 'GET', url: '/api/app-update' })).json() as Record<string, any>;
+      expect(body['state']).toBe('unknown');
+      expect(body['reason']).toBe(`the updater stopped while applying; see ${logFile}`);
+    });
+
+    it('stays applying at 29 minutes', async () => {
+      installed(RUNNING);
+      const startedAt = Date.UTC(2026, 10, 20, 10, 0, 0);
+      state({ status: 'applying', currentVersion: RUNNING, targetVersion: NEWER, phase: 'staged', pid: 1, timestamp: startedAt });
+      cache(NEWER);
+      const built = await buildServer({ configDir, publicDir: path.join(root, 'no-public'), authClock: () => startedAt + 29 * 60_000, update: { runningVersion: RUNNING, packageDir, updaterDir } });
+      app = built;
+      expect(((await built.server.inject({ method: 'GET', url: '/api/app-update' })).json() as Record<string, any>)['state']).toBe('applying');
     });
   });
 });
