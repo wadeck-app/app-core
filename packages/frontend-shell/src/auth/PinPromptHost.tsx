@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { ButtonAction, Dialog } from '@wadeck-app/dsl-ui';
 import { getErrorMessage } from '../errors.js';
-import { HiddenSubmit, PinField, submitBlockedReason } from './PinField.js';
+import { PinField, submitBlockedReason } from './PinField.js';
 import { setPinAsker, type PinAsker, type PinPromptMode, type PinVerdict } from './pinPrompt.js';
 import { lengthRule } from './pinStatus.js';
 import { ResetHint, usePinStatus } from './ResetHint.js';
@@ -25,6 +25,7 @@ export function PinPromptHost(): React.ReactElement {
   const pendingRef = useRef<Pending | null>(null);
   const [mismatch, setMismatch] = useState<string | undefined>(undefined);
   const formRef = useRef<HTMLFormElement>(null);
+  const formId = useId();
   const [refocus, setRefocus] = useState(0);
   useEffect(() => {
     if (refocus > 0) {
@@ -126,13 +127,14 @@ export function PinPromptHost(): React.ReactElement {
       actions={
         <>
           <ButtonAction label="Cancel" variant="secondary" onClick={() => pending?.settle(false)} />
-          {/* The button lives in the dialog actions, outside the form (ButtonAction has no `form` attribute): it asks the form to submit, which runs the same path as Enter (see HiddenSubmit). */}
-          <ButtonAction label={choosing ? 'Choose PIN' : 'Unlock'} variant="primary" disabled={!canSubmit} disabledReason={blockedReason} loading={busy} onClick={() => formRef.current?.requestSubmit()} />
+          {/* The button lives in the dialog actions, outside the form: its `form` attribute makes it the submit button of the form, so a click and Enter take the same path. */}
+          <ButtonAction label={choosing ? 'Choose PIN' : 'Unlock'} variant="primary" disabled={!canSubmit} disabledReason={blockedReason} loading={busy} type="submit" form={formId} />
         </>
       }
     >
       <form
         ref={formRef}
+        id={formId}
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
@@ -151,7 +153,6 @@ export function PinPromptHost(): React.ReactElement {
             {shown}
           </p>
         ) : null}
-        <HiddenSubmit />
         <ResetHint status={status} error={statusError} />
       </form>
     </Dialog>

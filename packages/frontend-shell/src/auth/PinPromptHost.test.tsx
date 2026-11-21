@@ -110,11 +110,10 @@ describe('PinPromptHost', () => {
     const first = await screen.findByLabelText('New PIN');
     const form = first.closest('form') as HTMLFormElement;
     const button = screen.getByRole('button', { name: 'Choose PIN' });
-    const hidden = screen.getByTestId('pin-hidden-submit');
-    expect(hidden.closest('form')).toBe(form);
-    expect(hidden).toHaveAttribute('type', 'submit');
-    expect(hidden).toHaveAttribute('tabindex', '-1');
-    expect(button).toHaveAttribute('type', 'button');
+    // The footer button is the submit button of the form through its `form` attribute: Enter in a field and a click take one path.
+    expect(button).toHaveAttribute('type', 'submit');
+    expect(button).toHaveAttribute('form', form.id);
+    expect(form.id).not.toBe('');
     const onSubmit = vi.fn();
     form.addEventListener('submit', onSubmit);
     fireEvent.change(first, { target: { value: '482915' } });
@@ -167,7 +166,7 @@ describe('PinPromptHost', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('app-core-cli pin set');
   });
 
-  it('unlock mode: Enter (the invisible submit button of the form) asks the server once', async () => {
+  it('unlock mode: the footer submit button asks the server once', async () => {
     render(<PinPromptHost />);
     const verify = vi.fn(async (): Promise<PinVerdict> => ({ ok: true }));
     let answer!: Promise<boolean>;
@@ -176,7 +175,7 @@ describe('PinPromptHost', () => {
     });
     await screen.findByLabelText('PIN');
     type('482915');
-    fireEvent.click(screen.getByTestId('pin-hidden-submit'));
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
     await expect(answer).resolves.toBe(true);
     expect(verify).toHaveBeenCalledTimes(1);
   });

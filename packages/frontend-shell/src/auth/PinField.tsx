@@ -50,10 +50,3 @@ export function submitBlockedReason({ busy, locked, remaining, filled, fieldsHin
   }
   return filled ? undefined : fieldsHint;
 }
-
-// A button of a form whose actions sit outside of it (a dialog footer), or inside: it is never the one a browser presses on Enter
-// (the ButtonAction of the design system has no `form` attribute), so the form carries this invisible submit button. It is out of the
-// tab order and of the accessibility tree: the visible button does the work for a pointer, this one only catches the Enter key.
-export function HiddenSubmit(): React.ReactElement {
-  return <button type="submit" tabIndex={-1} aria-hidden="true" className="sr-only" data-testid="pin-hidden-submit" />;
-}
