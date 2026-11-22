@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -9,6 +10,7 @@ import {
   SessionStore,
   secretFilePath,
   sessionsFilePath,
+  sessionsLockPath,
   signAccessToken,
   verifyAccessToken,
 } from '../src/auth/tokens.js';
@@ -240,5 +242,92 @@ describe('refresh tokens', () => {
   it('says what to do when the sessions file is damaged', () => {
     fs.writeFileSync(sessionsFilePath(dir), '{oops');
     expect(() => new SessionStore(dir, now).generation()).toThrow(/auth-sessions\.json.*not valid.*Delete it/s);
+  });
+});
+
+// The server and `app-core-cli pin set` (another process) both read, change and write auth-sessions.json: without a lock, a write made
+// from an older read can undo the other's generation bump, and tokens revoked by a new PIN would be valid again.
+describe('the lock around auth-sessions.json', () => {
+  let dir: string;
+  const clock = { now: 1_700_000_000_000 };
+  const now = (): number => clock.now;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-core-lock-'));
+    clock.now = 1_700_000_000_000;
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+  const store = (): SessionStore => new SessionStore(dir, now, { lockTimeoutMs: 80 });
+  const writeLock = (content: string): void => fs.writeFileSync(sessionsLockPath(dir), content);
+  const deadPid = (): number => {
+    const child = spawnSync(process.execPath, ['--version']);
+    if (child.pid === undefined) {
+      throw new Error('could not start a child process to get a pid that is gone');
+    }
+    return child.pid;
+  };
+
+  it('leaves no lock file behind after any change', () => {
+    const sessions = store();
+    const token = sessions.createRefresh();
+    expect(fs.existsSync(sessionsLockPath(dir))).toBe(false);
+    sessions.useRefresh(token);
+    sessions.findRefresh(token);
+    sessions.logout(token);
+    sessions.revokeAll();
+    expect(fs.existsSync(sessionsLockPath(dir))).toBe(false);
+  });
+
+  it('releases the lock when the change fails (a damaged file), so the next one is not blocked', () => {
+    fs.writeFileSync(sessionsFilePath(dir), '{oops');
+    expect(() => store().createRefresh()).toThrow(/not valid/);
+    expect(fs.existsSync(sessionsLockPath(dir))).toBe(false);
+  });
+
+  it('refuses to change the file while a live process holds the lock, says who holds it and what to delete, and writes nothing', () => {
+    const sessions = store();
+    sessions.revokeAll();
+    const before = fs.readFileSync(sessionsFilePath(dir), 'utf8');
+    writeLock(JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
+    expect(() => sessions.createRefresh()).toThrow(new RegExp(`auth-sessions\\.json\\.lock.*pid ${process.pid}.*delete`, 'is'));
+    expect(() => sessions.revokeAll()).toThrow(/auth-sessions\.json\.lock/);
+    expect(fs.readFileSync(sessionsFilePath(dir), 'utf8')).toBe(before);
+    // Not ours to remove: the holder is alive.
+    expect(fs.existsSync(sessionsLockPath(dir))).toBe(true);
+  });
+
+  it('takes over a lock whose process is gone (a crash), then removes it', () => {
+    writeLock(JSON.stringify({ pid: deadPid(), at: new Date().toISOString() }));
+    expect(() => store().createRefresh()).not.toThrow();
+    expect(fs.existsSync(sessionsLockPath(dir))).toBe(false);
+  });
+
+  it('takes over a lock that is much older than any change takes, even when its pid is alive (a reused pid)', () => {
+    writeLock(JSON.stringify({ pid: process.pid, at: new Date(0).toISOString() }));
+    const old = new Date(Date.now() - 10 * 60_000);
+    fs.utimesSync(sessionsLockPath(dir), old, old);
+    expect(() => store().createRefresh()).not.toThrow();
+    expect(fs.existsSync(sessionsLockPath(dir))).toBe(false);
+  });
+
+  it('does not take a fresh lock it cannot read (its writer may be between creating and filling it)', () => {
+    writeLock('');
+    expect(() => store().createRefresh()).toThrow(/auth-sessions\.json\.lock/);
+  });
+
+  it('reading the generation needs no lock: a verifier is never blocked by a writer', () => {
+    const sessions = store();
+    sessions.revokeAll();
+    writeLock(JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
+    expect(sessions.generation()).toBe(1);
+  });
+
+  it('is re-entrant inside one store: a change that reads the file (purging expired entries) does not wait for itself', () => {
+    const sessions = store();
+    const token = sessions.createRefresh();
+    clock.now += 8 * 24 * 3600 * 1000;
+    expect(sessions.useRefresh(token)).toBe(false);
+    expect(fs.existsSync(sessionsLockPath(dir))).toBe(false);
   });
 });

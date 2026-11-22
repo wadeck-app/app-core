@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { writeFileAtomic } from './atomicWrite.js';
+import { DEFAULT_LOCK_TIMEOUT_MS, withFileLock } from './fileLock.js';
 
 // Two kinds of token, both proving that the user typed the PIN:
 //  - the access token: a JWT (HS256, built here with node:crypto, no library) that lives 10 minutes and is sent as
@@ -23,6 +24,7 @@ const SECRET_BYTES = 32;
 
 export const secretFilePath = (configDir: string): string => path.join(configDir, 'auth-secret');
 export const sessionsFilePath = (configDir: string): string => path.join(configDir, 'auth-sessions.json');
+export const sessionsLockPath = (configDir: string): string => `${sessionsFilePath(configDir)}.lock`;
 
 // The signing secret: read, or created at the first use (flag 'wx' so two processes never end with two different secrets).
 function readSecret(configDir: string): Buffer {
@@ -135,16 +137,36 @@ function isEntry(value: unknown): value is SessionEntry {
 }
 
 // The refresh tokens and the generation counter, in auth-sessions.json. The file is read at every operation (the CLI changes it
-// while the server runs: a new PIN revokes everything); what is not worth a disk write (the slid expiry of a token used again within
+// while the server runs: a new PIN revokes everything), and every change (read, change, write) holds a lock file between processes, so
+// a write made from an older read cannot undo the other process's generation bump. Reading the generation takes no lock: the file is
+// replaced by one rename, a reader sees the old or the new one, never half of one; what is not worth a disk write (the slid expiry of a token used again within
 // SESSION_WRITE_THROTTLE_MS) is kept in memory and applied on top of what is read.
 export class SessionStore {
   // Slid expiry not yet written, by token hash.
   private readonly pending = new Map<string, { lastUsedAt: number; expiresAt: number }>();
 
+  // How many nested changes of this store hold the lock (load() writes the purge inside the change that called it).
+  private lockDepth = 0;
+
   constructor(
     private readonly configDir: string,
     private readonly now: () => number = Date.now,
+    private readonly options: { lockTimeoutMs?: number } = {},
   ) {}
+
+  private exclusive<T>(fn: () => T): T {
+    if (this.lockDepth > 0) {
+      return fn();
+    }
+    return withFileLock(sessionsLockPath(this.configDir), this.options.lockTimeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS, () => {
+      this.lockDepth += 1;
+      try {
+        return fn();
+      } finally {
+        this.lockDepth -= 1;
+      }
+    });
+  }
 
   private read(): SessionsFile {
     const file = sessionsFilePath(this.configDir);
@@ -199,12 +221,14 @@ export class SessionStore {
 
   // A new refresh token for a session; the token itself is returned once and kept nowhere.
   createRefresh(): string {
-    const token = randomBytes(32).toString('base64url');
-    const now = this.now();
-    const { raw } = this.load();
-    raw.sessions.push({ hash: hashOf(token), createdAt: now, lastUsedAt: now, expiresAt: now + REFRESH_WINDOW_MS });
-    this.write(raw);
-    return token;
+    return this.exclusive(() => {
+      const token = randomBytes(32).toString('base64url');
+      const now = this.now();
+      const { raw } = this.load();
+      raw.sessions.push({ hash: hashOf(token), createdAt: now, lastUsedAt: now, expiresAt: now + REFRESH_WINDOW_MS });
+      this.write(raw);
+      return token;
+    });
   }
 
   private find(entries: SessionEntry[], token: string): SessionEntry | undefined {
@@ -220,11 +244,15 @@ export class SessionStore {
 
   // Whether the token is a live session. Does not extend it (the status of the interface asks this on every page load).
   findRefresh(token: string): boolean {
-    return this.find(this.load().effective, token) !== undefined;
+    return this.exclusive(() => this.find(this.load().effective, token) !== undefined);
   }
 
   // Same, and the session now lasts REFRESH_WINDOW_MS from this moment.
   useRefresh(token: string): boolean {
+    return this.exclusive(() => this.useRefreshLocked(token));
+  }
+
+  private useRefreshLocked(token: string): boolean {
     const { raw, effective } = this.load();
     const entry = this.find(effective, token);
     if (entry === undefined) {
@@ -245,6 +273,10 @@ export class SessionStore {
   // is a live session does that: with none, or an unknown one, nothing changes and the answer is false (whoever can reach the port
   // must not be able to lock the user out).
   logout(token: string | undefined): boolean {
+    return this.exclusive(() => this.logoutLocked(token));
+  }
+
+  private logoutLocked(token: string | undefined): boolean {
     const { raw, effective } = this.load();
     const entry = token === undefined ? undefined : this.find(effective, token);
     if (entry === undefined) {
@@ -259,10 +291,12 @@ export class SessionStore {
 
   // A new PIN: nobody stays logged in (generation + 1, every refresh token deleted).
   revokeAll(): void {
-    const { raw } = this.load();
-    raw.generation += 1;
-    raw.sessions = [];
-    this.pending.clear();
-    this.write(raw);
+    this.exclusive(() => {
+      const { raw } = this.load();
+      raw.generation += 1;
+      raw.sessions = [];
+      this.pending.clear();
+      this.write(raw);
+    });
   }
 }

@@ -99,7 +99,9 @@ describe('UpdateControl', () => {
     await waitFor(() => expect(calls).toContain('POST /api/app-update/restart'));
     // Still the old server for a moment, then down, then back with the new version.
     current = 'down';
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    // Not a guessed pause: wait until the control has really polled the dead server a few times.
+    const pollsBefore = calls.length;
+    await waitFor(() => expect(calls.length).toBeGreaterThanOrEqual(pollsBefore + 3));
     expect(reload).not.toHaveBeenCalled();
     current = answer({ running: NEW, installed: NEW, latest: NEW });
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));

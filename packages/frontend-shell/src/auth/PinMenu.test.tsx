@@ -5,6 +5,7 @@ import { MAX_PIN_LENGTH, MIN_PIN_LENGTH } from '@wadeck-app/app-core-server/auth
 import { getAccessToken } from './accessToken.js';
 import { PinMenu } from './PinMenu.js';
 import { setPinAsker, type PinAsker } from './pinPrompt.js';
+import { settle } from '../testSettle.js';
 
 const HINT = { files: ['C:\\Users\\me\\.config\\app-core\\auth.json'], instruction: 'Delete this file (no restart needed), then choose a new PIN.' };
 const json = (status: number, body: unknown): Response => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -183,7 +184,7 @@ describe('PinMenu', () => {
     await open();
     fireEvent.click(await screen.findByRole('button', { name: 'Choose a PIN' }));
     await waitFor(() => expect(asker).toHaveBeenCalledTimes(1));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DateSettingsProvider } from '../dates/DateFormatContext.js';
+import { settle } from '../testSettle.js';
 import { TopBarActions } from './TopBarActions.js';
 
 const json = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -94,7 +95,7 @@ describe('two popovers of the top bar', () => {
     press(screen.getByRole('button', { name: 'Versions' }));
     await waitFor(() => expect(screen.getAllByTestId('popover-content')).toHaveLength(1));
     // Still there after the events and effects of the click have settled.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
     expect(screen.getAllByTestId('popover-content')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Versions' })).not.toHaveAttribute('title');
     expect(screen.getByRole('button', { name: 'Theme' })).toHaveAttribute('title', 'Theme');
@@ -112,7 +113,7 @@ describe('two popovers of the top bar', () => {
     await screen.findByTestId('popover-content');
     press(screen.getByRole('button', { name: 'Theme' }));
     await waitFor(() => expect(screen.getAllByTestId('popover-content')).toHaveLength(1));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
     expect(screen.getAllByTestId('popover-content')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Theme' })).not.toHaveAttribute('title');
   });
