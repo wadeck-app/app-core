@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { looksLikeShellRequest } from '../requestGuard.js';
 import type { RegisterProtection } from './registerGuard.js';
+import { refuseUnlessElevated } from './guard.js';
 import { PinLockout } from './lockout.js';
 import { isPinSet, MAX_PIN_LENGTH, MAX_PIN_REQUEST_LENGTH, MIN_PIN_LENGTH, PIN_NOT_SET_MESSAGE, pinProblem, pinResetHint, setPin, verifyPin } from './pin.js';
 import { ACCESS_TOKEN_SECONDS, REFRESH_WINDOW_MS, SessionStore, signAccessToken } from './tokens.js';
@@ -177,6 +178,17 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
     const loggedOut = sessions.logout(refreshTokenOf(request));
     reply.header('Set-Cookie', cookieHeader('', 0));
     return loggedOut ? { loggedOut } : { loggedOut, message: 'No valid session was presented (no refresh cookie, or it expired): nothing was locked. If sensitive actions are still unlocked in another browser, lock them from that browser.' };
+  });
+
+  // For a process that holds an access token and must not trust it blindly (the CLI of another tool, called by a module): the same
+  // check a `sensitive` route makes, answered on its own. It reveals no claim and no secret, and only confirms a token the caller
+  // already has. Not a PIN guess surface: it takes no PIN.
+  server.post('/api/auth/verify', async (request, reply) => {
+    const refusal = refuseUnlessElevated(configDir, request.headers.authorization, now);
+    if (refusal !== undefined) {
+      return reply.code(refusal.status).send(refusal.body);
+    }
+    return { ok: true };
   });
 
   server.get('/api/auth/status', async (request) => {

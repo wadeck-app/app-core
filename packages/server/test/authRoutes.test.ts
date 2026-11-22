@@ -540,4 +540,59 @@ describe('auth routes and sensitive routes', () => {
   it('writes auth files only in the config dir given', () => {
     expect(authFilePath(configDir)).toBe(path.join(configDir, 'auth.json'));
   });
+
+  // What a process that is not the browser (the CLI of another tool) asks before it trusts a token it was handed: the same check as a
+  // sensitive route, as an answer of its own. No browser headers: a CLI sends none, only a JSON body ({}) like every POST of the API.
+  describe('POST /api/auth/verify', () => {
+    const verify = (headers: Record<string, string> = {}) => app.server.inject({ method: 'POST', url: '/api/auth/verify', payload: {}, headers });
+
+    it('answers 403 pin-not-set while no PIN exists, even with a Bearer header', async () => {
+      const res = await verify(bearer('anything'));
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toEqual({ error: 'pin-not-set', message: PIN_NOT_SET_MESSAGE });
+    });
+
+    it('answers 401 elevation-required without a token, and for a token that is not one', async () => {
+      await setPin(configDir, PIN, now);
+      for (const headers of [{}, bearer('not.a.jwt'), bearer('x')]) {
+        const res = await verify(headers);
+        expect(res.statusCode).toBe(401);
+        expect(res.json()).toMatchObject({ error: 'elevation-required' });
+      }
+    });
+
+    it('answers 200 {ok:true} for the access token the PIN gave, and says nothing else', async () => {
+      await setPin(configDir, PIN, now);
+      const { token } = await login();
+      const res = await verify(bearer(token));
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ ok: true });
+    });
+
+    it('refuses the token once it has expired (10 minutes) and the reason says so', async () => {
+      await setPin(configDir, PIN, now);
+      const { token } = await login();
+      clock.now += 601_000;
+      const res = await verify(bearer(token));
+      expect(res.statusCode).toBe(401);
+      expect((res.json() as { message: string }).message).toContain('expired');
+    });
+
+    it('refuses the token once the session is locked (generation changed)', async () => {
+      await setPin(configDir, PIN, now);
+      const { token, cookie } = await login();
+      expect((await verify(bearer(token))).statusCode).toBe(200);
+      await post('/api/auth/logout', {}, { cookie });
+      const res = await verify(bearer(token));
+      expect(res.statusCode).toBe(401);
+      expect((res.json() as { message: string }).message).toContain('revoked');
+    });
+
+    it('is the same answer as a sensitive route for the same token', async () => {
+      await setPin(configDir, PIN, now);
+      const { token } = await login();
+      clock.now += 601_000;
+      expect((await post('/api/modules/fx/launch', {}, bearer(token))).statusCode).toBe((await verify(bearer(token))).statusCode);
+    });
+  });
 });
