@@ -175,4 +175,15 @@ describe('PinMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change PIN' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('auth.json is not valid. Delete it.');
   });
+
+  it('closing the Choose a PIN dialog is an answer, not an error: no alert in the menu', async () => {
+    pinSet = false;
+    const asker = vi.fn<PinAsker>(async () => false);
+    setPinAsker(asker);
+    await open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose a PIN' }));
+    await waitFor(() => expect(asker).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });

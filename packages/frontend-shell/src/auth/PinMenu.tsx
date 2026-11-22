@@ -3,7 +3,7 @@ import { KeyRound } from 'lucide-react';
 import { ButtonAction } from '@wadeck-app/dsl-ui';
 import { TopBarPopover } from '../layout/TopBarPopover.js';
 import { getErrorMessage } from '../errors.js';
-import { changePin, choosePin } from './elevation.js';
+import { CHOOSE_CANCELLED_MESSAGE, changePin, choosePin } from './elevation.js';
 import { PinField, submitBlockedReason } from './PinField.js';
 import { lengthRule } from './pinStatus.js';
 import { ResetHint, usePinStatus } from './ResetHint.js';
@@ -110,7 +110,11 @@ function PinMenuContent(): React.ReactElement {
       await choosePin();
       // The PIN exists now: reopen to see the change form.
     } catch (err) {
-      setChooseError(getErrorMessage(err));
+      const message = getErrorMessage(err);
+      // Closing the dialog is an answer, not a failure (LockControl does the same).
+      if (message !== CHOOSE_CANCELLED_MESSAGE) {
+        setChooseError(message);
+      }
     }
   };
 

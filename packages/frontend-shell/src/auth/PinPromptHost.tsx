@@ -43,6 +43,11 @@ export function PinPromptHost(): React.ReactElement {
           mode,
           verify,
           settle: (accepted) => {
+            // Answered already (a Cancel while the server was asked, then its late verdict): nothing to answer, and the dialog now open is
+            // the one of another question.
+            if (pendingRef.current !== next) {
+              return;
+            }
             pendingRef.current = null;
             setPending(null);
             resolve(accepted);
@@ -135,6 +140,13 @@ export function PinPromptHost(): React.ReactElement {
       <form
         ref={formRef}
         id={formId}
+        // A browser does nothing on Enter when the submit button is greyed out: say what is missing, as the button's tooltip does.
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !canSubmit && blockedReason !== undefined && !locked) {
+            event.preventDefault();
+            setMessage(blockedReason);
+          }
+        }}
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();

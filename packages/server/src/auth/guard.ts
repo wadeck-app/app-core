@@ -7,6 +7,8 @@ import { verifyAccessToken } from './tokens.js';
 export interface Refusal {
   status: 401 | 403;
   body: { error: 'pin-not-set' | 'elevation-required'; message: string };
+  // Why the token was not accepted (elevation-required only): 'missing', or the verdict of verifyAccessToken (malformed, expired, revoked...).
+  reason?: string;
 }
 
 export function bearerTokenOf(authorization: string | undefined): string | undefined {
@@ -26,6 +28,7 @@ export function refuseUnlessElevated(configDir: string, authorization: string | 
   const why = token === undefined ? 'no access token came with the request' : `the access token is not accepted (${verdict?.ok === false ? verdict.reason : 'unknown'})`;
   return {
     status: 401,
+    reason: token === undefined ? 'missing' : verdict?.ok === false ? verdict.reason : 'unknown',
     body: { error: 'elevation-required', message: `This action needs the PIN: ${why}. Enter the PIN in the dashboard (POST /api/auth/pin), then repeat the request with "Authorization: Bearer <accessToken>".` },
   };
 }

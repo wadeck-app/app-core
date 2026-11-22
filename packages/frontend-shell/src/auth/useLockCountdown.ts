@@ -9,7 +9,14 @@ export function useLockCountdown(): { locked: boolean; remaining: number; lock: 
     if (lockedUntil <= Date.now()) {
       return undefined;
     }
-    const timer = setInterval(() => setNow(Date.now()), 500);
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      // Over: nothing left to count, so the timer stops instead of re-rendering the form twice a second until it unmounts.
+      if (current >= lockedUntil) {
+        clearInterval(timer);
+      }
+    }, 500);
     return () => clearInterval(timer);
   }, [lockedUntil]);
 

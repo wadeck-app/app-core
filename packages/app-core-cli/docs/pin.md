@@ -44,9 +44,9 @@ Tokens: access = JWT HS256, 10 minutes, kept by the dashboard in localStorage `a
 
 `POST /api/auth/verify` is for a tool that is handed a token (a module passes the caller's `Authorization: Bearer` to a CLI) and must not trust it blindly. It makes the same check as a `sensitive` route and tells nothing else.
 
-- Request: `Authorization: Bearer <access token>`, `Content-Type: application/json`, body `{}`. Port: `<config dir>/server.port.json` (`{"pid","port"}`), host 127.0.0.1.
+- Request: `Authorization: Bearer <access token>`, `Content-Type: application/json`, body `{}`. Port: `<config dir>/server.port.json` (`{"pid","port"}`), host 127.0.0.1, config dir = `APP_CORE_CONFIG_DIR`, else `~/.config/app-core`. The file survives a forced kill: check that `pid` is alive before sending the token to that port (see `serve.md`).
 - 200 `{"ok":true}`: signature, issuer, `sensitive`, expiry (10 min) and generation are valid now, and a PIN is set. Accept only 200.
-- 401 `elevation-required` (`message` says why: missing, malformed, expired, revoked); 403 `pin-not-set`.
+- 401 `elevation-required` (`message` names the reason: missing, malformed, bad-algorithm, bad-signature, bad-claims, expired, revoked); 403 `pin-not-set`.
 - Scope: it proves the PIN was entered in the last 10 minutes and not locked since. It does not bind the token to an action or a caller.
 - Do not verify offline: the generation counter in `auth-sessions.json` revokes tokens, and the token format is internal.
 

@@ -186,7 +186,10 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (server, 
   server.post('/api/auth/verify', async (request, reply) => {
     const refusal = refuseUnlessElevated(configDir, request.headers.authorization, now);
     if (refusal !== undefined) {
-      return reply.code(refusal.status).send(refusal.body);
+      // The message of a sensitive route sends the caller to the PIN route of the dashboard: a tool that only checks a token must not be
+      // sent there. It gets the reason, and what to do is its caller's business.
+      const message = refusal.body.error === 'pin-not-set' ? refusal.body.message : `The access token is not accepted (${refusal.reason ?? 'unknown'}). A new one comes from the PIN entered in the dashboard.`;
+      return reply.code(refusal.status).send({ error: refusal.body.error, message });
     }
     return { ok: true };
   });

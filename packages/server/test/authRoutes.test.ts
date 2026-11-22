@@ -595,4 +595,33 @@ describe('auth routes and sensitive routes', () => {
       expect((await post('/api/modules/fx/launch', {}, bearer(token))).statusCode).toBe((await verify(bearer(token))).statusCode);
     });
   });
+
+  describe('POST /api/auth/verify, what a tool relies on', () => {
+    it('says the token is refused and why, without sending a CLI to the dashboard PIN route', async () => {
+      await setPin(configDir, PIN, now);
+      const { token } = await login();
+      clock.now += 601_000;
+      const res = await app.server.inject({ method: 'POST', url: '/api/auth/verify', payload: {}, headers: bearer(token) });
+      const body = res.json() as { error: string; message: string };
+      expect(body.error).toBe('elevation-required');
+      expect(body.message).toContain('expired');
+      expect(body.message).not.toContain('/api/auth/pin');
+    });
+
+    it('answers 403 pin-not-set when the PIN was deleted, even for a token that was valid', async () => {
+      await setPin(configDir, PIN, now);
+      const { token } = await login();
+      fs.rmSync(authFilePath(configDir));
+      const res = await app.server.inject({ method: 'POST', url: '/api/auth/verify', payload: {}, headers: bearer(token) });
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({ error: 'pin-not-set' });
+    });
+
+    it('needs a JSON body: a POST without one is a 415 (documented for the tools that call it)', async () => {
+      await setPin(configDir, PIN, now);
+      const { token } = await login();
+      const res = await app.server.inject({ method: 'POST', url: '/api/auth/verify', headers: bearer(token) });
+      expect(res.statusCode).toBe(415);
+    });
+  });
 });

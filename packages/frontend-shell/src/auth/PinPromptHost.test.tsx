@@ -328,4 +328,44 @@ describe('PinPromptHost', () => {
     warn.mockRestore();
     vi.unstubAllGlobals();
   });
+
+  it('Enter in a field while the submit button is greyed out says what is missing instead of doing nothing', async () => {
+    render(<PinPromptHost />);
+    act(() => {
+      void askForPin(async () => ({ ok: true }), 'choose');
+    });
+    const first = await screen.findByLabelText('New PIN');
+    fireEvent.change(first, { target: { value: '482915' } });
+    fireEvent.keyDown(first, { key: 'Enter' });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fill both fields');
+  });
+
+  it('a Cancel while the server is asked stays cancelled: the late "ok" does not answer again, nor close the dialog of the next question', async () => {
+    render(<PinPromptHost />);
+    let release!: (verdict: PinVerdict) => void;
+    const slow = vi.fn(() => new Promise<PinVerdict>((resolve) => (release = resolve)));
+    let first!: Promise<boolean>;
+    act(() => {
+      first = askForPin(slow);
+    });
+    await screen.findByLabelText('PIN');
+    type('482915');
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(slow).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await expect(first).resolves.toBe(false);
+    let second!: Promise<boolean>;
+    act(() => {
+      second = askForPin(async () => ({ ok: true }));
+    });
+    await screen.findByLabelText('PIN');
+    await act(async () => {
+      release({ ok: true });
+      await Promise.resolve();
+    });
+    expect(screen.getByLabelText('PIN')).toBeInTheDocument();
+    type('482915');
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await expect(second).resolves.toBe(true);
+  });
 });
