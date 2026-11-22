@@ -242,3 +242,15 @@ describe('contributions that are inactive (a provider the module can do without 
     expect(navModulesFor([own]).find((m) => m.id === 'own')?.pages.map((p) => p.label)).toEqual(['Home']);
   });
 });
+
+describe('navigation: collapsible', () => {
+  it('reaches the menu page, own and contributed, and is absent otherwise', () => {
+    const own = mod('agents', { ...page('nav', 'Agents', '/agents'), navigation: 'collapsible' }, page('nav', 'Table', '/table'));
+    const chart = mod('flow-chart', { ...page('flow:nav', 'Charts', '/charts'), navigation: 'collapsible' });
+    const flow = mod('flow', page('nav', 'Executions', '/'));
+    const byLabel = (m: ReturnType<typeof navModulesFor>[number]) => Object.fromEntries(m.pages.map((p) => [p.label, p.navigation]));
+    const [agents, flowNav] = [navModulesFor([own]).find((m) => m.id === 'agents'), navModulesFor([flow, chart]).find((m) => m.id === 'flow')];
+    expect(byLabel(agents!)).toEqual({ Agents: 'collapsible', Table: undefined });
+    expect(byLabel(flowNav!)).toMatchObject({ Charts: 'collapsible', Executions: undefined });
+  });
+});

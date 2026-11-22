@@ -122,6 +122,8 @@ const ExtensionPointSchema = z
     // trail, on each of them. `label` is the text of the tab (`History`, not the page label `Task history`), `order` sorts the tabs
     // (declaration order when absent).
     tab: TabSchema.optional(),
+    // The side menu of this page can be hidden by the user (a button at the left of the trail). Absent: the menu is always shown.
+    navigation: z.enum(['collapsible']).optional(),
     path: z
       .string()
       .regex(PAGE_PATH_PATTERN, 'path must look like "/jobs/:id": segments of letters, digits, "_" or "-", or ":param"')
@@ -146,10 +148,10 @@ const ExtensionPointSchema = z
       }
     }
   })
-  // `separatorBefore` and `groupLabel` shape the side menu: on a page of the menu (slot `nav` or `<providerId>:nav`) only.
+  // `separatorBefore`, `groupLabel` and `navigation` shape the side menu: on a page of the menu (slot `nav` or `<providerId>:nav`) only.
   .superRefine((ep, ctx) => {
     const inMenu = ep.kind === 'page' && (ep.slot === MENU_SLOT_LOCAL || menuSlotProvider(ep.slot) !== undefined);
-    for (const field of ['separatorBefore', 'groupLabel'] as const) {
+    for (const field of ['separatorBefore', 'groupLabel', 'navigation'] as const) {
       if (ep[field] !== undefined && !inMenu) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `"${field}" only shapes the side menu (kind "page", slot "nav" or "<module>:nav"); this is kind "${ep.kind}" on slot "${ep.slot}". Remove it, or make this a page of the menu.` });
       }

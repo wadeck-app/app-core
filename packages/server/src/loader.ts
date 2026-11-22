@@ -358,6 +358,7 @@ export class ModuleManager {
       groupLabel: ep.groupLabel,
       tab: ep.tab,
       count: ep.count,
+      navigation: ep.navigation,
     }));
 
     const problems = this.findProblems(entry.id, manifest, resolvedViews);

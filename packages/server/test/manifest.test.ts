@@ -339,3 +339,39 @@ describe('unknownKeyWarnings: the suggestion', () => {
     expect(hint('colour')).toBeUndefined();
   });
 });
+
+describe('parseManifest: a retractable side menu (navigation)', () => {
+  const withPage = (page: Record<string, unknown>) => ({
+    id: 'agents',
+    version: '1.0.0',
+    backendEntryPath: './backend.mjs',
+    extensionPoints: [{ kind: 'page', slot: 'nav', label: 'Agents', path: '/agents', view: { type: 'inline', value: { $type: 'TextBox' } }, ...page }],
+  });
+  const problemsOf = (fn: () => unknown): string[] => {
+    try {
+      fn();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        return err.issues.map((i) => i.message);
+      }
+      throw err;
+    }
+    return [];
+  };
+
+  it('accepts navigation "collapsible" on a page of the menu, own or contributed, and keeps it', () => {
+    expect(parseManifest(withPage({ navigation: 'collapsible' })).extensionPoints[0]?.navigation).toBe('collapsible');
+    expect(() => parseManifest(withPage({ slot: 'flow:nav', navigation: 'collapsible' }))).not.toThrow();
+    expect(parseManifest(withPage({})).extensionPoints[0]?.navigation).toBeUndefined();
+  });
+
+  it('refuses any other value, naming the one that exists', () => {
+    const problems = problemsOf(() => parseManifest(withPage({ navigation: 'hidden' })));
+    expect(problems.join(' ')).toMatch(/collapsible/);
+  });
+
+  it('refuses it outside the menu, and says where it works', () => {
+    const problems = problemsOf(() => parseManifest(withPage({ slot: 'route', navigation: 'collapsible' })));
+    expect(problems.join(' ')).toMatch(/"navigation" only shapes the side menu/);
+  });
+});

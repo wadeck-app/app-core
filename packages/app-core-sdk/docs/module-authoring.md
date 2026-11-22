@@ -557,6 +557,19 @@ A `page` of the menu (slot `nav`, or `<providerId>:nav`) can set itself apart fr
 - Both fields fail `check` and `package` on anything that is not a page of the menu, and `groupLabel` without `separatorBefore: true`, with the fix in the message.
 - The menu orders entries as before (own pages in manifest order, then contributed pages by `order`), so place the entry that starts a group where you want the rule.
 
+### A side menu the user can hide (`navigation`)
+
+A dense page can let the user take the width of the side menu back:
+
+```json
+{ "kind": "page", "slot": "nav", "label": "Table", "path": "/table", "navigation": "collapsible", "view": { "type": "path", "value": "./src/dsl-views/table.yaml" } }
+```
+
+- `navigation: "collapsible"` puts a button at the left of the trail ("Hide navigation" / "Show navigation", `aria-expanded`), in the same sticky row, whether the menu is shown or not. Hidden, the menu is gone (no column, no resize handle) and the page uses the full width. The top bar and the trail stay.
+- Only on a page of the menu (slot `nav`, or `<providerId>:nav`); `check` and `package` fail elsewhere and on any other value. Absent: the menu is always shown.
+- The choice is kept per page and per browser (`localStorage` `app-core.menu-collapsed`, by `<moduleId><path>`), and followed by the other tabs of the browser. A stored value that is not usable is ignored with a console warning.
+- The host frame still caps a page at the "xl" width of `PageContent`: a view that wants the freed space sets `maxWidth: full` on its `PageContent` root.
+
 ### Tabs of a page (`tab`)
 
 When a page opens something (a task from a list, a job) and that thing has several pages (details, history, logs), make those pages tabs: the shell shows them under the trail, on each of them, in the same sticky block.

@@ -14,6 +14,8 @@ export interface NavPage {
   groupLabel?: string;
   // Where the figure next to the label comes from (unread alerts, open items): a route of the module that owns the page.
   countSource?: CountSource;
+  // The user can hide the side menu while this page is shown (from the manifest).
+  navigation?: 'collapsible';
 }
 
 // Base slot: page/nav -> a navigation entry routing to a full-page render (frontend-shell.md "Base slots").
@@ -31,6 +33,7 @@ export function navPagesFor(modules: LoadedModuleSummary[]): NavPage[] {
         separatorBefore: ep.separatorBefore,
         groupLabel: ep.groupLabel,
         countSource: ep.count,
+        navigation: ep.navigation,
       })),
   );
 }
@@ -62,7 +65,7 @@ function contributedPagesFor(modules: LoadedModuleSummary[]): ContributedPage[] 
         if (provider === undefined || provider === m.id || !loaded.has(provider) || ep.kind !== 'page' || ep.path === undefined || ep.inactive !== undefined) {
           return [];
         }
-        return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), entryId: `${m.id}${ep.path}`, label: ep.label ?? ep.path, exact: ep.path === '/', separatorBefore: ep.separatorBefore, groupLabel: ep.groupLabel, countSource: ep.count } }];
+        return [{ provider, order: ep.order ?? Number.POSITIVE_INFINITY, page: { moduleId: m.id, routePath: modulePagePath(m.id, ep.path), entryId: `${m.id}${ep.path}`, label: ep.label ?? ep.path, exact: ep.path === '/', separatorBefore: ep.separatorBefore, groupLabel: ep.groupLabel, countSource: ep.count, navigation: ep.navigation } }];
       }),
     )
     .map((entry, seq) => ({ entry, seq }))

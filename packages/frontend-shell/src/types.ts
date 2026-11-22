@@ -35,6 +35,8 @@ export interface ResolvedExtensionPoint {
   tab?: { group: string; label: string; order?: number; count?: CountSource };
   // A figure next to the entry of this page in the side menu.
   count?: CountSource;
+  // The user can hide the side menu on this page.
+  navigation?: 'collapsible';
   // A contribution to a module this one can do without (`optionalRequires`) that is not used now: the reason. The shell leaves it out.
   inactive?: string;
 }
