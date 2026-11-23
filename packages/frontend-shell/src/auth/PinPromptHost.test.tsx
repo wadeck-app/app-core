@@ -368,4 +368,23 @@ describe('PinPromptHost', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
     await expect(second).resolves.toBe(true);
   });
+
+  it('puts the focus in the PIN field when the dialog opens, not on its close button, so the PIN can be typed at once', async () => {
+    render(<PinPromptHost />);
+    act(() => {
+      void askForPin(async () => ({ ok: true }));
+    });
+    const field = await screen.findByLabelText('PIN');
+    await waitFor(() => expect(field).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'Close dialog' })).not.toHaveFocus();
+  });
+
+  it('the same for the Choose a PIN dialog: the focus is in the first field', async () => {
+    render(<PinPromptHost />);
+    act(() => {
+      void askForPin(async () => ({ ok: true }), 'choose');
+    });
+    const field = await screen.findByLabelText('New PIN');
+    await waitFor(() => expect(field).toHaveFocus());
+  });
 });

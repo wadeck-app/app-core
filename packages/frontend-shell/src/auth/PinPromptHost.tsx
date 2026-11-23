@@ -28,10 +28,16 @@ export function PinPromptHost(): React.ReactElement {
   const formId = useId();
   const [refocus, setRefocus] = useState(0);
   useEffect(() => {
-    if (refocus > 0) {
-      // FieldText does not forward a ref: the PIN field is the first input of the form.
-      formRef.current?.querySelector('input')?.focus();
+    if (refocus === 0) {
+      return undefined;
     }
+    // FieldText does not forward a ref: the PIN field is the first input of the form.
+    const focusField = (): void => formRef.current?.querySelector('input')?.focus();
+    focusField();
+    // The dialog moves the focus to its first control (the close button) as it opens, in Chrome after the autoFocus of the field: once more
+    // on the next turn, after it, so the PIN can be typed at once.
+    const timer = setTimeout(focusField, 0);
+    return () => clearTimeout(timer);
   }, [refocus]);
   const countdown = useLockCountdown();
   const { status, error: statusError } = usePinStatus(pending !== null);
@@ -63,6 +69,7 @@ export function PinPromptHost(): React.ReactElement {
         countdown.clear();
         setBusy(false);
         setPending(next);
+        setRefocus((count) => count + 1);
       }),
     // `countdown.clear` only sets state: the asker must not be re-registered at every render.
     [],
