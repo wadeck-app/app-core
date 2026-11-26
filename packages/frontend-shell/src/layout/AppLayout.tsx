@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AppShell, useRootAccent, type ShellItem, type ShellLinkProps, type ShellMenu } from '@wadeck-app/dsl-ui';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { IconButton } from '@wadeck-app/dsl-ui';
+import { HeaderActionsProvider, HeaderActionsSlot, IconButton } from '@wadeck-app/dsl-ui';
 import { Breadcrumb } from './Breadcrumb.js';
 import { useMenuCollapsed } from './useMenuCollapsed.js';
 import { Logo, moduleColor } from './Logo.js';
@@ -33,7 +33,16 @@ const trimmedTrail = (crumbs: Crumb[]): Crumb[] => crumbs.map((c, i) => (i === 0
 // module (colored 2-letter logo and name, in the order the user chose); left = the pages of the active module in an
 // always-visible menu, or the quick-launch list of modules on the dashboard; above the page, the trail of nested pages.
 // The accent color (dsl-ui's --color-primary*) follows the module being viewed; the dashboard keeps the default.
-export function AppLayout({ modules, navModules, failed = [], standalone, children }: LayoutProps): React.ReactElement {
+// The provider of the header actions wraps the shell once: a page puts its status chip into HeaderActions, the sticky row of the trail shows it.
+export function AppLayout(props: LayoutProps): React.ReactElement {
+  return (
+    <HeaderActionsProvider>
+      <AppLayoutBody {...props} />
+    </HeaderActionsProvider>
+  );
+}
+
+function AppLayoutBody({ modules, navModules, failed = [], standalone, children }: LayoutProps): React.ReactElement {
   const { pathname } = useLocation();
   const active = activeNavModule(pathname, navModules);
   const tabOrder = useTabOrder();
@@ -140,10 +149,12 @@ export function AppLayout({ modules, navModules, failed = [], standalone, childr
           two sticky bars would stick at the same place and hide each other. */}
       {crumbs.length > 0 || tabsOn || collapsible ? (
         <div className={`sticky top-shell-bar z-10 border-b border-border bg-bg ${tabsOn ? '' : 'pb-2'}`}>
-          {collapsible ? (
-            // The button and the trail share one row: the trail is shifted right by the button, nothing overlaps, and the button stays where it
-            // is whether the menu is shown or hidden (it is the only way back when the menu is hidden, even on a page with no trail).
-            <div className="flex items-center gap-1 px-4 pt-3">
+          {/* One row: the button of the collapsible menu (when the page has one), the trail, and at the right what the page puts in HeaderActions (a
+              status chip of the module). The button stays where it is whether the menu is shown or hidden: it is the only way back when the menu is
+              hidden, even on a page with no trail. The row is in the sticky block, so the actions stay in view when the page scrolls. The title
+              (h1) of a page is drawn by the page itself, outside the shell: this is the row of the shell that names the page. */}
+          <div className="flex items-center gap-1 px-4 pt-3">
+            {collapsible ? (
               <IconButton
                 icon={menuState.collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
                 aria-label={menuState.collapsed ? 'Show navigation' : 'Hide navigation'}
@@ -153,11 +164,10 @@ export function AppLayout({ modules, navModules, failed = [], standalone, childr
                 size="icon-sm"
                 onClick={menuState.toggle}
               />
-              <Breadcrumb crumbs={crumbs} className="min-w-0 flex-1" />
-            </div>
-          ) : (
-            <Breadcrumb crumbs={crumbs} />
-          )}
+            ) : null}
+            <Breadcrumb crumbs={crumbs} className="min-w-0 flex-1" />
+            <HeaderActionsSlot className="ml-auto shrink-0" />
+          </div>
           {tabsOn ? <TertiaryTabs nav={tertiaryWithIndicators} label={`${pageTitle} sections`} /> : null}
         </div>
       ) : null}

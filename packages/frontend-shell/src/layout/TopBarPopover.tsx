@@ -10,12 +10,13 @@ export interface TopBarPopoverProps {
   children: React.ReactNode;
 }
 
-// The icon button of the top bar that opens a popover. One tooltip at a time: the native tooltip of the button is removed while the
-// popover is open (it used to sit on top of the panel it announces).
+// The icon button of the top bar that opens a popover. One tooltip at a time: none while the popover is open (it used to sit on top of
+// the panel it announces). The title is emptied, not removed: an IconButton without a title wraps itself in its own tooltip, which
+// would replace the button element (and bring a tooltip back) at every opening.
 export function TopBarPopover({ icon, label, title = label, children }: TopBarPopoverProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   return (
-    <Popover side="bottom" align="end" open={open} onOpenChange={setOpen} trigger={<IconButton icon={icon} aria-label={label} title={open ? undefined : title} variant="ghost" size="icon-sm" />}>
+    <Popover side="bottom" align="end" open={open} onOpenChange={setOpen} trigger={<IconButton icon={icon} aria-label={label} title={open ? '' : title} variant="ghost" size="icon-sm" />}>
       {children}
     </Popover>
   );

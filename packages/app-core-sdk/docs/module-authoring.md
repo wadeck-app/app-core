@@ -570,6 +570,18 @@ A dense page can let the user take the width of the side menu back:
 - The choice is kept per page and per browser (`localStorage` `app-core.menu-collapsed`, by `<moduleId><path>`), and followed by the other tabs of the browser. A stored value that is not usable is ignored with a console warning.
 - The host frame still caps a page at the "xl" width of `PageContent`: a view that wants the freed space sets `maxWidth: full` on its `PageContent` root.
 
+### A status chip next to the trail (`HeaderActions`)
+
+A page that shows a state of its own (a key unlocked, a connection) puts it in the header of the page with `HeaderActions` of `@wadeck-app/dsl-ui` (2026.11.26-380 or later), instead of measuring the page and positioning itself:
+
+```tsx
+<HeaderActions><Badge label="Key unlocked" /></HeaderActions>
+```
+
+- The shell draws it at the right end of the row of the trail, in the sticky block under the top bar: it stays in view when the page scrolls, and it is there whether the side menu is shown or hidden.
+- It is the row of the trail, not the row of the page's own title: the title (`PageHeader`) is drawn by the page, outside the shell.
+- Nothing is drawn where `HeaderActions` is written. The dashboard has no trail row: nothing is shown there.
+
 ### Tabs of a page (`tab`)
 
 When a page opens something (a task from a list, a job) and that thing has several pages (details, history, logs), make those pages tabs: the shell shows them under the trail, on each of them, in the same sticky block.

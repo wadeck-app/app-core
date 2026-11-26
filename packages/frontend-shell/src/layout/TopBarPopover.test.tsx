@@ -46,7 +46,7 @@ describe('the popover buttons of the top bar show no tooltip while their popover
     expect(button).toHaveAttribute('title', tooltip);
     fireEvent.click(button);
     await screen.findByTestId('popover-content');
-    expect(button).not.toHaveAttribute('title');
+    expect(button).toHaveAttribute('title', '');
     fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByTestId('popover-content')).toBeNull());
     expect(button).toHaveAttribute('title', tooltip);
@@ -97,7 +97,7 @@ describe('two popovers of the top bar', () => {
     // Still there after the events and effects of the click have settled.
     await settle();
     expect(screen.getAllByTestId('popover-content')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'Versions' })).not.toHaveAttribute('title');
+    expect(screen.getByRole('button', { name: 'Versions' })).toHaveAttribute('title', '');
     expect(screen.getByRole('button', { name: 'Theme' })).toHaveAttribute('title', 'Theme');
   });
 
@@ -115,7 +115,7 @@ describe('two popovers of the top bar', () => {
     await waitFor(() => expect(screen.getAllByTestId('popover-content')).toHaveLength(1));
     await settle();
     expect(screen.getAllByTestId('popover-content')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'Theme' })).not.toHaveAttribute('title');
+    expect(screen.getByRole('button', { name: 'Theme' })).toHaveAttribute('title', '');
   });
 
   it('opening a popover with a bare click (the keyboard) closes the other one: one panel at a time', async () => {

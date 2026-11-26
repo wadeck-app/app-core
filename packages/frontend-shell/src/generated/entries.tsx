@@ -151,6 +151,8 @@ function CompactSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const ariaLabel = coerceProp(resolveExpressionValue(node['ariaLabel'], ctx), 'CompactSelect.ariaLabel', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['ariaLabel']
 		const placeholder = coerceProp(resolveExpressionValue(node['placeholder'], ctx), 'CompactSelect.placeholder', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['placeholder']
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'CompactSelect.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['disabled']
+		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'CompactSelect.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['size']
+		const tooltip = coerceProp(resolveExpressionValue(node['tooltip'], ctx), 'CompactSelect.tooltip', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['tooltip']
 		const defaultValue = coerceProp(resolveExpressionValue(node['defaultValue'], ctx), 'CompactSelect.defaultValue', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['defaultValue']
 		const storageKey = coerceProp(resolveExpressionValue(node['storageKey'], ctx), 'CompactSelect.storageKey', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/CompactSelect.js').CompactSelectProps['storageKey']
 		const formCtx = useFormContext()
@@ -161,7 +163,7 @@ function CompactSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
 		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
-			<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} defaultValue={defaultValue} storageKey={storageKey} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<CompactSelect urlParam={urlParam} resetUrlParams={resetUrlParams} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} size={size} tooltip={tooltip} defaultValue={defaultValue} storageKey={storageKey} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -588,11 +590,12 @@ export const ActionButtonEntry: ComponentRegistryEntry = {
 		const iconOnly = coerceProp(resolveExpressionValue(node['iconOnly'], ctx), 'ActionButton.iconOnly', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['iconOnly']
 		const variant = coerceProp(resolveExpressionValue(node['variant'], ctx), 'ActionButton.variant', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['variant']
 		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'ActionButton.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['size']
+		const ariaLabel = coerceProp(resolveExpressionValue(node['ariaLabel'], ctx), 'ActionButton.ariaLabel', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['ariaLabel']
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'ActionButton.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['disabled']
 		const disabledReason = coerceProp(resolveExpressionValue(node['disabledReason'], ctx), 'ActionButton.disabledReason', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['disabledReason']
 		const onAction = coerceProp(resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'], 'ActionButton.onAction', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['onAction']
 		const actionPending = coerceProp(resolveExpressionValue(node['actionPending'], ctx) ?? ctx['$actionPending'], 'ActionButton.actionPending', 'object', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['actionPending']
-		return <ActionButton action={action} label={label} params={params} body={body} icon={icon} iconOnly={iconOnly} variant={variant} size={size} disabled={disabled} disabledReason={disabledReason} onAction={onAction} actionPending={actionPending} />
+		return <ActionButton action={action} label={label} params={params} body={body} icon={icon} iconOnly={iconOnly} variant={variant} size={size} ariaLabel={ariaLabel} disabled={disabled} disabledReason={disabledReason} onAction={onAction} actionPending={actionPending} />
 	},
 }
 
@@ -605,13 +608,14 @@ export const ButtonActionEntry: ComponentRegistryEntry = {
 		const variant = coerceProp(resolveExpressionValue(node['variant'], ctx), 'ButtonAction.variant', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['variant']
 		const icon = node['icon'] as unknown[] | undefined
 		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'ButtonAction.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['size']
+		const ariaLabel = coerceProp(resolveExpressionValue(node['ariaLabel'], ctx), 'ButtonAction.ariaLabel', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['ariaLabel']
 		const onClick = coerceProp(resolveExpressionValue(node['onClick'], ctx), 'ButtonAction.onClick', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['onClick']
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'ButtonAction.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['disabled']
 		const disabledReason = coerceProp(resolveExpressionValue(node['disabledReason'], ctx), 'ButtonAction.disabledReason', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['disabledReason']
 		const loading = coerceProp(resolveExpressionValue(node['loading'], ctx), 'ButtonAction.loading', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['loading']
 		const type = coerceProp(resolveExpressionValue(node['type'], ctx), 'ButtonAction.type', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['type']
 		const form = coerceProp(resolveExpressionValue(node['form'], ctx), 'ButtonAction.form', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['form']
-		return <ButtonAction label={label} variant={variant} icon={icon ? renderChildren(icon, registry, ctx) : null} size={size} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type} form={form} />
+		return <ButtonAction label={label} variant={variant} icon={icon ? renderChildren(icon, registry, ctx) : null} size={size} ariaLabel={ariaLabel} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type} form={form} />
 	},
 }
 
@@ -1186,8 +1190,9 @@ export const FieldWrapperEntry: ComponentRegistryEntry = {
 		const description = coerceProp(resolveExpressionValue(node['description'], ctx), 'FieldWrapper.description', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['description']
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldWrapper.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldWrapper.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['error']
+		const id = coerceProp(resolveExpressionValue(node['id'], ctx), 'FieldWrapper.id', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['id']
 		return (
-			<FieldWrapper label={label} description={description} required={required} error={error}>
+			<FieldWrapper label={label} description={description} required={required} error={error} id={id}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</FieldWrapper>
 		)
@@ -1714,14 +1719,20 @@ export const ToastProviderEntry: ComponentRegistryEntry = {
 }
 
 export const TooltipEntry: ComponentRegistryEntry = {
-	name: 'Tooltip', category: 'disposition', tags: ["tooltip"],
+	name: 'Tooltip', category: 'disposition', tags: ["tooltip","hover","card","rows","details"],
 	nodeSchema: null as never,
 	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['TooltipNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
-		const content = coerceProp(resolveExpressionValue(node['content'], ctx), 'Tooltip.content', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/overlay/Tooltip.js').TooltipProps['content']
+		const content = node['content'] as unknown[] | undefined
+		const rowsRaw = coerceProp(resolveExpressionValue(node['rows'], ctx), 'Tooltip.rows', 'array', false)
+		const rows = (Array.isArray(rowsRaw) ? rowsRaw.map((entry: unknown) => { if (entry === null || typeof entry !== 'object') return entry; const e = entry as Record<string, unknown>; return { ...e, value: Array.isArray(e['value']) ? renderChildren(e['value'] as unknown[], registry, ctx) : e['value'] } }) : rowsRaw) as import('@wadeck-app/dsl-ui/dist/components/overlay/Tooltip.js').TooltipProps['rows']
+		const side = coerceProp(resolveExpressionValue(node['side'], ctx), 'Tooltip.side', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/Tooltip.js').TooltipProps['side']
+		const align = coerceProp(resolveExpressionValue(node['align'], ctx), 'Tooltip.align', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/Tooltip.js').TooltipProps['align']
+		const delay = coerceProp(resolveExpressionValue(node['delay'], ctx), 'Tooltip.delay', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/Tooltip.js').TooltipProps['delay']
+		const describe = coerceProp(resolveExpressionValue(node['describe'], ctx), 'Tooltip.describe', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/Tooltip.js').TooltipProps['describe']
 		return (
-			<Tooltip content={content}>
+			<Tooltip content={content ? renderChildren(content, registry, ctx) : null} rows={rows} side={side} align={align} delay={delay} describe={describe}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</Tooltip>
 		)
@@ -1958,13 +1969,13 @@ export const allEntries: ComponentRegistryEntry[] = [
 
 // ─── Auto-detected metadata (allowedChildren, providesContext, requiresContext) ─
 // Generated from @slot JSDoc tags and createContext/useContext calls in component sources.
-ActionButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["action","actionPending","body","disabled","disabledReason","icon","iconOnly","label","onAction","params","size","variant"] : [];
-ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabled","disabledReason","form","icon","label","loading","onClick","size","type","variant"] : [];
+ActionButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["action","actionPending","ariaLabel","body","disabled","disabledReason","icon","iconOnly","label","onAction","params","size","variant"] : [];
+ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","disabled","disabledReason","form","icon","label","loading","onClick","size","type","variant"] : [];
 CheckboxGroupEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options","orientation"] : [];
 ChipButtonEntry.allowedChildren = {"items":["atomic"]};
 ChipButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["active","aria-label","aria-pressed","color","emphasis","items","onClick","shape","title"] : [];
 ColorPickerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options"] : [];
-CompactSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","bind","defaultValue","disabled","options","placeholder","resetUrlParams","storageKey","urlParam"] : [];
+CompactSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","bind","defaultValue","disabled","options","placeholder","resetUrlParams","size","storageKey","tooltip","urlParam"] : [];
 DeleteButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 IconButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["aria-label","icon","size"] : [];
 LiveToggleEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["live","onChange","urlParam"] : [];
@@ -2020,7 +2031,7 @@ FieldTextEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","desc
 FieldTextareaEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","label","mono","placeholder","readOnly","required","rows"] : [];
 FieldTimeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","is12Hour","label","minuteStep","placeholder","required"] : [];
 FieldWrapperEntry.allowedChildren = {"items":["atomic"]};
-FieldWrapperEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["description","error","items","label","required"] : [];
+FieldWrapperEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["description","error","id","items","label","required"] : [];
 FormEntry.allowedChildren = {"fields":["field"],"actions":["action-bar","form-specific"]};
 FormEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["actions","fields","initialData","onSubmit"] : [];
 FormEntry.providesContext = ["FormContext"];
@@ -2080,7 +2091,7 @@ ToastProviderEntry.allowedChildren = {"items":["layout","content"]};
 ToastProviderEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 ToastProviderEntry.providesContext = ["ToastContext"];
 TooltipEntry.allowedChildren = {"items":["atomic","composite"]};
-TooltipEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["content","items"] : [];
+TooltipEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["align","content","delay","describe","items","rows","side"] : [];
 BulkActionsToolbarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items","onClearSelection","selectedCount"] : [];
 DataTableEntry.allowedChildren = {"filtersTop":["filter"],"filters":["filter"]};
 DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","dateStyle","badge","href","external","title"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition","icon"]}}},"link":{"keys":["type","to","label","icon","position","external","width"]}}}};
