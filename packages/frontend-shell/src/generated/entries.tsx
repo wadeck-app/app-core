@@ -915,7 +915,8 @@ export const PageHeaderEntry: ComponentRegistryEntry = {
 		const icon = (resolveExpressionValue(node['icon'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/display/PageHeader.js').PageHeaderProps['icon']
 		const headerActions = node['headerActions'] as unknown[] | undefined
 		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'PageHeader.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/PageHeader.js').PageHeaderProps['size']
-		return <PageHeader title={title} subtitle={subtitle} icon={icon} headerActions={headerActions ? renderChildren(headerActions, registry, ctx) : null} size={size} />
+		const placement = coerceProp(resolveExpressionValue(node['placement'], ctx), 'PageHeader.placement', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/PageHeader.js').PageHeaderProps['placement']
+		return <PageHeader title={title} subtitle={subtitle} icon={icon} headerActions={headerActions ? renderChildren(headerActions, registry, ctx) : null} size={size} placement={placement} />
 	},
 }
 
@@ -2044,7 +2045,7 @@ JsonViewerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["field","ma
 MarkdownEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["allowImages","collapsed","maxHeight","text"] : [];
 NoticeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","showLessLabel","showMoreLabel","variant"] : [];
 PageHeaderEntry.allowedChildren = {"headerActions":["button","action"]};
-PageHeaderEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["headerActions","icon","size","subtitle","title"] : [];
+PageHeaderEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["headerActions","icon","placement","size","subtitle","title"] : [];
 ProgressEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","layout","max","showValue","size","value","valueLabel","variant"] : [];
 RelativeDateEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["date","format","live","tooltip"] : [];
 SkeletonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["count","decorative","height","variant","width"] : [];

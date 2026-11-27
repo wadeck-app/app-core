@@ -88,6 +88,12 @@ describe('the trail row when a page puts its header in the slot (A/B "Header row
     renderAt(true);
     await waitFor(() => expect(within(trail()).queryByText('Sessions')).toBeNull());
     expect(row().className).toMatch(/\bflex-wrap\b/);
+    // A line break is decided on natural widths: the trail keeps its own (no flex-1, whose zero basis never wraps and let the header
+    // overlap the crumb at 640 px), and the header has a minimum basis it grows from, so it goes under the trail as a whole.
+    expect(trail().className).not.toMatch(/\bflex-1\b/);
+    expect(trail().className).toMatch(/\bshrink-0\b/);
+    expect(slot().className).toMatch(/\bgrow\b/);
+    expect(slot().className).toMatch(/\bbasis-96\b/);
   });
 
   it.each(TRAIL_VARIANTS)('%s: a page that puts nothing in the slot is drawn as before (last crumb kept, no divider, no wrap)', async (variant) => {
