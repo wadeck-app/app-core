@@ -97,6 +97,7 @@ import { TreeView } from '@wadeck-app/dsl-ui/dist/components/navigation/TreeView
 import { ConfirmDialog } from '@wadeck-app/dsl-ui/dist/components/overlay/ConfirmDialog.js'
 import { ContextMenu } from '@wadeck-app/dsl-ui/dist/components/overlay/ContextMenu.js'
 import { Dialog } from '@wadeck-app/dsl-ui/dist/components/overlay/Dialog.js'
+import { DialogButton } from '@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js'
 import { DialogForm } from '@wadeck-app/dsl-ui/dist/components/overlay/DialogForm.js'
 import { Drawer } from '@wadeck-app/dsl-ui/dist/components/overlay/Drawer.js'
 import { Popover } from '@wadeck-app/dsl-ui/dist/components/overlay/Popover.js'
@@ -1717,6 +1718,25 @@ export const DialogEntry: ComponentRegistryEntry = {
 	},
 }
 
+export const DialogButtonEntry: ComponentRegistryEntry = {
+	name: 'DialogButton', category: 'atomic', tags: ["button","dialog-action"],
+	nodeSchema: null as never,
+	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['DialogButtonNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
+	render: ({ node, ctx }: RegistryRenderProps) => {
+		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'DialogButton.label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['label']
+		const variant = coerceProp(resolveExpressionValue(node['variant'], ctx), 'DialogButton.variant', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['variant']
+		const action = coerceProp(resolveExpressionValue(node['action'], ctx), 'DialogButton.action', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['action']
+		const params = coerceProp(resolveExpressionsDeep(node['params'], ctx), 'DialogButton.params', 'object', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['params']
+		const body = coerceProp(resolveExpressionsDeep(node['body'], ctx), 'DialogButton.body', 'object', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['body']
+		const closesDialog = coerceProp(resolveExpressionValue(node['closesDialog'], ctx), 'DialogButton.closesDialog', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['closesDialog']
+		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'DialogButton.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['disabled']
+		const disabledReason = coerceProp(resolveExpressionValue(node['disabledReason'], ctx), 'DialogButton.disabledReason', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['disabledReason']
+		const onAction = coerceProp(resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'], 'DialogButton.onAction', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['onAction']
+		const actionPending = coerceProp(resolveExpressionValue(node['actionPending'], ctx) ?? ctx['$actionPending'], 'DialogButton.actionPending', 'object', false) as import('@wadeck-app/dsl-ui/dist/components/overlay/DialogButton.js').DialogButtonProps['actionPending']
+		return <DialogButton label={label} variant={variant} action={action} params={params} body={body} closesDialog={closesDialog} disabled={disabled} disabledReason={disabledReason} onAction={onAction} actionPending={actionPending} />
+	},
+}
+
 export const DialogFormEntry: ComponentRegistryEntry = {
 	name: 'DialogForm', category: 'composite', tags: ["dialog","form"],
 	nodeSchema: null as never,
@@ -2031,6 +2051,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 	ConfirmDialogEntry,
 	ContextMenuEntry,
 	DialogEntry,
+	DialogButtonEntry,
 	DialogFormEntry,
 	DrawerEntry,
 	PopoverEntry,
@@ -2080,6 +2101,7 @@ MarkdownEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["allowImages"
 NoticeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","showLessLabel","showMoreLabel","variant"] : [];
 PageHeaderEntry.allowedChildren = {"headerActions":["button","action"]};
 PageHeaderEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["headerActions","icon","placement","size","subtitle","title"] : [];
+PageHeaderEntry.requiresContextWhen = [{"context":"HeaderActionsContext","prop":"placement","value":"trail"}];
 ProgressEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","layout","max","showValue","size","value","valueLabel","variant"] : [];
 RelativeDateEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["date","format","live","tooltip"] : [];
 SkeletonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["count","decorative","height","variant","width"] : [];
@@ -2167,6 +2189,8 @@ ContextMenuEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["align","i
 DialogEntry.allowedChildren = {"trigger":["button"],"items":["atomic","composite","disposition"],"actions":["button"]};
 DialogEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["actions","items","onOpenChange","open","size","title","trigger"] : [];
 DialogEntry.providesContext = ["DialogCloseContext"];
+DialogButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["action","actionPending","body","closesDialog","disabled","disabledReason","label","onAction","params","variant"] : [];
+DialogButtonEntry.requiresContext = ["DialogCloseContext"];
 DialogFormEntry.allowedChildren = {"fields":["field"]};
 DialogFormEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["fields","initialData","onClose","onSubmit","onSubmitEdit","size","title","visible"] : [];
 DrawerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["footer","hideCloseButton","items","onClose","open","side","size","title"] : [];
@@ -2179,7 +2203,7 @@ TooltipEntry.allowedChildren = {"items":["atomic","composite"]};
 TooltipEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["align","content","delay","describe","items","maxWidth","rows","side"] : [];
 BulkActionsToolbarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items","onClearSelection","selectedCount"] : [];
 DataTableEntry.allowedChildren = {"filtersTop":["filter"],"filters":["filter"]};
-DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","dateStyle","badge","href","external","title"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition","icon"]}}},"link":{"keys":["type","to","label","icon","position","external","width"]}}}};
+DataTableEntry.itemKeys = {"columns":{"keys":["field","key","label","width","truncate","nowrap","mono","muted","sortable","format","dateStyle","badge","href","external","title"],"byType":{"actions":{"keys":["type","items","width"],"arrays":{"items":{"keys":["label","action","variant","condition","enabledWhen","disabledReason","icon"]}}},"link":{"keys":["type","to","label","icon","position","external","width"]}}}};
 DataTableEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["actionPending","actionPendingRows","batchActions","batchActionsPosition","collapseLabel","columns","defaultFilters","emptyMessage","expandLabel","expansion","expansionCondition","fill","filters","filtersTop","fontMono","id","loading","navigateTo","onAction","onBatchAction","onRowClick","onSortColChange","onSortDirChange","refreshing","rowKey","rows","selectable","sortCol","sortDir"] : [];
 DataTableEntry.providesContext = ["DataTableSelectionCtx","DataTableFilterCtx"];
 DataTableEntry.requiresContext = ["RouterContext"];
@@ -2187,4 +2211,5 @@ FilterBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["filters","o
 FilterChipsEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","mode","onChange","options","value"] : [];
 PaginationEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["onPageChange","page","size","total","urlParam"] : [];
 SearchBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaControls","debounceMs","focusExpand","inputRef","onChange","onKeyDown","placeholder","resetUrlParams","size","urlParam","value"] : [];
+SearchBarEntry.requiresOneOf = [["urlParam"],["value"]];
 SortableColumnEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["currentSort","label","onSort","sortKey"] : [];
