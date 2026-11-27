@@ -32,6 +32,7 @@ import { FigureRow } from '@wadeck-app/dsl-ui/dist/components/display/FigureRow.
 import { JsonViewer } from '@wadeck-app/dsl-ui/dist/components/display/JsonViewer.js'
 const MarkdownLazy = React.lazy(() => import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').then(m => ({ default: m.Markdown })))
 const Markdown = (props: React.ComponentProps<typeof MarkdownLazy>) => <LazyBoundary><MarkdownLazy {...props} /></LazyBoundary>
+import { Notice } from '@wadeck-app/dsl-ui/dist/components/display/Notice.js'
 import { PageHeader } from '@wadeck-app/dsl-ui/dist/components/display/PageHeader.js'
 import { Progress } from '@wadeck-app/dsl-ui/dist/components/display/Progress.js'
 import { RelativeDate } from '@wadeck-app/dsl-ui/dist/components/display/RelativeDate.js'
@@ -77,6 +78,7 @@ import { PageContent } from '@wadeck-app/dsl-ui/dist/components/layout/PageConte
 import { PageSection } from '@wadeck-app/dsl-ui/dist/components/layout/PageSection.js'
 import { ScrollArea } from '@wadeck-app/dsl-ui/dist/components/layout/ScrollArea.js'
 import { Section } from '@wadeck-app/dsl-ui/dist/components/layout/Section.js'
+import { SplitLayout } from '@wadeck-app/dsl-ui/dist/components/layout/SplitLayout.js'
 import { StatTile } from '@wadeck-app/dsl-ui/dist/components/layout/StatTile.js'
 import { TableRowActions } from '@wadeck-app/dsl-ui/dist/components/layout/TableRowActions.js'
 import { ThemeScope } from '@wadeck-app/dsl-ui/dist/components/layout/ThemeScope.js'
@@ -458,6 +460,8 @@ function FieldSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const disabled = coerceProp(resolveExpressionValue(node['disabled'], ctx), 'FieldSelect.disabled', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['disabled']
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldSelect.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldSelect.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['error']
+		const hideLabel = coerceProp(resolveExpressionValue(node['hideLabel'], ctx), 'FieldSelect.hideLabel', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['hideLabel']
+		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'FieldSelect.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldSelect.js').FieldSelectProps['size']
 		const formCtx = useFormContext()
 		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
@@ -466,7 +470,7 @@ function FieldSelectWithContext({ node, ctx }: RegistryRenderProps) {
 		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
 		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
-			<FieldSelect label={label} description={description} options={options} placeholder={placeholder} disabled={disabled} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<FieldSelect label={label} description={description} options={options} placeholder={placeholder} disabled={disabled} required={required} error={error} hideLabel={hideLabel} size={size} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -496,6 +500,8 @@ function FieldTagsWithContext({ node, ctx }: RegistryRenderProps) {
 function FieldTextWithContext({ node, ctx }: RegistryRenderProps) {
 		const bind = node['bind'] as string
 		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'FieldText.label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['label']
+		const hideLabel = coerceProp(resolveExpressionValue(node['hideLabel'], ctx), 'FieldText.hideLabel', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['hideLabel']
+		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'FieldText.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['size']
 		const description = coerceProp(resolveExpressionValue(node['description'], ctx), 'FieldText.description', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['description']
 		const readOnly = coerceProp(resolveExpressionValue(node['readOnly'], ctx), 'FieldText.readOnly', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['readOnly']
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldText.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['required']
@@ -508,7 +514,7 @@ function FieldTextWithContext({ node, ctx }: RegistryRenderProps) {
 		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
 		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
-			<FieldText label={label} description={description} readOnly={readOnly} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<FieldText label={label} hideLabel={hideLabel} size={size} description={description} readOnly={readOnly} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -663,7 +669,7 @@ export const CompactSelectEntry: ComponentRegistryEntry = {
 }
 
 export const DeleteButtonEntry: ComponentRegistryEntry = {
-	name: 'DeleteButton', category: 'atomic', tags: [],
+	name: 'DeleteButton', category: 'atomic', tags: ["button","delete"],
 	nodeSchema: null as never,
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
@@ -672,14 +678,15 @@ export const DeleteButtonEntry: ComponentRegistryEntry = {
 }
 
 export const IconButtonEntry: ComponentRegistryEntry = {
-	name: 'IconButton', category: 'atomic', tags: [],
+	name: 'IconButton', category: 'atomic', tags: ["button","icon"],
 	nodeSchema: null as never,
 	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['IconButtonNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const icon = node['icon'] as unknown[] | undefined
 		const ariaLabel = coerceProp(resolveExpressionValue(node['aria-label'], ctx), 'IconButton.aria-label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/controls/IconButton.js').IconButtonProps['aria-label']
 		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'IconButton.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/IconButton.js').IconButtonProps['size']
-		return <IconButton icon={icon ? renderChildren(icon, registry, ctx) : null} aria-label={ariaLabel} size={size} />
+		const tooltip = coerceProp(resolveExpressionValue(node['tooltip'], ctx), 'IconButton.tooltip', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/IconButton.js').IconButtonProps['tooltip']
+		return <IconButton icon={icon ? renderChildren(icon, registry, ctx) : null} aria-label={ariaLabel} size={size} tooltip={tooltip} />
 	},
 }
 
@@ -732,14 +739,14 @@ export const RefreshButtonEntry: ComponentRegistryEntry = {
 }
 
 export const SliderEntry: ComponentRegistryEntry = {
-	name: 'Slider', category: 'atomic', tags: ["slider","range","input","number"],
+	name: 'Slider', category: 'atomic', tags: ["slider","range","input","number","field"],
 	nodeSchema: null as never,
 	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['SliderNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: (props: RegistryRenderProps) => <SliderWithContext {...props} />,
 }
 
 export const SwitchEntry: ComponentRegistryEntry = {
-	name: 'Switch', category: 'atomic', tags: ["switch","toggle","boolean"],
+	name: 'Switch', category: 'atomic', tags: ["switch","toggle","boolean","field"],
 	nodeSchema: null as never,
 	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['SwitchNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: (props: RegistryRenderProps) => <SwitchWithContext {...props} />,
@@ -882,6 +889,19 @@ export const MarkdownEntry: ComponentRegistryEntry = {
 		const collapsed = coerceProp(resolveExpressionValue(node['collapsed'], ctx), 'Markdown.collapsed', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').MarkdownProps['collapsed']
 		const allowImages = coerceProp(resolveExpressionValue(node['allowImages'], ctx), 'Markdown.allowImages', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Markdown.js').MarkdownProps['allowImages']
 		return <Markdown text={text} maxHeight={maxHeight} collapsed={collapsed} allowImages={allowImages} />
+	},
+}
+
+export const NoticeEntry: ComponentRegistryEntry = {
+	name: 'Notice', category: 'atomic', tags: ["notice","message","feedback","alert","banner"],
+	nodeSchema: null as never,
+	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['NoticeNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
+	render: ({ node, ctx }: RegistryRenderProps) => {
+		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'Notice.label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/display/Notice.js').NoticeProps['label']
+		const variant = coerceProp(resolveExpressionValue(node['variant'], ctx), 'Notice.variant', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/display/Notice.js').NoticeProps['variant']
+		const showMoreLabel = coerceProp(resolveExpressionValue(node['showMoreLabel'], ctx), 'Notice.showMoreLabel', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/Notice.js').NoticeProps['showMoreLabel']
+		const showLessLabel = coerceProp(resolveExpressionValue(node['showLessLabel'], ctx), 'Notice.showLessLabel', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/display/Notice.js').NoticeProps['showLessLabel']
+		return <Notice label={label} variant={variant} showMoreLabel={showMoreLabel} showLessLabel={showLessLabel} />
 	},
 }
 
@@ -1191,8 +1211,9 @@ export const FieldWrapperEntry: ComponentRegistryEntry = {
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldWrapper.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldWrapper.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['error']
 		const id = coerceProp(resolveExpressionValue(node['id'], ctx), 'FieldWrapper.id', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['id']
+		const hideLabel = coerceProp(resolveExpressionValue(node['hideLabel'], ctx), 'FieldWrapper.hideLabel', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldWrapper.js').FieldWrapperProps['hideLabel']
 		return (
-			<FieldWrapper label={label} description={description} required={required} error={error} id={id}>
+			<FieldWrapper label={label} description={description} required={required} error={error} id={id} hideLabel={hideLabel}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</FieldWrapper>
 		)
@@ -1410,6 +1431,23 @@ export const SectionEntry: ComponentRegistryEntry = {
 				{items ? renderChildren(items, registry, ctx) : null}
 			</Section>
 		)
+	},
+}
+
+export const SplitLayoutEntry: ComponentRegistryEntry = {
+	name: 'SplitLayout', category: 'disposition', tags: ["layout","split","sidebar","responsive"],
+	nodeSchema: null as never,
+	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['SplitLayoutNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
+	render: ({ node, registry, ctx }: RegistryRenderProps) => {
+		const main = node['main'] as unknown[] | undefined
+		const side = node['side'] as unknown[] | undefined
+		const sidePosition = coerceProp(resolveExpressionValue(node['sidePosition'], ctx), 'SplitLayout.sidePosition', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/SplitLayout.js').SplitLayoutProps['sidePosition']
+		const sideWidth = coerceProp(resolveExpressionValue(node['sideWidth'], ctx), 'SplitLayout.sideWidth', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/SplitLayout.js').SplitLayoutProps['sideWidth']
+		const sticky = coerceProp(resolveExpressionValue(node['sticky'], ctx), 'SplitLayout.sticky', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/SplitLayout.js').SplitLayoutProps['sticky']
+		const stickyTop = coerceProp(resolveExpressionValue(node['stickyTop'], ctx), 'SplitLayout.stickyTop', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/SplitLayout.js').SplitLayoutProps['stickyTop']
+		const gap = coerceProp(resolveExpressionValue(node['gap'], ctx), 'SplitLayout.gap', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/SplitLayout.js').SplitLayoutProps['gap']
+		const sideFirstWhenStacked = coerceProp(resolveExpressionValue(node['sideFirstWhenStacked'], ctx), 'SplitLayout.sideFirstWhenStacked', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/SplitLayout.js').SplitLayoutProps['sideFirstWhenStacked']
+		return <SplitLayout main={main ? renderChildren(main, registry, ctx) : null} side={side ? renderChildren(side, registry, ctx) : null} sidePosition={sidePosition} sideWidth={sideWidth} sticky={sticky} stickyTop={stickyTop} gap={gap} sideFirstWhenStacked={sideFirstWhenStacked} />
 	},
 }
 
@@ -1850,7 +1888,10 @@ export const SearchBarEntry: ComponentRegistryEntry = {
 		const debounceMs = coerceProp(resolveExpressionValue(node['debounceMs'], ctx), 'SearchBar.debounceMs', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['debounceMs']
 		const focusExpand = coerceProp(resolveExpressionValue(node['focusExpand'], ctx), 'SearchBar.focusExpand', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['focusExpand']
 		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'SearchBar.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['size']
-		return <SearchBar urlParam={urlParam} resetUrlParams={resetUrlParams} value={value} onChange={onChange} placeholder={placeholder} debounceMs={debounceMs} focusExpand={focusExpand} size={size} />
+		const inputRef = (resolveExpressionValue(node['inputRef'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['inputRef']
+		const onKeyDown = (resolveExpressionValue(node['onKeyDown'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['onKeyDown']
+		const ariaControls = coerceProp(resolveExpressionValue(node['ariaControls'], ctx), 'SearchBar.ariaControls', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['ariaControls']
+		return <SearchBar urlParam={urlParam} resetUrlParams={resetUrlParams} value={value} onChange={onChange} placeholder={placeholder} debounceMs={debounceMs} focusExpand={focusExpand} size={size} inputRef={inputRef} onKeyDown={onKeyDown} ariaControls={ariaControls} />
 	},
 }
 
@@ -1894,6 +1935,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 	FigureRowEntry,
 	JsonViewerEntry,
 	MarkdownEntry,
+	NoticeEntry,
 	PageHeaderEntry,
 	ProgressEntry,
 	RelativeDateEntry,
@@ -1937,6 +1979,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 	PageSectionEntry,
 	ScrollAreaEntry,
 	SectionEntry,
+	SplitLayoutEntry,
 	StatTileEntry,
 	TableRowActionsEntry,
 	ThemeScopeEntry,
@@ -1977,7 +2020,7 @@ ChipButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["active","a
 ColorPickerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options"] : [];
 CompactSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","bind","defaultValue","disabled","options","placeholder","resetUrlParams","size","storageKey","tooltip","urlParam"] : [];
 DeleteButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
-IconButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["aria-label","icon","size"] : [];
+IconButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["aria-label","icon","size","tooltip"] : [];
 LiveToggleEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["live","onChange","urlParam"] : [];
 PageSizeSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["default","onChange","options","resetUrlParams","urlParam","value"] : [];
 RadioGroupEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options","orientation"] : [];
@@ -1999,6 +2042,7 @@ FetchSpinnerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["loading"
 FigureRowEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 JsonViewerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["field","maxHeight","row"] : [];
 MarkdownEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["allowImages","collapsed","maxHeight","text"] : [];
+NoticeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","showLessLabel","showMoreLabel","variant"] : [];
 PageHeaderEntry.allowedChildren = {"headerActions":["button","action"]};
 PageHeaderEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["headerActions","icon","size","subtitle","title"] : [];
 ProgressEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","layout","max","showValue","size","value","valueLabel","variant"] : [];
@@ -2025,46 +2069,47 @@ FieldMultiSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind
 FieldNumberEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","label","max","min","onUnlimitedChange","required","suffix","unlimited","unlimitedValue"] : [];
 FieldReadOnlyEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["copyable","description","label","mono","value"] : [];
 FieldReadOnlyEntry.requiresContext = ["ToastContext"];
-FieldSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","label","options","placeholder","required"] : [];
+FieldSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","hideLabel","label","options","placeholder","required","size"] : [];
 FieldTagsEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["allowDuplicates","bind","description","disabled","error","label","maxTags","name","placeholder","required"] : [];
-FieldTextEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","error","label","readOnly","required"] : [];
+FieldTextEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","error","hideLabel","label","readOnly","required","size"] : [];
 FieldTextareaEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","label","mono","placeholder","readOnly","required","rows"] : [];
 FieldTimeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","is12Hour","label","minuteStep","placeholder","required"] : [];
 FieldWrapperEntry.allowedChildren = {"items":["atomic"]};
-FieldWrapperEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["description","error","id","items","label","required"] : [];
-FormEntry.allowedChildren = {"fields":["field"],"actions":["action-bar","form-specific"]};
+FieldWrapperEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["description","error","hideLabel","id","items","label","required"] : [];
+FormEntry.allowedChildren = {"fields":["field"],"actions":["action-bar","form-specific","button"]};
 FormEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["actions","fields","initialData","onSubmit"] : [];
 FormEntry.providesContext = ["FormContext"];
 TimePickerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","disabled","is12Hour","minuteStep","onOpenChange","open","placeholder"] : [];
 UnsavedBadgeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["hasChanges"] : [];
 UnsavedBadgeEntry.requiresContext = ["FormContext"];
-ActionBarEntry.allowedChildren = {"items":["btn"]};
+ActionBarEntry.allowedChildren = {"items":["button"]};
 ActionBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 ActionBarEntry.providesContext = ["ButtonContext"];
-CardEntry.allowedChildren = {"items":["layout","display","composite"]};
+CardEntry.allowedChildren = {"items":["atomic","composite","disposition"]};
 CardEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["border","fill","footer","header","items","onClick","padding","shadow"] : [];
 CardActionsEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 CardActionsEntry.providesContext = ["ButtonContext"];
-CollapsibleEntry.allowedChildren = {"items":["field","layout","atomic"]};
+CollapsibleEntry.allowedChildren = {"items":["atomic","composite","disposition"]};
 CollapsibleEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["defaultOpen","items","title"] : [];
 DialogFooterEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 DialogFooterEntry.providesContext = ["ButtonContext"];
 DividerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","orientation"] : [];
-HorizontalStackEntry.allowedChildren = {"items":["layout","table","form","display","composite","atomic"]};
+HorizontalStackEntry.allowedChildren = {"items":["atomic","composite","disposition"]};
 HorizontalStackEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["align","fill","gap","itemSizes","items","justify","wrap"] : [];
 NavBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 NavBarEntry.providesContext = ["ButtonContext"];
-PageContentEntry.allowedChildren = {"sections":["layout","composite","header","content","chart","table","tabs","navigation","action-bar","form","stepper","wizard","upload","dropzone","file","navigator","browser","keys","security","scopes","admin","management","versions","history"]};
+PageContentEntry.allowedChildren = {"sections":["atomic","composite","disposition"]};
 PageContentEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["maxWidth","sections"] : [];
 PageSectionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["actions","items","title"] : [];
 ScrollAreaEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["axis","fill","items","scheme"] : [];
-SectionEntry.allowedChildren = {"items":["layout","table","form","display","composite"]};
+SectionEntry.allowedChildren = {"items":["atomic","composite","disposition"]};
 SectionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["fill","items","title"] : [];
+SplitLayoutEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["gap","main","side","sideFirstWhenStacked","sidePosition","sideWidth","sticky","stickyTop"] : [];
 StatTileEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["compact","external","fill","href","icon","label","loading","nowrap","trend","value"] : [];
 TableRowActionsEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 TableRowActionsEntry.providesContext = ["ButtonContext"];
 ThemeScopeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items","surface","theme","tokens"] : [];
-VerticalStackEntry.allowedChildren = {"items":["layout","table","form","display","composite","atomic"]};
+VerticalStackEntry.allowedChildren = {"items":["atomic","composite","disposition"]};
 VerticalStackEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["fill","gap","items"] : [];
 BackLinkEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","to"] : [];
 BreadcrumbEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["currentPath","onNavigate"] : [];
@@ -2079,7 +2124,7 @@ TreeViewEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["defaultExpan
 ConfirmDialogEntry.allowedChildren = {"message":["content"]};
 ConfirmDialogEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["confirmLabel","confirmVariant","message","onConfirm","onOpenChange","open","title"] : [];
 ContextMenuEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["align","items","onOpenChange","open","side","trigger"] : [];
-DialogEntry.allowedChildren = {"trigger":["btn"],"items":["field","layout","table","display","composite"],"actions":["btn"]};
+DialogEntry.allowedChildren = {"trigger":["button"],"items":["atomic","composite","disposition"],"actions":["button"]};
 DialogEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["actions","items","onOpenChange","open","size","title","trigger"] : [];
 DialogEntry.providesContext = ["DialogCloseContext"];
 DialogFormEntry.allowedChildren = {"fields":["field"]};
@@ -2101,5 +2146,5 @@ DataTableEntry.requiresContext = ["RouterContext"];
 FilterBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["filters","onClearAll","onFilterChange","onSearchChange","placeholder","search"] : [];
 FilterChipsEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","mode","onChange","options","value"] : [];
 PaginationEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["onPageChange","page","size","total","urlParam"] : [];
-SearchBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["debounceMs","focusExpand","onChange","placeholder","resetUrlParams","size","urlParam","value"] : [];
+SearchBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaControls","debounceMs","focusExpand","inputRef","onChange","onKeyDown","placeholder","resetUrlParams","size","urlParam","value"] : [];
 SortableColumnEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["currentSort","label","onSort","sortKey"] : [];
