@@ -1,7 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { PinPromptHost } from './auth/PinPromptHost.js';
-import { AbExperiments, RouterProvider, ToastProvider } from '@wadeck-app/dsl-ui';
+import { AbExperiments, RouterProvider, ToastProvider, useConfirmDialog } from '@wadeck-app/dsl-ui';
+import { ConfirmProvider } from '@wadeck-app/dsl-renderer';
 import { AbTestsPage } from './AbTestsPage.js';
 import { ModulesPage } from './ModulesPage.js';
 import { AbTestsSeenRecorder } from './abTestsSeen.js';
@@ -57,6 +58,8 @@ export default function App(): React.ReactElement {
   const modules = data?.modules ?? NO_MODULES;
   const failedModules = data?.failed ?? [];
   const libStatuses = useModuleLibs(modules);
+  // The question of an action's `confirm` is asked in a dialog of dsl-ui (it follows the theme), not by the browser's native confirm.
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const libErrors = Object.entries(libStatuses).flatMap(([id, status]) => (status.state === 'error' ? [{ id, message: status.message }] : []));
 
   // Pages that declare a `path` get their own route (so `$route.<param>` reaches the view);
@@ -79,6 +82,7 @@ export default function App(): React.ReactElement {
       <PaletteApplier />
       <RouterProvider>
         <ToastProvider>
+          <ConfirmProvider confirm={confirm}>
           {/* The outcome of every module action (row/batch actions, forms, brains) is shown as a toast. */}
           <ShellNotifier>
           {/* The one dialog that asks the PIN when a sensitive action needs it (the fetcher calls it). */}
@@ -138,6 +142,8 @@ export default function App(): React.ReactElement {
             </AppFrame>
           </ModuleLibsProvider>
           </ShellNotifier>
+          {confirmDialog}
+          </ConfirmProvider>
         </ToastProvider>
       </RouterProvider>
       </AbExperiments>
