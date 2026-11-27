@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { PageContent } from '@wadeck-app/dsl-ui';
 import { ModuleView } from './ModuleView.js';
+import { PageErrorBoundary } from './PageErrorBoundary.js';
 import { ModuleLibGate } from './useModuleLibs.js';
 import type { LoadedModuleSummary } from './types.js';
 
@@ -38,7 +39,13 @@ export function ModulePage({ modules, target }: { modules: LoadedModuleSummary[]
   const viewDecidesWidth = ep.view?.['$type'] === 'PageContent';
   return (
     <ModuleLibGate moduleId={mod.id}>
-      <PageContent maxWidth={viewDecidesWidth ? 'full' : undefined} sections={<ModuleView key={pageKey} rawYaml={ep.rawYaml} />} />
+      <PageContent maxWidth={viewDecidesWidth ? 'full' : undefined} sections={
+          // A page that throws shows its error here, and the menu and the top bar stay (see PageErrorBoundary).
+          <PageErrorBoundary key={pageKey} moduleId={mod.id} pageLabel={ep.label ?? ep.path ?? `#${index}`}>
+            <ModuleView rawYaml={ep.rawYaml} />
+          </PageErrorBoundary>
+        }
+      />
     </ModuleLibGate>
   );
 }
