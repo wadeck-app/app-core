@@ -578,8 +578,9 @@ A page that shows a state of its own (a key unlocked, a connection) puts it in t
 <HeaderActions><Badge label="Key unlocked" /></HeaderActions>
 ```
 
-- The shell draws it at the right end of the row of the trail, in the sticky block under the top bar: it stays in view when the page scrolls, and it is there whether the side menu is shown or hidden.
-- It is the row of the trail, not the row of the page's own title: the title (`PageHeader`) is drawn by the page, outside the shell.
+- The shell draws it in the row of the trail, in the sticky block under the top bar: it stays in view when the page scrolls, and it is there whether the side menu is shown or hidden.
+- It follows the trail closely and takes the width left; the last crumb (the page name) is dropped while it is there, so a header that starts with the page title reads as the last crumb. The trail keeps its width, the header gives way: let it shrink or wrap.
+- It is the row of the trail, not the row of the page's own title: a title (`PageHeader`) is drawn by the page, unless it has `placement: trail`, which puts it in this row too.
 - Nothing is drawn where `HeaderActions` is written. The dashboard has no trail row: nothing is shown there.
 
 ### Tabs of a page (`tab`)
