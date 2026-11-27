@@ -20,7 +20,6 @@ import { inventoryAbTests } from './abTestScan.js';
 import { authRoutes } from './auth/routes.js';
 import { refuseUnlessElevated } from './auth/guard.js';
 import { appUpdateRoutes, resolveUpdateOptions, type AppUpdateOptions } from './appUpdate.js';
-import { PROVIDED_HOST_CONTEXTS } from './hostContexts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -165,7 +164,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<AppCor
   await server.register(modulesRoutes, { modulesDir, manager, registerGuard: createRegisterGuard({ configDir, token: cliToken, mode: registerProtection, now: opts.authClock }) });
   await server.register(slotsRoutes, { manager });
   // What the shell cannot know from its build: settings of this server process, read once per page load.
-  server.get('/api/shell-settings', { onSend: etagHook }, async () => ({ abTests: opts.abTests === true, providedContexts: [...PROVIDED_HOST_CONTEXTS], ...(opts.standalone === undefined ? {} : { standalone: { moduleId: opts.standalone.moduleId } }) }));
+  server.get('/api/shell-settings', { onSend: etagHook }, async () => ({ abTests: opts.abTests === true, ...(opts.standalone === undefined ? {} : { standalone: { moduleId: opts.standalone.moduleId } }) }));
   // The A/B tests the installed modules declare, over all their pages (see abTestScan.ts for what is exact and what is estimated).
   server.get('/api/ab-tests', { onSend: etagHook }, async () => {
     const inventory = await inventoryAbTests(manager.list());

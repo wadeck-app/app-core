@@ -19,7 +19,7 @@ function renderDialog() {
     </DateSettingsProvider>,
   );
   fireEvent.click(screen.getByRole('button', { name: 'Date and time settings' }));
-  return within(screen.getByRole('dialog', { name: 'Date and time' }));
+  return within(screen.getByRole('dialog'));
 }
 
 beforeEach(() => {
@@ -27,6 +27,14 @@ beforeEach(() => {
 });
 
 describe('DateSettingsButton', () => {
+  // Like the other buttons of the top bar (theme, versions, PIN, update): a panel that opens under its own button, not a modal in the
+  // middle of the page that hides everything else.
+  it('opens a popover under its button, like the other controls of the top bar, not a centred modal', () => {
+    renderDialog();
+    expect(screen.getByLabelText('Language').closest('[data-radix-popper-content-wrapper]')).not.toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Date and time' })).toBeNull();
+  });
+
   it('opens a dialog with English defaults and a preview', () => {
     const dialog = renderDialog();
     expect(dialog.getByLabelText('Language')).toHaveValue('en-GB');

@@ -95,7 +95,7 @@ describe('standalone application (--module)', () => {
     const running = await runServe({ publicDir, module: moduleDir, configDir: path.join(root, 'data'), port, defaultStandaloneConfigDir: defaultConfigDir });
     try {
       expect(running.moduleId).toBe('my-app');
-      expect(await getJson(port, '/api/shell-settings')).toEqual({ abTests: false, providedContexts: expect.arrayContaining(['RouterContext', 'ToastContext']), standalone: { moduleId: 'my-app' } });
+      expect(await getJson(port, '/api/shell-settings')).toEqual({ abTests: false, standalone: { moduleId: 'my-app' } });
       const modules = (await getJson(port, '/api/modules')) as { modules: Array<{ id: string }> };
       expect(modules.modules.map((m) => m.id)).toEqual(['my-app']);
     } finally {

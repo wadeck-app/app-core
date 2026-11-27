@@ -1,16 +1,16 @@
 import { render, screen } from '@testing-library/react';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import React from 'react';
-import { HeaderActions, HOST_CONTEXTS, RouterContext, ThemeContext, UrlParamContext } from '@wadeck-app/dsl-ui';
+import { HeaderActions, RouterContext, ThemeContext, UrlParamContext, type HostContext } from '@wadeck-app/dsl-ui';
 import { AbExperimentsContext } from '@wadeck-app/dsl-ui/dist/components/dev/AbExperiments.js';
 import { ToastContext } from '@wadeck-app/dsl-ui/dist/components/overlay/Toast.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
+import { SHELL_HOST_CONTEXTS, providedHostContexts } from './hostContexts.js';
 
-// What the shell tells the module builds it provides (`providedContexts` of the DSL compiler, served by GET /api/shell-settings) is
-// the list in packages/server/src/hostContexts.ts. This test mounts the real shell and checks, for every context dsl-ui names, that a
-// page of a module really finds it (or really does not), so the list cannot drift from what App.tsx and AppLayout.tsx provide.
+// What the shell tells the module builds it provides (`providedContexts` of the DSL compiler, written in build-info.json) is
+// SHELL_HOST_CONTEXTS (hostContexts.ts), a record with one entry per context dsl-ui names: a new name is a compile error until decided.
+// This test mounts the real shell and checks, for every one of them, that a page of a module really finds it (or really does not), so
+// the record cannot drift from what App.tsx and AppLayout.tsx provide.
 
 // The page of the test is a probe: it reports what the contexts around it hold. It stands for the view runner.
 const found: Record<string, boolean> = {};
@@ -39,9 +39,6 @@ vi.mock('./useModules.js', () => ({
   }),
 }));
 
-const serverSource = fs.readFileSync(path.join(process.cwd(), '..', 'server', 'src', 'hostContexts.ts'), 'utf8');
-const listIn = (name: string): string[] => [...(new RegExp(`${name}[^=]*= \\[([^\\]]*)\\]`).exec(serverSource)?.[1] ?? '').matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1] ?? '');
-
 beforeEach(() => {
   window.history.pushState({}, '', '/modules/probe-mod');
 });
@@ -51,24 +48,19 @@ afterEach(() => {
 });
 
 describe('the host contexts the shell says it provides are the ones a page finds', () => {
-  it('provides what PROVIDED_HOST_CONTEXTS says, and nothing of what NOT_PROVIDED_HOST_CONTEXTS says', async () => {
+  it('a page finds every context of SHELL_HOST_CONTEXTS that is true, and none that is false', async () => {
     render(<App />);
     await screen.findByText('probe-ready');
-    const provided = listIn('PROVIDED_HOST_CONTEXTS');
-    const notProvided = listIn('NOT_PROVIDED_HOST_CONTEXTS');
-    expect(provided.length).toBeGreaterThan(0);
     // HeaderActionsContext has no value to read: a HeaderActions of the page must come out in the slot of the trail row.
     found['HeaderActionsContext'] = screen.queryByText('probe-header') !== null;
-    for (const name of provided) {
-      expect(found[name], `${name} is listed as provided but a page does not find it`).toBe(true);
-    }
-    for (const name of notProvided) {
-      expect(found[name], `${name} is listed as not provided but a page finds it: move it to PROVIDED_HOST_CONTEXTS`).toBe(false);
+    const names = Object.keys(SHELL_HOST_CONTEXTS) as HostContext[];
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) {
+      expect(found[name], `${name} is declared ${SHELL_HOST_CONTEXTS[name] ? 'provided' : 'not provided'} in hostContexts.ts but a page ${found[name] === true ? 'finds' : 'does not find'} it`).toBe(SHELL_HOST_CONTEXTS[name]);
     }
   });
 
-  it('decides about every context dsl-ui names: a new one in HOST_CONTEXTS fails here until it is listed', () => {
-    const decided = [...listIn('PROVIDED_HOST_CONTEXTS'), ...listIn('NOT_PROVIDED_HOST_CONTEXTS')].sort();
-    expect(decided).toEqual([...HOST_CONTEXTS].sort());
+  it('lists in providedHostContexts() exactly the true ones, sorted', () => {
+    expect(providedHostContexts()).toEqual(['AbExperimentsContext', 'HeaderActionsContext', 'RouterContext', 'ToastContext', 'UrlParamContext']);
   });
 });

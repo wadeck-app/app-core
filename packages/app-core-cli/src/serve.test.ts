@@ -76,13 +76,13 @@ describe('runServe', () => {
   it('tells the shell that A/B tests are off by default', async () => {
     const running = await runServe({ publicDir });
     stop = running.stop;
-    expect(await shellSettings()).toEqual({ abTests: false, providedContexts: expect.arrayContaining(['RouterContext', 'ToastContext']) });
+    expect(await shellSettings()).toEqual({ abTests: false });
   });
 
   it('tells the shell that A/B tests are on when started with abTests', async () => {
     const running = await runServe({ publicDir, abTests: true });
     stop = running.stop;
-    expect(await shellSettings()).toEqual({ abTests: true, providedContexts: expect.arrayContaining(['RouterContext', 'ToastContext']) });
+    expect(await shellSettings()).toEqual({ abTests: true });
   });
 
   it('hands the update information to the server: GET /api/app-update names the running version, and the restart is offered', async () => {

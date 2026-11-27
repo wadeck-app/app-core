@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { register } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { entriesGeneratorUrl, restartOnDslUpdate } from './viteRestartOnDslUpdate';
+import { providedHostContexts } from './src/hostContexts';
 
 // Phase 1c: wires the real @wadeck-app/dsl-renderer entriesGenerator (the actual
 // working precedent is orchestrator/packages/orch-app's vite.config.ts, not
@@ -10,6 +11,9 @@ import { entriesGeneratorUrl, restartOnDslUpdate } from './viteRestartOnDslUpdat
 // entriesGenerator scans dsl-ui's component source (its package.json exports
 // raw ./src/*) by default -- no dsl.config.yaml needed, since app-core has no
 // custom component package of its own (unlike orch-app's "@orch": "orch-ui").
+// Read and removed by scripts/build-info.mjs, which writes its content as `providedContexts` of build-info.json.
+const HOST_CONTEXTS_FILE = 'host-contexts.json';
+
 export default defineConfig(async () => {
   // Imported by a URL that carries the installed version, and so is everything it imports (dslFreshLoader.mjs): Vite's own restart
   // (see restartOnDslUpdate) keeps the modules already imported, so a plain import would keep generating the registry with the
@@ -26,7 +30,11 @@ export default defineConfig(async () => {
   const api = process.env['APP_CORE_API'] ?? 'http://127.0.0.1:4850';
   return {
     // The root package-lock.json is where `npm install` of a new dsl ends: see restartOnDslUpdate.
-    plugins: [react(), entriesGenerator(), restartOnDslUpdate({ root, lockfile: fileURLToPath(new URL('../../package-lock.json', import.meta.url)) })],
+    plugins: [
+      react(),
+      // The host contexts this shell provides (src/hostContexts.ts), next to the build: scripts/build-info.mjs moves them into build-info.json.
+      { name: 'app-core-host-contexts', generateBundle() { this.emitFile({ type: 'asset', fileName: HOST_CONTEXTS_FILE, source: JSON.stringify(providedHostContexts()) }); } },
+      entriesGenerator(), restartOnDslUpdate({ root, lockfile: fileURLToPath(new URL('../../package-lock.json', import.meta.url)) })],
     build: {
       outDir: 'dist',
       emptyOutDir: true,

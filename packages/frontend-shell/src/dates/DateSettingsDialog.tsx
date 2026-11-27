@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { CalendarClock, Undo2 } from 'lucide-react';
-import { AUTO_LOCALE, DEFAULT_DATE_SETTINGS, Dialog, IconButton, LOCAL_TIME_ZONE, createDateFormatter, type DateSettings } from '@wadeck-app/dsl-ui';
+import { AUTO_LOCALE, DEFAULT_DATE_SETTINGS, LOCAL_TIME_ZONE, createDateFormatter, type DateSettings } from '@wadeck-app/dsl-ui';
+import { TopBarPopover } from '../layout/TopBarPopover.js';
 import { useDateSettingsControl } from './DateFormatContext.js';
 
 const SELECT = 'rounded border border-border bg-surface px-1.5 py-1 text-xs text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
@@ -74,14 +75,13 @@ function Preview({ settings }: { settings: DateSettings }): React.ReactElement {
   );
 }
 
-// The date and time settings of the user: one dialog, opened from the top bar, applied everywhere at once and kept in this browser.
+// The date and time settings of the user: a popover under its button of the top bar, like the other controls there (theme, versions, PIN), applied everywhere at once and kept in this browser.
 export function DateSettingsButton(): React.ReactElement {
-  const [open, setOpen] = useState(false);
   const { settings, reset, customized } = useDateSettingsControl();
   return (
-    <>
-      <IconButton icon={<CalendarClock size={14} />} aria-label="Date and time settings" title="Date and time settings" variant="ghost" size="icon-sm" onClick={() => setOpen(true)} />
-      <Dialog title="Date and time" open={open} onOpenChange={setOpen} size="md">
+    <TopBarPopover icon={<CalendarClock size={14} />} label="Date and time settings">
+      <div className="w-96 max-w-[calc(100vw-2rem)]">
+        <h3 className="mb-1 text-sm font-semibold text-content">Date and time</h3>
         <p className="mb-3 text-sm text-muted">How every date of the app is shown, in the tables, widgets, charts and logs. It is saved in this browser.</p>
         <div className="space-y-2">
           <Choice label="Language" field="locale" options={settings.locale !== AUTO_LOCALE && !LOCALES.some(([v]) => v === settings.locale) ? [[settings.locale, settings.locale], ...LOCALES] : LOCALES} />
@@ -136,7 +136,7 @@ export function DateSettingsButton(): React.ReactElement {
             Default settings ({DEFAULT_DATE_SETTINGS.locale}, local time)
           </button>
         </div>
-      </Dialog>
-    </>
+      </div>
+    </TopBarPopover>
   );
 }
