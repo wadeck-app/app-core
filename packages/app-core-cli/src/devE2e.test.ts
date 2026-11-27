@@ -69,7 +69,7 @@ describe('dev A/B test dock', () => {
     { opts: { abTests: true }, expected: true },
   ])('tells the shell abTests=$expected for $opts', async ({ opts, expected }) => {
     const handle = await start(copyFixtureSources('app-module-slot-provider'), opts);
-    expect(await getJson(handle, '/api/shell-settings')).toEqual({ status: 200, body: { abTests: expected } });
+    expect(await getJson(handle, '/api/shell-settings')).toEqual({ status: 200, body: { abTests: expected, providedContexts: expect.arrayContaining(['RouterContext', 'ToastContext']) } });
   });
 });
 

@@ -23,13 +23,13 @@ Runs the same server as `packages/server`, with the frontend built into this pac
 | `--module <dir|manifest.json>` | An application made of one module, see below. |
 | `--config-dir <dir>` | With `--module`: where the application keeps its registry, `data/` and `state/`. Default `<app-core-cli config dir>/standalone/<module id>`. Refused without `--module`. |
 | `--port <n>` | Port to listen on; wins over `APP_CORE_PORT`. |
-| `--ab-tests` | Shows the A/B test dock (`AbTest` nodes and the shell's own tests) in this production build. Off without it. The server prints a line at start and answers `GET /api/shell-settings` with `{"abTests": true}`. A tray Restart or an update restart keeps the flag. |
+| `--ab-tests` | Shows the A/B test dock (`AbTest` nodes and the shell's own tests) in this production build. Off without it. The server prints a line at start and answers `GET /api/shell-settings` with `{"abTests": true, "providedContexts": [...]}`. A tray Restart or an update restart keeps the flag. |
 
 ## An application made of one module (`--module`)
 
 `app-core-cli serve --module ./dist-module --no-tray --no-update` serves one built module (what `app-core-cli package` writes; a source manifest is refused with the command to run) and the modules it `requires`, found in the `node_modules` of its package as `dev` does. Nothing else is loaded, and the registry is rewritten at each start, so an application never picks up modules of a global app-core.
 
-- The shell has no dashboard, no module tabs and no "Modules" or "A/B tests" pages; the brand is the module's title, and `/` opens the first page the module adds to the menu (`slot: "nav"`). `GET /api/shell-settings` answers `{"abTests": false, "standalone": {"moduleId": "<id>"}}`.
+- The shell has no dashboard, no module tabs and no "Modules" or "A/B tests" pages; the brand is the module's title, and `/` opens the first page the module adds to the menu (`slot: "nav"`). `GET /api/shell-settings` answers `{"abTests": false, "providedContexts": [...], "standalone": {"moduleId": "<id>"}}`.
 - A module with no `nav` page has nothing to open on: the page says so.
 - The module's package ships this as its own command: a `bin` script that resolves `@wadeck-app/app-core-cli/dist/cli.bundle.js` with `createRequire` and runs `serve --module <dist-module> --no-update` plus the arguments it was given. The script, the `package.json` fields and the steps are in `app-core-cli help standalone` (the text is `src/helpStandalone.ts`); the script was run against a built module and served it.
 - Not covered: a window or installer around the browser, a name or icon other than the module's title, hiding the information menu of the top bar.
