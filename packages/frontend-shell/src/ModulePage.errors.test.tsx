@@ -4,10 +4,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ModulePage } from './ModulePage.js';
 import type { LoadedModuleSummary } from './types.js';
 
-// The real failure that blanked the whole app: dsl-ui's SearchBar throws when it has neither "urlParam" nor "value" and "onChange"
-// (the showcase page of the table demonstrated it with none).
-const BROKEN = '$type: SearchBar\nsize: sm\n';
-const FINE = '$type: Badge\nlabel: all-good\n';
+// The real failure that blanked the whole app: dsl-ui's SearchBar threw when it had neither "urlParam" nor "value" and "onChange"
+// (the showcase page of the table). Since dsl-ui 396 each node has its own boundary, so what reaches the page boundary is what throws
+// outside a node (the runner itself, the compiler): the view runner is replaced by one that throws, to stand for it.
+const BROKEN = 'broken';
+const FINE = 'fine';
+const RUNNER_ERROR = 'the runner could not compile this view: unexpected token';
+
+vi.mock('./ModuleView.js', () => ({
+  ModuleView: ({ rawYaml }: { rawYaml: string }) => {
+    if (rawYaml === 'broken') {
+      throw new Error('the runner could not compile this view: unexpected token');
+    }
+    return <span>all-good</span>;
+  },
+}));
 
 const modules: LoadedModuleSummary[] = [
   {
@@ -49,7 +60,7 @@ describe('a page whose view throws', () => {
     expect(alert).toHaveTextContent('"Table"');
     expect(alert).toHaveTextContent('"showcase"');
     // The message of the error itself, so the author knows what to fix.
-    expect(alert).toHaveTextContent('[SearchBar] needs either "urlParam" or both "value" and "onChange"');
+    expect(alert).toHaveTextContent(RUNNER_ERROR);
     expect(alert).toHaveTextContent(/rest of app-core still works/i);
     // Everything around the page is still there (the navigation of the test stands for the shell).
     expect(screen.getByRole('link', { name: 'go to the good page' })).toBeInTheDocument();
