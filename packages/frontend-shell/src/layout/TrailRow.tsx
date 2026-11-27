@@ -7,7 +7,7 @@ import { useTrailVariant, type TrailVariant } from './trailRowVariants.js';
 // The classes of the three parts of the row for a variant, once the slot has content. `trail` is the breadcrumb, `slot` the header.
 // @formatter:off
 const FILLED: Record<TrailVariant, { row: string; trail: string; slot: string; divider: boolean; hideCurrent: boolean; chevron?: boolean }> = {
-  'right':       { row: '',          trail: 'min-w-0 flex-1',  slot: 'ml-auto shrink-0',                   divider: false, hideCurrent: false },
+  'right':       { row: '',          trail: 'shrink-0',        slot: 'ml-auto min-w-0 shrink',             divider: false, hideCurrent: false },
   'right-title': { row: '',          trail: 'min-w-0 flex-1',  slot: 'ml-auto min-w-0 shrink',             divider: false, hideCurrent: true  },
   'gap':         { row: '',          trail: 'shrink-0',        slot: 'ml-6 min-w-0 flex-1',                divider: true,  hideCurrent: true  },
   'merged':      { row: '',          trail: 'shrink-0',        slot: 'ml-1 min-w-0 flex-1',                divider: false, hideCurrent: true, chevron: true },

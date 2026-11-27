@@ -56,6 +56,11 @@ describe('the trail row when a page puts its header in the slot (A/B "Header row
     expect(within(trail()).getByText('Sessions')).toBeInTheDocument();
     expect(slot().className).toMatch(/\bml-auto\b/);
     expect(row().className).not.toMatch(/flex-wrap/);
+    // The trail keeps its own width (a flex-1 with a zero basis let a wide header squeeze it to nothing, and its crumbs, wrapping, were drawn under the header);
+    // it is the header that gives way.
+    expect(trail().className).toMatch(/\bshrink-0\b/);
+    expect(trail().className).not.toMatch(/\bflex-1\b/);
+    expect(slot().className).toMatch(/\bmin-w-0\b/);
   });
 
   it('right-title: the last crumb is dropped (the header shows the title), the header is still at the right end', async () => {
