@@ -2,8 +2,8 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AppShell, useRootAccent, type ShellItem, type ShellLinkProps, type ShellMenu } from '@wadeck-app/dsl-ui';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { HeaderActionsProvider, HeaderActionsSlot, IconButton } from '@wadeck-app/dsl-ui';
-import { Breadcrumb } from './Breadcrumb.js';
+import { HeaderActionsProvider, IconButton } from '@wadeck-app/dsl-ui';
+import { TrailRow } from './TrailRow.js';
 import { useMenuCollapsed } from './useMenuCollapsed.js';
 import { Logo, moduleColor } from './Logo.js';
 import { NavSettings } from './NavSettings.js';
@@ -149,25 +149,26 @@ function AppLayoutBody({ modules, navModules, failed = [], standalone, children 
           two sticky bars would stick at the same place and hide each other. */}
       {crumbs.length > 0 || tabsOn || collapsible ? (
         <div className={`sticky top-shell-bar z-10 border-b border-border bg-bg ${tabsOn ? '' : 'pb-2'}`}>
-          {/* One row: the button of the collapsible menu (when the page has one), the trail, and at the right what the page puts in HeaderActions (a
-              status chip of the module). The button stays where it is whether the menu is shown or hidden: it is the only way back when the menu is
-              hidden, even on a page with no trail. The row is in the sticky block, so the actions stay in view when the page scrolls. The title
-              (h1) of a page is drawn by the page itself, outside the shell: this is the row of the shell that names the page. */}
-          <div className="flex items-center gap-1 px-4 pt-3">
-            {collapsible ? (
-              <IconButton
-                icon={menuState.collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-                aria-label={menuState.collapsed ? 'Show navigation' : 'Hide navigation'}
-                aria-expanded={!menuState.collapsed}
-                title={menuState.collapsed ? 'Show navigation' : 'Hide navigation'}
-                variant="ghost"
-                size="icon-sm"
-                onClick={menuState.toggle}
-              />
-            ) : null}
-            <Breadcrumb crumbs={crumbs} className="min-w-0 flex-1" />
-            <HeaderActionsSlot className="ml-auto shrink-0" />
-          </div>
+          {/* The row that names the page: the button of the collapsible menu (when the page has one), the trail, and what the page puts in its
+              header slot (HeaderActions), laid out by the A/B test "Header row". The button stays where it is whether the menu is shown or hidden:
+              it is the only way back when the menu is hidden, even on a page with no trail. The row is in the sticky block, so the header stays
+              in view when the page scrolls. */}
+          <TrailRow
+            crumbs={crumbs}
+            leading={
+              collapsible ? (
+                <IconButton
+                  icon={menuState.collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+                  aria-label={menuState.collapsed ? 'Show navigation' : 'Hide navigation'}
+                  aria-expanded={!menuState.collapsed}
+                  title={menuState.collapsed ? 'Show navigation' : 'Hide navigation'}
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={menuState.toggle}
+                />
+              ) : undefined
+            }
+          />
           {tabsOn ? <TertiaryTabs nav={tertiaryWithIndicators} label={`${pageTitle} sections`} /> : null}
         </div>
       ) : null}
