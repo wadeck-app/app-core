@@ -224,7 +224,7 @@ describe('check: requires and contributions', () => {
       requires: { prov: '^1.0.0' },
       extensionPoints: [{ kind: 'widget', slot: 'prov:shared-slot', view: { type: 'path', value: './src/dsl-views/form.yaml' } }],
     });
-    const dir = track(makeModule(contributorFiles({ 'manifest.json': manifest, 'src/dsl-views/form.yaml': '$type: Form\nchildren:\n  - $type: Badge\n' })));
+    const dir = track(makeModule(contributorFiles({ 'manifest.json': manifest, 'src/dsl-views/form.yaml': '$type: Form\nfields: []\n' })));
     const issue = only((await checkModule(dir, { links: { '@x/prov': provider } })).issues, 'src/dsl-views/form.yaml');
     expect(issue.problem).toContain('"Form"');
     expect(issue.problem).toContain('accepts only: Badge');
@@ -241,7 +241,10 @@ describe('check: requires and contributions', () => {
   it('does not validate the children of the contributed view', async () => {
     const provider = await packagedProvider();
     const dir = track(makeModule(contributorFiles({ 'manifest.json': contributorManifest({ $type: 'Badge', children: [{ $type: 'Form' }] }) })));
-    expect((await checkModule(dir, { links: { '@x/prov': provider } })).issues).toEqual([]);
+    // The slot checks the root type only: the nested Form is not reported as a type the slot does not accept. (The view compiler does report
+    // the unknown key "children" of Badge, which is its own check.)
+    const { issues } = await checkModule(dir, { links: { '@x/prov': provider } });
+    expect(issues.filter((issue) => issue.problem.includes('accepts only'))).toEqual([]);
   });
 
   it('reports an unprefixed custom slot through the manifest validation', async () => {

@@ -84,7 +84,7 @@ describe('check: optionalRequires', () => {
 
   it('reports a root $type the slot does not accept as an error, with its fix, when the provider is there', async () => {
     const provider = await packagedProvider();
-    const dir = track(makeModule(contributorFiles(contributorManifest({ $type: 'Card', title: 'x' }))));
+    const dir = track(makeModule(contributorFiles(contributorManifest({ $type: 'Card', items: [] }))));
     const { issues } = await checkModule(dir, { links: { '@x/prov': provider } });
     expect(issues).toHaveLength(1);
     expect(issues[0]?.problem).toContain('contributes a "Card" to "prov:shared-slot", which accepts only: Badge');
@@ -126,7 +126,7 @@ describe('check: --link <module id>=<folder> for a provider the module does not 
     const dir = track(makeModule(noDependency()));
     expect(await checkModule(dir, { links: { prov: provider } })).toMatchObject({ issues: [], warnings: [] });
 
-    const wrong = track(makeModule({ ...noDependency(), 'manifest.json': contributorManifest({ $type: 'Card', title: 'x' }) }));
+    const wrong = track(makeModule({ ...noDependency(), 'manifest.json': contributorManifest({ $type: 'Card', items: [] }) }));
     const { issues } = await checkModule(wrong, { links: { prov: provider } });
     expect(issues[0]?.problem).toContain('contributes a "Card" to "prov:shared-slot", which accepts only: Badge');
   });

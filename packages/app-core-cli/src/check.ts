@@ -10,12 +10,15 @@ import { tabContributionsOf } from '@wadeck-app/app-core-server/manifest';
 import { OUTPUT_DIR } from './outputDir.js';
 import { findProvider, type Links } from './providers.js';
 import { validateSourceManifestFile } from './validate.js';
+import { loadViewCheckContext, viewProblems, type ViewCheckContext } from './viewDiagnostics.js';
 
 export { OUTPUT_DIR };
 
 export interface CheckOptions {
   // Package name -> folder, to find a provider module that is not installed in node_modules (see providers.ts).
   links?: Links;
+  // What the views are compiled against; absent: read from the bundled shell (viewDiagnostics.ts), which fails when it cannot be found.
+  viewCheck?: ViewCheckContext;
 }
 
 export interface CheckIssue {
@@ -273,7 +276,7 @@ async function checkSrc(moduleDir: string, issues: CheckIssue[]): Promise<Map<st
   return scanned;
 }
 
-function checkViewFile(moduleDir: string, viewValue: string, index: number, seen: Set<string>, issues: CheckIssue[]): void {
+function checkViewFile(moduleDir: string, viewValue: string, index: number, seen: Set<string>, issues: CheckIssue[], viewCheck: ViewCheckContext, ownComponents: boolean): void {
   const abs = path.resolve(moduleDir, viewValue);
   const rel = toPosix(path.relative(moduleDir, abs));
   if (seen.has(abs)) {
@@ -301,13 +304,17 @@ function checkViewFile(moduleDir: string, viewValue: string, index: number, seen
     const parsed = parseYaml(fs.readFileSync(abs, 'utf8'));
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
       issues.push({ file: rel, problem: 'a view must be a YAML/JSON object (with a $type), got something else', fix: 'Start the file with `$type: <Component>`.' });
+    } else {
+      for (const found of viewProblems(parsed as Record<string, unknown>, viewCheck, ownComponents)) {
+        issues.push({ file: rel, ...found });
+      }
     }
   } catch (err) {
     issues.push({ file: rel, problem: `is not valid YAML: ${(err as Error).message.split('\n')[0]}`, fix: 'Fix the YAML syntax.' });
   }
 }
 
-function checkManifest(moduleDir: string, issues: CheckIssue[], warnings: string[]): SourceManifest | undefined {
+function checkManifest(moduleDir: string, issues: CheckIssue[], warnings: string[], viewCheck: ViewCheckContext): SourceManifest | undefined {
   const result = validateSourceManifestFile(path.join(moduleDir, 'manifest.json'));
   if (!result.ok) {
     issues.push({
@@ -320,15 +327,21 @@ function checkManifest(moduleDir: string, issues: CheckIssue[], warnings: string
   const manifest = result.manifest;
   warnings.push(...result.warnings);
 
+  const componentsDir = path.join(moduleDir, 'src', 'dsl-components');
+  const hasComponents = fs.existsSync(componentsDir) && listFiles(componentsDir).length > 0;
+  if (hasComponents) {
+    warnings.push('src/dsl-components has components of its own: the component types and keys of the views are not checked (only the components of dsl-ui are known to `check`); the contexts and prop groups of dsl-ui components still are.');
+  }
   const seen = new Set<string>();
   manifest.extensionPoints.forEach((ep, index) => {
     if (ep.view.type === 'path') {
-      checkViewFile(moduleDir, String(ep.view.value), index, seen, issues);
+      checkViewFile(moduleDir, String(ep.view.value), index, seen, issues, viewCheck, hasComponents);
+    } else if (typeof ep.view.value === 'object' && ep.view.value !== null && !Array.isArray(ep.view.value)) {
+      for (const found of viewProblems(ep.view.value as Record<string, unknown>, viewCheck, hasComponents)) {
+        issues.push({ file: 'manifest.json', problem: `extensionPoints[${index}] (inline view): ${found.problem}`, fix: found.fix });
+      }
     }
   });
-
-  const componentsDir = path.join(moduleDir, 'src', 'dsl-components');
-  const hasComponents = fs.existsSync(componentsDir) && listFiles(componentsDir).length > 0;
   if (manifest.dslLib !== undefined && !fs.existsSync(path.join(moduleDir, DSL_COMPONENTS_ENTRY))) {
     issues.push({
       file: DSL_COMPONENTS_ENTRY,
@@ -570,7 +583,7 @@ export async function checkModule(moduleDirArg: string, options: CheckOptions = 
   checkRoot(moduleDir, issues);
   const scanned = await checkSrc(moduleDir, issues);
   const manifestWarnings: string[] = [];
-  const manifest = checkManifest(moduleDir, issues, manifestWarnings);
+  const manifest = checkManifest(moduleDir, issues, manifestWarnings, options.viewCheck ?? loadViewCheckContext());
   checkPublishing(moduleDir, issues);
   let warnings: string[] = manifestWarnings;
   if (manifest !== undefined) {

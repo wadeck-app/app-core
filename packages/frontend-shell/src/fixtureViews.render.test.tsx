@@ -247,10 +247,9 @@ function stubEventSource(): void {
 }
 
 describe('registry child key contract', () => {
-  // `app-core-cli package` warns about `children:` on built-in nodes (packages/app-core-cli/src/childKeys.ts) because it
-  // has no registry to ask: the warning is only right while no built-in component takes a "children" key (FieldWrapper
-  // stopped with dsl 2026.10.23-127: its children are an `items` slot). The registry now declares the keys each component takes (`knownKeys`), so this reads that data
-  // instead of the source of the render functions. If it fails, update CHILDREN_READERS in childKeys.ts.
+  // `app-core-cli check` compiles the views of a module against dsl-ui's known-keys manifest, which flags `children:` on a built-in node
+  // (the renderer ignores it): that is only right while no built-in component takes a "children" key (FieldWrapper stopped with dsl
+  // 2026.10.23-127: its children are an `items` slot). The registry declares the keys each component takes (`knownKeys`): this reads them.
   const builtIns = Object.values(appRegistry).filter((entry) => !entry.name.includes(':'));
 
   it('no built-in component takes a "children" key', () => {

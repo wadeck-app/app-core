@@ -604,7 +604,8 @@ export const ActionButtonEntry: ComponentRegistryEntry = {
 		const disabledReason = coerceProp(resolveExpressionValue(node['disabledReason'], ctx), 'ActionButton.disabledReason', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['disabledReason']
 		const onAction = coerceProp(resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'], 'ActionButton.onAction', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['onAction']
 		const actionPending = coerceProp(resolveExpressionValue(node['actionPending'], ctx) ?? ctx['$actionPending'], 'ActionButton.actionPending', 'object', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['actionPending']
-		return <ActionButton action={action} label={label} params={params} body={body} icon={icon} iconOnly={iconOnly} variant={variant} size={size} ariaLabel={ariaLabel} disabled={disabled} disabledReason={disabledReason} onAction={onAction} actionPending={actionPending} />
+		const loadingStyle = coerceProp(resolveExpressionValue(node['loadingStyle'], ctx), 'ActionButton.loadingStyle', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ActionButton.js').ActionButtonProps['loadingStyle']
+		return <ActionButton action={action} label={label} params={params} body={body} icon={icon} iconOnly={iconOnly} variant={variant} size={size} ariaLabel={ariaLabel} disabled={disabled} disabledReason={disabledReason} onAction={onAction} actionPending={actionPending} loadingStyle={loadingStyle} />
 	},
 }
 
@@ -1081,7 +1082,8 @@ export const ButtonSaveEntry: ComponentRegistryEntry = {
 		const isPending = coerceProp(resolveExpressionValue(node['isPending'], ctx), 'ButtonSave.isPending', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/ButtonSave.js').ButtonSaveProps['isPending']
 		const hasChanges = coerceProp(resolveExpressionValue(node['hasChanges'], ctx), 'ButtonSave.hasChanges', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/ButtonSave.js').ButtonSaveProps['hasChanges']
 		const disabledReason = coerceProp(resolveExpressionValue(node['disabledReason'], ctx), 'ButtonSave.disabledReason', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/ButtonSave.js').ButtonSaveProps['disabledReason']
-		return <ButtonSave label={label} onClick={onClick} isPending={isPending} hasChanges={hasChanges} disabledReason={disabledReason} />
+		const loadingStyle = coerceProp(resolveExpressionValue(node['loadingStyle'], ctx), 'ButtonSave.loadingStyle', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/ButtonSave.js').ButtonSaveProps['loadingStyle']
+		return <ButtonSave label={label} onClick={onClick} isPending={isPending} hasChanges={hasChanges} disabledReason={disabledReason} loadingStyle={loadingStyle} />
 	},
 }
 
@@ -1094,7 +1096,8 @@ export const ButtonSubmitEntry: ComponentRegistryEntry = {
 		const variant = coerceProp(resolveExpressionValue(node['variant'], ctx), 'ButtonSubmit.variant', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/ButtonSubmit.js').ButtonSubmitProps['variant']
 		const pendingLabel = coerceProp(resolveExpressionValue(node['pendingLabel'], ctx), 'ButtonSubmit.pendingLabel', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/ButtonSubmit.js').ButtonSubmitProps['pendingLabel']
 		const requireChanges = coerceProp(resolveExpressionValue(node['requireChanges'], ctx), 'ButtonSubmit.requireChanges', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/ButtonSubmit.js').ButtonSubmitProps['requireChanges']
-		return <ButtonSubmit label={label} variant={variant} pendingLabel={pendingLabel} requireChanges={requireChanges} />
+		const loadingStyle = coerceProp(resolveExpressionValue(node['loadingStyle'], ctx), 'ButtonSubmit.loadingStyle', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/ButtonSubmit.js').ButtonSubmitProps['loadingStyle']
+		return <ButtonSubmit label={label} variant={variant} pendingLabel={pendingLabel} requireChanges={requireChanges} loadingStyle={loadingStyle} />
 	},
 }
 
@@ -2068,7 +2071,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 
 // ─── Auto-detected metadata (allowedChildren, providesContext, requiresContext) ─
 // Generated from @slot JSDoc tags and createContext/useContext calls in component sources.
-ActionButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["action","actionPending","ariaLabel","body","disabled","disabledReason","icon","iconOnly","label","onAction","params","size","variant"] : [];
+ActionButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["action","actionPending","ariaLabel","body","disabled","disabledReason","icon","iconOnly","label","loadingStyle","onAction","params","size","variant"] : [];
 ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","disabled","disabledReason","form","icon","label","loading","onClick","size","type","variant"] : [];
 CheckboxGroupEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options","orientation"] : [];
 ChipButtonEntry.allowedChildren = {"items":["atomic"]};
@@ -2112,9 +2115,9 @@ TimeBrushEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["data","doma
 TimeSeriesChartEntry.itemKeys = {"series":{"keys":["key","name","color","width","dots","pointColorKey","detailKey","gapDash","legend","kind","fromKey","decimals","showValue","axis"]},"bands":{"keys":["from","to","color","opacity","label"]},"rangeAreas":{"keys":["lowKey","highKey","name","color","opacity","legend"]},"legendItems":{"keys":["label","color"]}};
 TimeSeriesChartEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bands","data","domain","emptyMessage","gapDashAfterDays","height","initialWindow","legendItems","marginRight","rangeAreas","series","syncGroup","title","xFormat","xKey","yAxisWidth","yDecimals","yFormat","yIncludeZero","yRightAxisWidth","yRightDecimals","yRightFormat","yRightIncludeZero","yRightUnit","yUnit"] : [];
 ButtonCancelEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabled","disabledReason","label","onCancel"] : [];
-ButtonSaveEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabledReason","hasChanges","isPending","label","onClick"] : [];
+ButtonSaveEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["disabledReason","hasChanges","isPending","label","loadingStyle","onClick"] : [];
 ButtonSaveEntry.requiresContext = ["FormContext"];
-ButtonSubmitEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","pendingLabel","requireChanges","variant"] : [];
+ButtonSubmitEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","loadingStyle","pendingLabel","requireChanges","variant"] : [];
 ButtonSubmitEntry.requiresContext = ["FormContext"];
 CronBuilderEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["onChange","onClose","value"] : [];
 DatePickerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","dateFormat","disabled","isDateDisabled","maxDate","minDate","onSelect","placeholder"] : [];

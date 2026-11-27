@@ -38,6 +38,8 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@wadeck-app/app-core-server": "*",
+    "@wadeck-app/dsl-renderer": "latest",
+    "@wadeck-app/dsl-ui": "latest",
     "sharp": "^0.35.5",
     "typescript": "^5.3.3",
     "vitest": "^4.0.14"

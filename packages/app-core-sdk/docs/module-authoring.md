@@ -62,6 +62,8 @@ Rules, all enforced by `app-core-cli check`:
 
 `check` also validates the manifest and that every referenced view exists. Each error names the file and the fix, and all problems are listed in one run.
 
+`check` also compiles every view (the files of `src/dsl-views` and the inline views of the manifest) against the components of the dsl-ui bundled with the CLI and the host contexts its shell provides (`providedContexts` of `build-info.json`). It fails the build, with the node (`$.items[2]`) and the diagnostic code, on: an unknown component type or key (`children:` on a built-in container, a typo), a component that needs one of several props and has none (`missing-prop-group`: a `SearchBar` without `urlParam` nor `value`), and a component that needs a context the shell does not provide (`missing-host-context`: `PageHeader` with `placement: trail` needs `HeaderActionsContext`). Not checked: the types and keys of the components of your own `src/dsl-components` (`check` warns about it), the `<moduleId>:<Name>` components of other modules, and the values of props (`invalid-prop-value`, `missing-required-prop`: the CLI has no prop schemas).
+
 In this repo the same layout rules also run as `violations` rules (`app-module/*`, scoped to any `app-module-*` folder, with a parity test against `check`). Other repos rely on `check`; the rules do not apply there on their own.
 
 ```sh
@@ -791,7 +793,7 @@ Texts are abridged to their stable part; `<...>` is filled in by the tool. `chec
 | `<step> failed:` then `file:line:col: <text>` lines | esbuild error in your source; a missing package usually needs `npm install` in the module folder. |
 | `The packaged manifest's <field> "<x>" does not exist` | A path in the manifest points to something `package` did not write; fix the source path. |
 | `--link "<x>" is not of the form <package>=<folder>` | Use `--link @acme/provider=../provider`. |
-| `warning: <view>: <node> has a "children" key, which built-in components ignore ...` (`package`, `dev`), or a page or widget that renders blank with no error anywhere | Built-in containers read their child nodes from `items:`, not `children:` (checked in the dsl-ui catalogue: VerticalStack, HorizontalStack, Card, Section, PageSection, Collapsible, ActionBar, CardActions, DialogFooter, NavBar, ScrollArea, TableRowActions, ThemeScope, Dialog, Drawer, Popover, Tooltip, ToastProvider, RouterProvider, BulkActionsToolbar, ChipButton, DeleteButton). The renderer ignores unknown keys, so a wrong key renders an empty container silently. Rename `children:` to `items:`. |
+| `[unknown-key] Card at $.items[0]: ... unknown key "children"` (`check`, `package`, `dev`; it fails the build), or a page or widget that renders blank with no error anywhere | Built-in containers read their child nodes from `items:`, not `children:` (checked in the dsl-ui catalogue: VerticalStack, HorizontalStack, Card, Section, PageSection, Collapsible, ActionBar, CardActions, DialogFooter, NavBar, ScrollArea, TableRowActions, ThemeScope, Dialog, Drawer, Popover, Tooltip, ToastProvider, RouterProvider, BulkActionsToolbar, ChipButton, DeleteButton). The renderer ignores unknown keys, so a wrong key renders an empty container silently: `check` compiles the views and refuses it. Rename `children:` to `items:`. |
 
 ### `dev`
 

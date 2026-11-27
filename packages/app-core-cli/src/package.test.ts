@@ -239,25 +239,30 @@ describe('packageModule: output manifest and views', () => {
     expect(result.warnings[0]).toMatch(/not referenced/);
   });
 
-  it('warns, naming file and node, when a built-in container uses "children:" instead of "items:" (it would render blank)', async () => {
+  it('refuses, naming file and node, a built-in container that uses "children:" instead of "items:" (it would render blank): the views are compiled by check', async () => {
     const view = '$type: VerticalStack\nitems:\n  - $type: Card\n    children:\n      - $type: Badge\n        label: x\n';
-    const result = await packageModule({ moduleDir: module_({ 'src/dsl-views/home.yaml': view }), outDir: outDir(), version: '1.0.0' });
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('src/dsl-views/home.yaml');
-    expect(result.warnings[0]).toContain('$.items[0] (Card)');
-    expect(result.warnings[0]).toContain('"items:"');
+    const failure = await packageModule({ moduleDir: module_({ 'src/dsl-views/home.yaml': view }), outDir: outDir(), version: '1.0.0' }).then(
+      () => undefined,
+      (err: Error) => err.message,
+    );
+    expect(failure).toContain('src/dsl-views/home.yaml');
+    expect(failure).toContain('$.items[0]');
+    expect(failure).toContain('Card');
+    expect(failure).toContain('"items"');
   });
 
-  it('warns for an inline view too, and not for "items:" or a dsl-lib component', async () => {
+  it('refuses an inline view too, and not "items:" or a dsl-lib component', async () => {
     const inline = (value: unknown): string =>
       JSON.stringify({ ...BASE_MANIFEST, extensionPoints: [{ kind: 'widget', slot: 'dashboard', view: { type: 'inline', value } }] });
     const bad = await packageModule({
-      moduleDir: module_({ 'manifest.json': inline({ $type: 'Section', children: [] }), 'src/dsl-views/home.yaml': null }),
+      moduleDir: module_({ 'manifest.json': inline({ $type: 'Card', children: [] }), 'src/dsl-views/home.yaml': null }),
       outDir: outDir(),
       version: '1.0.0',
-    });
-    expect(bad.warnings).toHaveLength(1);
-    expect(bad.warnings[0]).toContain('extensionPoints[0] (inline view)');
+    }).then(
+      () => undefined,
+      (err: Error) => err.message,
+    );
+    expect(bad).toContain('extensionPoints[0] (inline view)');
     const fine = await packageModule({
       moduleDir: module_({
         'manifest.json': inline({ $type: 'VerticalStack', items: [{ $type: 'FieldWrapper', items: [{ $type: 'Badge', label: 'x' }] }, { $type: 'tiny:Custom', children: [] }] }),
