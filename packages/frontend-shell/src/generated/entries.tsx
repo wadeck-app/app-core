@@ -628,7 +628,8 @@ export const ButtonActionEntry: ComponentRegistryEntry = {
 		const form = coerceProp(resolveExpressionValue(node['form'], ctx), 'ButtonAction.form', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['form']
 		const ariaExpanded = coerceProp(resolveExpressionValue(node['ariaExpanded'], ctx), 'ButtonAction.ariaExpanded', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['ariaExpanded']
 		const ariaControls = coerceProp(resolveExpressionValue(node['ariaControls'], ctx), 'ButtonAction.ariaControls', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['ariaControls']
-		return <ButtonAction label={label} variant={variant} icon={icon ? renderChildren(icon, registry, ctx) : null} size={size} ariaLabel={ariaLabel} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type} form={form} ariaExpanded={ariaExpanded} ariaControls={ariaControls} />
+		const underline = coerceProp(resolveExpressionValue(node['underline'], ctx), 'ButtonAction.underline', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['underline']
+		return <ButtonAction label={label} variant={variant} icon={icon ? renderChildren(icon, registry, ctx) : null} size={size} ariaLabel={ariaLabel} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type} form={form} ariaExpanded={ariaExpanded} ariaControls={ariaControls} underline={underline} />
 	},
 }
 
@@ -645,7 +646,7 @@ export const ChipButtonEntry: ComponentRegistryEntry = {
 	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['ChipButtonNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
-		const active = coerceProp(resolveExpressionValue(node['active'], ctx), 'ChipButton.active', 'primitive', true) as import('@wadeck-app/dsl-ui/dist/components/controls/ChipButton.js').ChipButtonProps['active']
+		const active = coerceProp(resolveExpressionValue(node['active'], ctx), 'ChipButton.active', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ChipButton.js').ChipButtonProps['active']
 		const color = (resolveExpressionValue(node['color'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/controls/ChipButton.js').ChipButtonProps['color']
 		const onClick = coerceProp(resolveExpressionValue(node['onClick'], ctx), 'ChipButton.onClick', 'function', true) as import('@wadeck-app/dsl-ui/dist/components/controls/ChipButton.js').ChipButtonProps['onClick']
 		const shape = coerceProp(resolveExpressionValue(node['shape'], ctx), 'ChipButton.shape', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ChipButton.js').ChipButtonProps['shape']
@@ -1342,10 +1343,13 @@ export const CollapsibleEntry: ComponentRegistryEntry = {
 	propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['CollapsibleNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,
 	render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
-		const title = coerceProp(resolveExpressionValue(node['title'], ctx), 'Collapsible.title', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/layout/Collapsible.js').CollapsibleProps['title']
+		const title = coerceProp(resolveExpressionValue(node['title'], ctx), 'Collapsible.title', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/layout/Collapsible.js').CollapsibleProps['title']
+		const header = node['header'] as unknown[] | undefined
 		const defaultOpen = coerceProp(resolveExpressionValue(node['defaultOpen'], ctx), 'Collapsible.defaultOpen', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/Collapsible.js').CollapsibleProps['defaultOpen']
+		const open = coerceProp(resolveExpressionValue(node['open'], ctx), 'Collapsible.open', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/layout/Collapsible.js').CollapsibleProps['open']
+		const onOpenChange = coerceProp(resolveExpressionValue(node['onOpenChange'], ctx), 'Collapsible.onOpenChange', 'function', false) as import('@wadeck-app/dsl-ui/dist/components/layout/Collapsible.js').CollapsibleProps['onOpenChange']
 		return (
-			<Collapsible title={title} defaultOpen={defaultOpen}>
+			<Collapsible title={title} header={header ? renderChildren(header, registry, ctx) : null} defaultOpen={defaultOpen} open={open} onOpenChange={onOpenChange}>
 				{items ? renderChildren(items, registry, ctx) : null}
 			</Collapsible>
 		)
@@ -2078,7 +2082,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 // ─── Auto-detected metadata (allowedChildren, providesContext, requiresContext) ─
 // Generated from @slot JSDoc tags and createContext/useContext calls in component sources.
 ActionButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["action","actionPending","ariaLabel","body","disabled","disabledReason","icon","iconOnly","label","loadingStyle","onAction","params","size","variant"] : [];
-ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaControls","ariaExpanded","ariaLabel","disabled","disabledReason","form","icon","label","loading","onClick","size","type","variant"] : [];
+ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaControls","ariaExpanded","ariaLabel","disabled","disabledReason","form","icon","label","loading","onClick","size","type","underline","variant"] : [];
 CheckboxGroupEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options","orientation"] : [];
 ChipButtonEntry.allowedChildren = {"items":["atomic"]};
 ChipButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["active","aria-label","aria-pressed","color","disabled","disabledReason","emphasis","items","onClick","shape","title"] : [];
@@ -2160,8 +2164,8 @@ CardEntry.allowedChildren = {"items":["atomic","composite","disposition"]};
 CardEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["border","fill","footer","header","items","onClick","padding","shadow"] : [];
 CardActionsEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 CardActionsEntry.providesContext = ["ButtonContext"];
-CollapsibleEntry.allowedChildren = {"items":["atomic","composite","disposition"]};
-CollapsibleEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["defaultOpen","items","title"] : [];
+CollapsibleEntry.allowedChildren = {"header":["atomic","composite"],"items":["atomic","composite","disposition"]};
+CollapsibleEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["defaultOpen","header","items","onOpenChange","open","title"] : [];
 DialogFooterEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["items"] : [];
 DialogFooterEntry.providesContext = ["ButtonContext"];
 DividerEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["label","orientation"] : [];
