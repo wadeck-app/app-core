@@ -500,7 +500,7 @@ function FieldTagsWithContext({ node, ctx }: RegistryRenderProps) {
 		)
 }
 
-function FieldTextWithContext({ node, ctx }: RegistryRenderProps) {
+function FieldTextWithContext({ node, registry, ctx }: RegistryRenderProps) {
 		const bind = node['bind'] as string
 		const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'FieldText.label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['label']
 		const hideLabel = coerceProp(resolveExpressionValue(node['hideLabel'], ctx), 'FieldText.hideLabel', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['hideLabel']
@@ -509,6 +509,7 @@ function FieldTextWithContext({ node, ctx }: RegistryRenderProps) {
 		const readOnly = coerceProp(resolveExpressionValue(node['readOnly'], ctx), 'FieldText.readOnly', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['readOnly']
 		const required = coerceProp(resolveExpressionValue(node['required'], ctx), 'FieldText.required', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['required']
 		const error = coerceProp(resolveExpressionValue(node['error'], ctx), 'FieldText.error', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/form/FieldText.js').FieldTextProps['error']
+		const icon = node['icon'] as unknown[] | undefined
 		const formCtx = useFormContext()
 		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
@@ -517,7 +518,7 @@ function FieldTextWithContext({ node, ctx }: RegistryRenderProps) {
 		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
 		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
-			<FieldText label={label} hideLabel={hideLabel} size={size} description={description} readOnly={readOnly} required={required} error={error} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
+			<FieldText label={label} hideLabel={hideLabel} size={size} description={description} readOnly={readOnly} required={required} error={error} icon={icon ? renderChildren(icon, registry, ctx) : null} value={String(formData?.[bind] ?? '')} onChange={(v) => onChange?.(bind, v)} />
 		)
 }
 
@@ -625,7 +626,9 @@ export const ButtonActionEntry: ComponentRegistryEntry = {
 		const loading = coerceProp(resolveExpressionValue(node['loading'], ctx), 'ButtonAction.loading', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['loading']
 		const type = coerceProp(resolveExpressionValue(node['type'], ctx), 'ButtonAction.type', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['type']
 		const form = coerceProp(resolveExpressionValue(node['form'], ctx), 'ButtonAction.form', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['form']
-		return <ButtonAction label={label} variant={variant} icon={icon ? renderChildren(icon, registry, ctx) : null} size={size} ariaLabel={ariaLabel} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type} form={form} />
+		const ariaExpanded = coerceProp(resolveExpressionValue(node['ariaExpanded'], ctx), 'ButtonAction.ariaExpanded', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['ariaExpanded']
+		const ariaControls = coerceProp(resolveExpressionValue(node['ariaControls'], ctx), 'ButtonAction.ariaControls', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/ButtonAction.js').ButtonActionProps['ariaControls']
+		return <ButtonAction label={label} variant={variant} icon={icon ? renderChildren(icon, registry, ctx) : null} size={size} ariaLabel={ariaLabel} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type} form={form} ariaExpanded={ariaExpanded} ariaControls={ariaControls} />
 	},
 }
 
@@ -691,7 +694,7 @@ export const IconButtonEntry: ComponentRegistryEntry = {
 		const icon = node['icon'] as unknown[] | undefined
 		const ariaLabel = coerceProp(resolveExpressionValue(node['aria-label'], ctx), 'IconButton.aria-label', 'string', true) as import('@wadeck-app/dsl-ui/dist/components/controls/IconButton.js').IconButtonProps['aria-label']
 		const size = coerceProp(resolveExpressionValue(node['size'], ctx), 'IconButton.size', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/IconButton.js').IconButtonProps['size']
-		const tooltip = coerceProp(resolveExpressionValue(node['tooltip'], ctx), 'IconButton.tooltip', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/controls/IconButton.js').IconButtonProps['tooltip']
+		const tooltip = coerceProp(resolveExpressionValue(node['tooltip'], ctx), 'IconButton.tooltip', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/controls/IconButton.js').IconButtonProps['tooltip']
 		return <IconButton icon={icon ? renderChildren(icon, registry, ctx) : null} aria-label={ariaLabel} size={size} tooltip={tooltip} />
 	},
 }
@@ -1947,7 +1950,10 @@ export const SearchBarEntry: ComponentRegistryEntry = {
 		const inputRef = (resolveExpressionValue(node['inputRef'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['inputRef']
 		const onKeyDown = (resolveExpressionValue(node['onKeyDown'], ctx)) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['onKeyDown']
 		const ariaControls = coerceProp(resolveExpressionValue(node['ariaControls'], ctx), 'SearchBar.ariaControls', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['ariaControls']
-		return <SearchBar urlParam={urlParam} resetUrlParams={resetUrlParams} value={value} onChange={onChange} placeholder={placeholder} debounceMs={debounceMs} focusExpand={focusExpand} size={size} inputRef={inputRef} onKeyDown={onKeyDown} ariaControls={ariaControls} />
+		const width = coerceProp(resolveExpressionValue(node['width'], ctx), 'SearchBar.width', 'primitive', false) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['width']
+		const ariaLabel = coerceProp(resolveExpressionValue(node['ariaLabel'], ctx), 'SearchBar.ariaLabel', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['ariaLabel']
+		const ariaDescribedBy = coerceProp(resolveExpressionValue(node['ariaDescribedBy'], ctx), 'SearchBar.ariaDescribedBy', 'string', false) as import('@wadeck-app/dsl-ui/dist/components/table/SearchBar.js').SearchBarProps['ariaDescribedBy']
+		return <SearchBar urlParam={urlParam} resetUrlParams={resetUrlParams} value={value} onChange={onChange} placeholder={placeholder} debounceMs={debounceMs} focusExpand={focusExpand} size={size} inputRef={inputRef} onKeyDown={onKeyDown} ariaControls={ariaControls} width={width} ariaLabel={ariaLabel} ariaDescribedBy={ariaDescribedBy} />
 	},
 }
 
@@ -2072,7 +2078,7 @@ export const allEntries: ComponentRegistryEntry[] = [
 // ─── Auto-detected metadata (allowedChildren, providesContext, requiresContext) ─
 // Generated from @slot JSDoc tags and createContext/useContext calls in component sources.
 ActionButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["action","actionPending","ariaLabel","body","disabled","disabledReason","icon","iconOnly","label","loadingStyle","onAction","params","size","variant"] : [];
-ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaLabel","disabled","disabledReason","form","icon","label","loading","onClick","size","type","variant"] : [];
+ButtonActionEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaControls","ariaExpanded","ariaLabel","disabled","disabledReason","form","icon","label","loading","onClick","size","type","variant"] : [];
 CheckboxGroupEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","label","options","orientation"] : [];
 ChipButtonEntry.allowedChildren = {"items":["atomic"]};
 ChipButtonEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["active","aria-label","aria-pressed","color","disabled","disabledReason","emphasis","items","onClick","shape","title"] : [];
@@ -2133,7 +2139,7 @@ FieldReadOnlyEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["copyabl
 FieldReadOnlyEntry.requiresContext = ["ToastContext"];
 FieldSelectEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","hideLabel","label","options","placeholder","required","size"] : [];
 FieldTagsEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["allowDuplicates","bind","description","disabled","error","label","maxTags","name","placeholder","required"] : [];
-FieldTextEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","error","hideLabel","label","readOnly","required","size"] : [];
+FieldTextEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","error","hideLabel","icon","label","readOnly","required","size"] : [];
 FieldTextareaEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","label","mono","placeholder","readOnly","required","rows"] : [];
 FieldTimeEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","description","disabled","error","is12Hour","label","minuteStep","placeholder","required"] : [];
 FieldWrapperEntry.allowedChildren = {"items":["atomic"]};
@@ -2213,6 +2219,6 @@ DataTableEntry.requiresContext = ["RouterContext"];
 FilterBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["filters","onClearAll","onFilterChange","onSearchChange","placeholder","search"] : [];
 FilterChipsEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["bind","mode","onChange","options","value"] : [];
 PaginationEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["onPageChange","page","size","total","urlParam"] : [];
-SearchBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaControls","debounceMs","focusExpand","inputRef","onChange","onKeyDown","placeholder","resetUrlParams","size","urlParam","value"] : [];
+SearchBarEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["ariaControls","ariaDescribedBy","ariaLabel","debounceMs","focusExpand","inputRef","onChange","onKeyDown","placeholder","resetUrlParams","size","urlParam","value","width"] : [];
 SearchBarEntry.requiresOneOf = [["urlParam"],["value"]];
 SortableColumnEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["currentSort","label","onSort","sortKey"] : [];
